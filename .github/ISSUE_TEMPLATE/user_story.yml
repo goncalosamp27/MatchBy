@@ -1,6 +1,6 @@
 name: "User Story"
 description: "Template for drafting user stories, including acceptance criteria and completion requirements"
-title: "[S-${{ inputs.story_id }}] <short summary here>"
+title: "S-<NNN>: <short summary here>"
 labels: ["feature", "user-story"]
 assignees: []
 
