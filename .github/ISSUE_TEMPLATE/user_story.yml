@@ -1,0 +1,43 @@
+name: "User Story"
+description: "Template for drafting user stories, including acceptance criteria and completion requirements"
+title: "[Story] <brief summary here>"
+labels: ["feature", "user-story"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Story Overview
+
+        **As** a [user type],  
+        **I need** [specific goal],  
+        **In order to** [intended benefit].
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria"
+      description: "Define the conditions that must be satisfied for this story to be accepted (use checklist format)."
+      value: |
+        - [ ] Condition 1
+        - [ ] Condition 2
+        - [ ] Condition 3
+
+  - type: textarea
+    id: done_definition
+    attributes:
+      label: "Completion Definition"
+      description: "Specify the items that confirm this story is finished (use checklist format)."
+      value: |
+        - [ ] Every acceptance criterion is fulfilled
+        - [ ] Code has been reviewed and merged
+        - [ ] Automated tests written and successful
+        - [ ] Documentation updated as needed
+        - [ ] Released to production environment
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes / Dependencies"
+      description: "Include relevant background information, dependencies, or clarifications."
