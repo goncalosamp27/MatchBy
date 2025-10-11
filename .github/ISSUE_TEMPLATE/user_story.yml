@@ -1,18 +1,46 @@
 name: "User Story"
 description: "Template for drafting user stories, including acceptance criteria and completion requirements"
-title: "[Story] <brief summary here>"
+title: "[S-${{ inputs.story_id }}] <short summary here>"
 labels: ["feature", "user-story"]
 assignees: []
 
 body:
+  - type: input
+    id: story_id
+    attributes:
+      label: "Story ID"
+      description: "Enter the unique story identifier (e.g., 001, 102, 245)."
+      placeholder: "e.g., 123"
+
+  - type: input
+    id: user_type
+    attributes:
+      label: "User Type"
+      description: "Specify who the user is (e.g., admin, customer, developer)."
+      placeholder: "e.g., customer"
+
+  - type: input
+    id: user_goal
+    attributes:
+      label: "User Goal"
+      description: "Describe what the user wants to do."
+      placeholder: "e.g., view their order history"
+
+  - type: input
+    id: user_benefit
+    attributes:
+      label: "Intended Benefit"
+      description: "Explain why the user wants this feature — what value or outcome they get."
+      placeholder: "e.g., easily track past purchases"
+
   - type: markdown
     attributes:
       value: |
-        ## Story Overview
+        ## User Story
 
-        **As** a [user type],  
-        **I need** [specific goal],  
-        **In order to** [intended benefit].
+        **As** a ${{ inputs.user_type }},  
+        **I want** ${{ inputs.user_goal }},  
+        **So that** ${{ inputs.user_benefit }}.
 
   - type: textarea
     id: acceptance_criteria
