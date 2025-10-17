@@ -18,8 +18,6 @@ body:
       label: "User Story"
       description: "Fill in the fields (User Type, Goal, and Benefit) to generate your user story."
       value: |
-        ## User Story
-
         **As** a <UserType>,  
         **I want** <Goal>,  
         **So that** <Benefit>.
