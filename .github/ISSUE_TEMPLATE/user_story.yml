@@ -46,7 +46,7 @@ body:
       label: "UI Mockups / Wireframes" 
       description: "Reference to mockups, wireframes or prototypes documented in the Wiki." 
       value: | 
-        - [Wireframes of functionality X](../../wiki/UI-Mockups#functionality-x)
+        - [Wireframes of functionality X](/wiki/UI-Mockups#functionality-x)
         
   - type: textarea
     id: done_definition
