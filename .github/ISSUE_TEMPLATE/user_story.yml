@@ -12,6 +12,13 @@ body:
       description: "Enter the unique story identifier (e.g., 001, 102, 245)."
       placeholder: "e.g., 123"
 
+  - type: input
+    id: story_points
+    attributes:
+      label: "Story Points"
+      description: "Estimate the effort required to complete this story."
+      placeholder: "e.g., 1-5"
+
   - type: textarea
     id: user_story
     attributes:
