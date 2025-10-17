@@ -40,6 +40,14 @@ body:
         - [ ] Condition 2
         - [ ] Condition 3
 
+  - type: textarea 
+    id: ui_mockups 
+    attributes: 
+      label: "UI Mockups / Wireframes" 
+      description: "Reference to mockups, wireframes or prototypes documented in the Wiki." 
+      value: | 
+        - [Wireframes of functionality X](../../wiki/UI-Mockups#functionality-x)
+        
   - type: textarea
     id: done_definition
     attributes:
