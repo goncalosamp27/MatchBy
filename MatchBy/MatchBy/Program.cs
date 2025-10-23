@@ -45,8 +45,7 @@ builder.WebHost.UseSentry(options =>
 
     if (string.IsNullOrEmpty(dsn))
     {
-        
-        return;
+        throw new InvalidOperationException("Sentry DSN not found in configuration.");
     }
 
     options.Dsn = dsn;
@@ -78,7 +77,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services
     .AddBlazorise(options =>
     {
-        options.ProductToken = builder.Configuration["Blazorise:ProductToken"];
+        options.ProductToken = builder.Configuration["Blazorise:ProductToken"] ?? throw new InvalidOperationException("Blazorise product token not found in configuration.");
     })
     .AddTailwindProviders()
     .AddFontAwesomeIcons()
