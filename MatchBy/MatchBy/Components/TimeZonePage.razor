@@ -1,0 +1,32 @@
+﻿@page "/tz"
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+@if (tzId is null) { <p>Detecting…</p> }
+else
+{
+    <p>@tzId</p>
+    <p>UTC now: @utcNow:O</p>
+    <p>Local now: @localNow:O</p>
+}
+
+@code {
+    private string? tzId;
+    private TimeZoneInfo? tz;
+    private DateTime utcNow;
+    private DateTime localNow;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        tzId = await JS.InvokeAsync<string>("timeZone");
+        tz = Tz.FromId(tzId);
+
+        // Example conversions
+        utcNow = DateTime.UtcNow;                  // this is UTC
+        localNow = Tz.ToLocal(utcNow, tz);         // -> local in user's TZ
+
+        StateHasChanged();
+    }
+}

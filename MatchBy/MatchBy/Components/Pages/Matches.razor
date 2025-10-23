@@ -1,0 +1,105 @@
+@page "/Matches"
+@using Blazorise
+@inject IMatchesService MatchesService
+@inject NavigationManager NavigationManager
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
+@inject IJSRuntime JS
+
+<h3 class="text-4xl font-extrabold dark:text-white my-4">Matches</h3>
+<Button Color="Color.Primary" @onclick="GoToCreateMatch">Create Match</Button>
+
+@if(matches is null)
+{
+    <SkeletonTable Rows="5" Columns="15" Class="mt-2" />
+}
+else
+{
+    
+    <Table class="mt-2">
+        <TableHeader ThemeContrast="ThemeContrast.Light">
+            <TableRow>
+                <TableHeaderCell>#</TableHeaderCell>
+                <TableHeaderCell>Location</TableHeaderCell>
+                <TableHeaderCell>MatchDateTime</TableHeaderCell>
+                <TableHeaderCell>Description</TableHeaderCell>
+                <TableHeaderCell>MinPlayers</TableHeaderCell>
+                <TableHeaderCell>MaxPlayers</TableHeaderCell>
+                <TableHeaderCell>Sport</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Privacy</TableHeaderCell>
+                <TableHeaderCell>CreatorId</TableHeaderCell>
+                <TableHeaderCell>ParticipantsIds</TableHeaderCell>
+                <TableHeaderCell>CreatedAt</TableHeaderCell>
+                <TableHeaderCell>UpdatedAt</TableHeaderCell>
+                <TableHeaderCell>DeletedAt</TableHeaderCell>
+                <TableHeaderCell>Actions</TableHeaderCell>
+            </TableRow>
+        </TableHeader>
+        <TableBody>
+            @foreach(var match in matches)
+            {
+                <TableRow>
+                    <TableRowHeader>@match.Id</TableRowHeader>
+                    <TableRowCell>@match.Location</TableRowCell>
+                    <TableRowCell>@(tz is null ? "Null" : Tz.ToLocal(match.MatchDateTimeUtc, tz))</TableRowCell>
+                    <TableRowCell>@match.Description</TableRowCell>
+                    <TableRowCell>@match.minPlayers</TableRowCell>
+                    <TableRowCell>@match.maxPlayers</TableRowCell>
+                    <TableRowCell>@match.Sport</TableRowCell>
+                    <TableRowCell>@match.Status</TableRowCell>
+                    <TableRowCell>@match.Privacy</TableRowCell>
+                    <TableRowCell>@match.CreatorId</TableRowCell>
+                    <TableRowCell>@string.Join(", ", match.Participants.Select(p => p.Id))</TableRowCell>
+                    <TableRowCell>@(tz is null ? "Null" : Tz.ToLocal(match.CreatedAtUtc, tz))</TableRowCell>
+                    <TableRowCell>@(tz is null || match.UpdatedAtUtc is null ? "Null" : Tz.ToLocal(match.UpdatedAtUtc.Value, tz))</TableRowCell>
+                    <TableRowCell>@(tz is null || match.DeletedAtUtc is null? "Null" : Tz.ToLocal(match.DeletedAtUtc.Value, tz))</TableRowCell>
+                    <TableRowCell>
+                        <Div class="flex flex-row gap-2">
+                            <Button Color="Color.Secondary" Clicked="@(() => GoToEditMatch(match.Id))">Edit</Button>
+                            <Button Color="Color.Danger" Clicked="@(() => DeleteMatch(match.Id))">Delete</Button>
+                        </Div>
+                    </TableRowCell>
+                </TableRow>
+            }
+        </TableBody>
+    </Table>
+}
+
+
+@code {
+    private List<Models.Match>? matches { get; set; }
+    private string? tzId;
+    private TimeZoneInfo? tz;
+
+    protected override async Task OnInitializedAsync() => matches = await MatchesService.GetMatches();
+
+    private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
+    private void GoToEditMatch(string matchId) => NavigationManager.NavigateTo($"/EditMatch/{matchId}");
+
+    private async Task DeleteMatch(string matchId)
+    {
+        await MatchesService.DeleteMatch(matchId);
+        var matchToDelete = matches?.FirstOrDefault(m => m.Id == matchId);
+        if(matchToDelete != null)
+        {
+            matches?.Remove(matchToDelete);
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        tzId = await JS.InvokeAsync<string>("timeZone");
+        tz = Tz.FromId(tzId);
+        SentrySdk.CaptureMessage("Hello Sentry");
+
+
+        // Example conversions
+        //utcNow = DateTime.UtcNow;                  // this is UTC
+        //localNow = Tz.ToLocal(utcNow, tz);         // -> local in user's TZ
+
+        StateHasChanged();
+    }
+}
