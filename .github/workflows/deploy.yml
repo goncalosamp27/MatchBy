@@ -18,12 +18,12 @@ jobs:
         with:
           dotnet-version: 9.x
       - name: Restore dependencies
-        run: dotnet restore MatchBy/MatchBy.sln
+        run: dotnet restore MatchBy.sln
       - name: Build with dotnet
-        run: dotnet build MatchBy/MatchBy.sln --configuration Release --no-restore
+        run: dotnet build MatchBy.sln --configuration Release --no-restore
       - name: Run tests
         run: >-
-          dotnet test MatchBy/MatchBy.sln --configuration Release --no-build
+          dotnet test MatchBy.sln --configuration Release --no-build
           --verbosity normal --logger "trx;LogFileName=test-results.trx"
       - name: Publish test results
         uses: dorny/test-reporter@v1
@@ -35,7 +35,7 @@ jobs:
           fail-on-error: true
       - name: dotnet publish
         run: >-
-          dotnet publish MatchBy/MatchBy/MatchBy/MatchBy.csproj -c Release -o
+          dotnet publish MatchBy/MatchBy/MatchBy.csproj -c Release -o
           ${{env.DOTNET_ROOT}}/myapp --no-build
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
