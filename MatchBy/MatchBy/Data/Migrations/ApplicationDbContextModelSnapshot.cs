@@ -17,7 +17,7 @@ namespace MatchBy.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "9.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -43,8 +43,8 @@ namespace MatchBy.Data.Migrations
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -96,10 +96,14 @@ namespace MatchBy.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -107,6 +111,9 @@ namespace MatchBy.Data.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -730,7 +737,6 @@ namespace MatchBy.Data.Migrations
                                 .HasColumnType("integer");
 
                             b1.Property<string>("Url")
-                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.HasKey("ApplicationUserId");
@@ -741,8 +747,7 @@ namespace MatchBy.Data.Migrations
                                 .HasForeignKey("ApplicationUserId");
                         });
 
-                    b.Navigation("BaseLocation")
-                        .IsRequired();
+                    b.Navigation("BaseLocation");
 
                     b.Navigation("ProfileImage");
                 });
