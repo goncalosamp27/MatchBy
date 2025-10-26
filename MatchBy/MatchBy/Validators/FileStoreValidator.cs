@@ -4,12 +4,11 @@ using MatchBy.Models;
 
 namespace MatchBy.Validators;
 
-public class ImageStoreValidator : AbstractValidator<FileStore>
+public class FileStoreValidator : AbstractValidator<FileStore>
 {
-    public ImageStoreValidator()
+    public FileStoreValidator()
     {
         RuleFor(i => i.Url)
-            .NotEmpty().WithMessage("Url is required.")
             .MaximumLength(2048).WithMessage("Url cannot exceed 2048 characters.");
 
         RuleFor(i => i.Key)

@@ -1,12 +1,10 @@
 ﻿@page "/Account/Register"
-
 @using System.ComponentModel.DataAnnotations
 @using System.Text
 @using System.Text.Encodings.Web
+@using MatchBy.Extensions
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
-@using MatchBy.Models
-@using MatchBy.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -18,68 +16,147 @@
 
 <PageTitle>Register</PageTitle>
 
-<h1>Register</h1>
+<section class="bg-gray-50 dark:bg-gray-900">
+    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+        <a href="#" class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+            <img class="w-8 h-8 mr-2" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg" alt="logo">
+            MatchBy
+        </a>
 
-<div class="row">
-    <div class="col-lg-6">
-        <StatusMessage Message="@Message"/>
-        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
-            <DataAnnotationsValidator/>
-            <h2>Create a new account.</h2>
-            <hr/>
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com"/>
-                <label for="Input.Email">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger"/>
+        <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
+            <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+                <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+                    Create an account
+                </h1>
+
+                <StatusMessage Message="@Message" UseCookieMessage="false" />
+
+                <EditForm Model="InputRegister" method="post" OnValidSubmit="RegisterUser" FormName="register" class="space-y-4 md:space-y-6">
+                    <DataAnnotationsValidator />
+                    <!-- Username -->
+                    <div>
+                        <label for="InputRegister.Username" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Username</label>
+                        <InputText @bind-Value="InputRegister.Username"
+                                   id="InputRegister.Username"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                   placeholder="john" />
+                        <ValidationMessage For="() => InputRegister.Username" class="text-danger" />
+                    </div>
+
+                    <!-- Display Name -->
+                    <div>
+                        <label for="InputRegister.DisplayName" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Display Name</label>
+                        <InputText @bind-Value="InputRegister.DisplayName"
+                                   id="InputRegister.DisplayName"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                   placeholder="john doe" />
+                        <ValidationMessage For="() => InputRegister.DisplayName" class="text-danger" />
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="InputRegister.Email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Email</label>
+                        <InputText @bind-Value="InputRegister.Email"
+                                   id="InputRegister.Email"
+                                   type="email"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                   placeholder="john@email.com"
+                                   autocomplete="email" />
+                        <ValidationMessage For="() => InputRegister.Email" class="text-danger" />
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="InputRegister.Password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Password</label>
+                        <InputText @bind-Value="InputRegister.Password"
+                                   id="InputRegister.Password"
+                                   type="password"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                   placeholder="••••••••"
+                                   autocomplete="new-password" />
+                        <ValidationMessage For="() => InputRegister.Password" class="text-danger" />
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="InputRegister.ConfirmPassword" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Confirm Password</label>
+                        <InputText @bind-Value="InputRegister.ConfirmPassword"
+                                   id="InputRegister.ConfirmPassword"
+                                   type="password"
+                                   class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                   placeholder="••••••••"
+                                   autocomplete="new-password" />
+                        <ValidationMessage For="() => InputRegister.ConfirmPassword" class="text-danger" />
+                    </div>
+
+                    <!-- Accept Terms -->
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <InputCheckbox @bind-Value="InputRegister.AcceptTerms"
+                                           id="InputRegister.AcceptTerms"
+                                           class="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-primary-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-primary-600 dark:ring-offset-gray-800" />
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="InputRegister.AcceptTerms" class="text-gray-500 dark:text-gray-300">
+                                I accept the
+                                <a href="/TermsAndConditions" class="font-medium text-primary-600 hover:underline dark:text-primary-500">Terms and Conditions</a>
+                            </label>
+                        </div><ValidationMessage For="() => InputRegister.AcceptTerms" class="text-danger block" />
+                    </div>
+
+                    <!-- Submit -->
+                    <div>
+                        <button type="submit"
+                                class="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                            Register
+                        </button>
+                    </div>
+
+                    <!-- Footer links -->
+                    <p class="text-sm font-light text-gray-500 dark:text-gray-400">
+                        Already have an account?
+                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
+                           class="font-medium text-primary-600 hover:underline dark:text-primary-500">Login here</a>
+                    </p>
+                </EditForm>
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password"/>
-                <label for="Input.Password">Password</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger"/>
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password"/>
-                <label for="Input.ConfirmPassword">Confirm Password</label>
-                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger"/>
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
+        </div>
     </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr/>
-            <ExternalLoginPicker/>
-        </section>
-    </div>
-</div>
+</section>
+
 
 @code {
-    private IEnumerable<IdentityError>? identityErrors;
-
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
-
+    private IEnumerable<IdentityError>? _identityErrors;
+    private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+    
+    [SupplyParameterFromForm] private InputModel InputRegister { get; set; } = new();
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
-
-    public async Task RegisterUser(EditContext editContext)
+    private async Task RegisterUser()
     {
-        var user = CreateUser();
+        var user = CreateUser().InitializeNewUser(InputRegister.DisplayName);
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        await UserStore.SetUserNameAsync(user, InputRegister.Username, CancellationToken.None);
+        
         var emailStore = GetEmailStore();
-        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-        var result = await UserManager.CreateAsync(user, Input.Password);
-
+        await emailStore.SetEmailAsync(user, InputRegister.Email, CancellationToken.None);
+        
+        if (await UserManager.FindByEmailAsync(InputRegister.Email) is not null)
+        {
+            _identityErrors = [new IdentityError { Code = "DuplicateEmail", Description = "Email address is already in use." }];
+            return;
+        }
+        
+        var result = await UserManager.CreateAsync(user, InputRegister.Password);
         if (!result.Succeeded)
         {
-            identityErrors = result.Errors;
+            _identityErrors = result.Errors;
             return;
         }
 
         Logger.LogInformation("User created a new account with password.");
+
+        await UserManager.AddToRoleAsync(user, Roles.Member);
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
@@ -88,13 +165,13 @@
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendConfirmationLinkAsync(user, InputRegister.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
             RedirectManager.RedirectTo(
                 "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+                new Dictionary<string, object?> { ["email"] = InputRegister.Email, ["returnUrl"] = ReturnUrl });
         }
 
         await SignInManager.SignInAsync(user, isPersistent: false);
@@ -123,7 +200,7 @@
 
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }
-
+    
     private sealed class InputModel
     {
         [Required]
@@ -137,10 +214,22 @@
         [Display(Name = "Password")]
         public string Password { get; set; } = "";
 
+        [Required]
         [DataType(DataType.Password)]
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
+        
+        [Required]
+        [MaxLength(50, ErrorMessage = "Username cannot exceed 50 characters.")]
+        public string Username { get; set; } = "";
+        
+        [Required]
+        [MaxLength(50, ErrorMessage = "Display Name cannot exceed 50 characters.")]
+        public string DisplayName { get; set; } = "";
+        
+        [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the terms and conditions.")]
+        public bool AcceptTerms { get; set; }
     }
 
 }

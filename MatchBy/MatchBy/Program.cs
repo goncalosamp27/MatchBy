@@ -13,6 +13,7 @@ using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
 using MatchBy.Services;
+using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -39,7 +40,15 @@ builder.Services.AddScoped<ISeeder, PrivateChatMessageSeeder>();
 builder.Services.AddScoped<ISeeder, PlayerRatingSeeder>();
 builder.Services.AddScoped<ISeeder, FriendSeeder>();
 
-builder.WebHost.UseSentry(options =>
+builder.Services.AddOptions();
+builder.Services.AddHttpClient<ResendClient>();
+builder.Services.Configure<ResendClientOptions>( o =>
+{
+    o.ApiToken = builder.Configuration["Resend:ApiKey"] ?? throw new InvalidOperationException("Resend ApiKey not found in configuration.");
+} );
+builder.Services.AddScoped<IResend, ResendClient>();
+
+/*builder.WebHost.UseSentry(options =>
 {
     string? dsn = builder.Configuration["Sentry:DSN"];
 
@@ -51,7 +60,7 @@ builder.WebHost.UseSentry(options =>
     options.Dsn = dsn;
     options.TracesSampleRate = 1.0;
     options.Debug = true;
-});
+});*/
 
 builder.Services.AddLocalTimeZoneServer();
 
@@ -68,7 +77,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = true;
+        options.SignIn.RequireConfirmedPhoneNumber = false;
+        options.SignIn.RequireConfirmedEmail = true;
+        options.User.RequireUniqueEmail = true;
+        options.User.AllowedUserNameCharacters =
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+    })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
@@ -85,7 +102,7 @@ builder.Services
 
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 

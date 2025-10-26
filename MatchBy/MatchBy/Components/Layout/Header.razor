@@ -1,16 +1,17 @@
 ﻿@using Blazorise
-@using Toolbelt.Blazor.Globalization
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
-<Bar Breakpoint="Breakpoint.Desktop" Background="Background.White" Shadow="Shadow.Default" ThemeContrast="ThemeContrast.Light">
+<Bar Breakpoint="Breakpoint.Desktop" Class="bg-gray-50 dark:bg-gray-500 border-b border-gray-200 dark:border-gray-700">
     <BarBrand>
         <BarItem>
             <BarLink To="">
-                <BarIcon IconName="IconName.Dashboard" />
+                <BarIcon IconName="IconName.Dashboard"/>
                 MatchBy
             </BarLink>
         </BarItem>
     </BarBrand>
-    <BarToggler />
+    <BarToggler/>
     <BarMenu>
         <BarStart>
             <BarItem>
@@ -24,6 +25,53 @@
             <BarItem>
                 <BarLink To="https://github.com/Megabit/Blazorise">GitHub</BarLink>
             </BarItem>
+            <BarLink To="auth">
+                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
+            </BarLink>
+
+            <AuthorizeView>
+                <Authorized>
+                    <BarLink class="nav-link" To="Account/Manage">
+                        <span class="bi bi-person-fill-nav-menu"
+                              aria-hidden="true"></span> @context.User.Identity?.Name
+                    </BarLink>
+                    <BarLink>
+                        <form action="Account/Logout" method="post">
+                            <AntiforgeryToken/>
+                            <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
+                            <button type="submit" class="nav-link">
+                                <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                            </button>
+                        </form>
+                    </BarLink>
+                </Authorized>
+                <NotAuthorized>
+                    <BarLink To="Account/Register">
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                    </BarLink>
+                    <BarLink To="Account/Login">
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                    </BarLink>
+                </NotAuthorized>
+            </AuthorizeView>
         </BarEnd>
     </BarMenu>
 </Bar>
+
+@code {
+
+    private string? _currentUrl;
+
+    protected override void OnInitialized()
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+}

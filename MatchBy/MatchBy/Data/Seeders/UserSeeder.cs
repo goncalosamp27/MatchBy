@@ -22,9 +22,9 @@ public class UserSeeder(ILogger<UserSeeder> logger) : ISeeder
             return;
         }
 
-        await CreateUserIfNotExists(userManager, "admin", "admin@admin.com", "Admin!123", Roles.Admin);
-        await CreateUserIfNotExists(userManager, "user1", "user1@user.com", "User1!123", Roles.Member);
-        await CreateUserIfNotExists(userManager, "user2", "user2@user.com", "User2!123", Roles.Member);
+        await CreateUserIfNotExists(userManager, "admin@admin.com", "admin@admin.com", "Admin!123", Roles.Admin);
+        await CreateUserIfNotExists(userManager, "user1@user.com", "user1@user.com", "User1!123", Roles.Member);
+        await CreateUserIfNotExists(userManager, "user2@user.com", "user2@user.com", "User2!123", Roles.Member);
     }
 
     private async Task CreateUserIfNotExists(
@@ -47,7 +47,7 @@ public class UserSeeder(ILogger<UserSeeder> logger) : ISeeder
             Email = email,
             EmailConfirmed = true,
             DisplayName = username,
-            PreferredSports = new List<Sports> { Sports.Football, Sports.Basketball },
+            PreferredSports = [Sports.Football, Sports.Basketball],
             BaseLocation = new Location(40.7128, -74.0060, "New York", "USA"),
             Rating = 5.0f,
             Status = AccountStatus.Available,
