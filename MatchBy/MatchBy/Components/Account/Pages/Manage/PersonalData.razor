@@ -4,31 +4,49 @@
 
 <PageTitle>Personal Data</PageTitle>
 
-<StatusMessage/>
-<h3>Personal Data</h3>
+<section class="space-y-6">
+    <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-6">Personal Data</h2>
 
-<div class="row">
-    <div class="col-md-6">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
+    <StatusMessage />
+
+    <div class="space-y-4">
+        <p class="text-gray-700 dark:text-gray-300">
+            Your account contains personal data that you have provided to us.  
+            This page allows you to download or delete that data.
         </p>
-        <form action="Account/Manage/DownloadPersonalData" method="post">
-            <AntiforgeryToken/>
-            <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        <p>
-            <a href="Account/Manage/DeletePersonalData" class="btn btn-danger">Delete</a>
+
+        <p class="text-red-700 dark:text-red-400 font-medium">
+            <strong>Deleting this data will permanently remove your account, and this action cannot be undone.</strong>
         </p>
+        <div class="flex flex-col md:flex-row md:space-x-4">
+            <form action="Account/Manage/DownloadPersonalData" method="post" class="pt-4">
+                <AntiforgeryToken />
+                <button type="submit"
+                        class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white
+                           bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-4
+                           focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                    Download
+                </button>
+            </form>
+
+            <div class="pt-4">
+                <a href="Account/Manage/DeletePersonalData"
+                   class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white
+                      bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300
+                      dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+                    Delete
+                </a>
+            </div>
+        </div>
     </div>
-</div>
+</section>
 
 @code {
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
         _ = await UserAccessor.GetRequiredUserAsync(HttpContext);
     }
-
 }

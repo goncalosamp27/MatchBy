@@ -1,8 +1,6 @@
 ﻿@page "/Account/Manage/ResetAuthenticator"
 
 @using Microsoft.AspNetCore.Identity
-@using MatchBy.Data
-@using MatchBy.Models
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -12,42 +10,57 @@
 
 <PageTitle>Reset authenticator key</PageTitle>
 
-<StatusMessage/>
-<h3>Reset authenticator key</h3>
-<div class="alert alert-warning" role="alert">
-    <p>
-        <span class="glyphicon glyphicon-warning-sign"></span>
-        <strong>If you reset your authenticator key your authenticator app will not work until you reconfigure it.</strong>
-    </p>
-    <p>
-        This process disables 2FA until you verify your authenticator app.
-        If you do not complete your authenticator app configuration you may lose access to your account.
-    </p>
-</div>
-<div>
-    <form @formname="reset-authenticator" @onsubmit="OnSubmitAsync" method="post">
-        <AntiforgeryToken/>
-        <button class="btn btn-danger" type="submit">Reset authenticator key</button>
+<section class="space-y-6">
+    <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-6">Reset authenticator key</h2>
+
+    <StatusMessage />
+
+    <div class="p-4 rounded-lg bg-yellow-50 dark:bg-gray-800 border border-yellow-200 dark:border-gray-700 text-yellow-800 dark:text-yellow-300">
+        <p class="font-medium mb-2 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.366-.446.988-.446 1.354 0l6.429 7.84A1 1 0 0115.429 12H4.571a1 1 0 01-.611-1.06l6.297-7.84zM9 13a1 1 0 102 0 1 1 0 00-2 0z" clip-rule="evenodd" />
+            </svg>
+            <strong>Resetting your authenticator key will make your current authenticator app stop working until reconfigured.</strong>
+        </p>
+        <p class="text-sm leading-relaxed">
+            This process will disable two-factor authentication (2FA) until you verify your new authenticator app setup.  
+            If you do not complete the configuration, you may lose access to your account.
+        </p>
+    </div>
+
+    <form @formname="reset-authenticator"
+          @onsubmit="OnSubmitAsync"
+          method="post"
+          class="pt-2">
+        <AntiforgeryToken />
+        <button type="submit"
+                class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white
+                       bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300
+                       dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+            Reset authenticator key
+        </button>
     </form>
-</div>
+</section>
 
 @code {
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
 
     private async Task OnSubmitAsync()
     {
         var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+
         await UserManager.SetTwoFactorEnabledAsync(user, false);
         await UserManager.ResetAuthenticatorKeyAsync(user);
+
         var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' has reset their authentication app key.", userId);
+        Logger.LogInformation("User with ID '{UserId}' has reset their authenticator app key.", userId);
 
         await SignInManager.RefreshSignInAsync(user);
 
         RedirectManager.RedirectToWithStatus(
             "Account/Manage/EnableAuthenticator",
-            "Your authenticator app key has been reset, you will need to configure your authenticator app using the new key.",
+            "Your authenticator app key has been reset. You must reconfigure your authenticator app using the new key.",
             HttpContext);
     }
-
 }

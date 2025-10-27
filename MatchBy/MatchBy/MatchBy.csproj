@@ -12,6 +12,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
+        <PackageReference Include="QRCoder" />
         <PackageReference Include="Resend" />
         <PackageReference Include="Sentry.AspNetCore" />
         <PackageReference Include="TimeZoneConverter" />

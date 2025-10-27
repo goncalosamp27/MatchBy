@@ -1,8 +1,37 @@
 ﻿@page "/Account/Lockout"
 
-<PageTitle>Locked out</PageTitle>
+<PageTitle>Account locked</PageTitle>
 
-<header>
-    <h1 class="text-danger">Locked out</h1>
-    <p class="text-danger" role="alert">This account has been locked out, please try again later.</p>
-</header>
+<section class="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-6">
+    <div class="flex flex-col items-center space-y-4">
+        <!-- Lock icon -->
+        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-yellow-600 dark:text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 11c.552 0 1 .448 1 1v4a1 1 0 01-2 0v-4c0-.552.448-1 1-1zm6-3V8a6 6 0 10-12 0v0m12 0v3H6V8m12 0a6 6 0 00-12 0" />
+            </svg>
+        </div>
+
+        <h1 class="text-3xl font-semibold text-yellow-700 dark:text-yellow-400">Account locked</h1>
+        <p class="text-gray-700 dark:text-gray-300 max-w-md" role="alert">
+            This account has been temporarily locked due to multiple unsuccessful login attempts.  
+            Please try again later or reset your password if you’ve forgotten it.
+        </p>
+    </div>
+
+    <div class="pt-4 flex space-x-4">
+        <a href="/Account/ForgotPassword"
+           class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white
+                  bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300
+                  dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+            Reset password
+        </a>
+
+        <a href="/"
+           class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-primary-700
+                  bg-transparent border border-primary-600 hover:bg-primary-50 focus:outline-none focus:ring-4 focus:ring-primary-200
+                  dark:text-primary-300 dark:border-primary-500 dark:hover:bg-primary-900 dark:focus:ring-primary-800">
+            Return to home
+        </a>
+    </div>
+</section>
