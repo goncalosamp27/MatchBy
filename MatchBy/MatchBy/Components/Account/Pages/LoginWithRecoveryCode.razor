@@ -2,41 +2,81 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
-@using MatchBy.Data
-@using MatchBy.Models
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWithRecoveryCode> Logger
+@inject NavigationManager NavigationManager
 
 <PageTitle>Recovery code verification</PageTitle>
 
-<h1>Recovery code verification</h1>
-<hr/>
-<StatusMessage Message="@message"/>
-<p>
-    You have requested to log in with a recovery code. This login will not be remembered until you provide
-    an authenticator app code at log in or disable 2FA and log in again.
-</p>
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator/>
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.RecoveryCode" id="Input.RecoveryCode" class="form-control" autocomplete="off" placeholder="RecoveryCode"/>
-                <label for="Input.RecoveryCode" class="form-label">Recovery Code</label>
-                <ValidationMessage For="() => Input.RecoveryCode" class="text-danger"/>
+<section class="bg-gray-50 dark:bg-gray-900">
+    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+        <a href="/" class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+            <img class="w-8 h-8 mr-2" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg" alt="logo">
+            MatchBy
+        </a>
+
+        <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0
+                    dark:bg-gray-800 dark:border-gray-700">
+            <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+                <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+                    Recovery code verification
+                </h1>
+
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    You are logging in with a recovery code. This login <strong>will not be remembered</strong>
+                    until you sign in again using an authenticator app code.
+                </p>
+
+                <StatusMessage Message="@_message" />
+
+                <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post"
+                          class="space-y-4 md:space-y-6">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-red-600 text-sm" role="alert" />
+
+                    <div>
+                        <label for="Input.RecoveryCode" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                            Recovery code
+                        </label>
+                        <InputText
+                            @bind-Value="Input.RecoveryCode"
+                            id="Input.RecoveryCode"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg
+                                   focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5
+                                   dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
+                                   dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                            autocomplete="one-time-code"
+                            aria-required="true"
+                            placeholder="XXXX-XXXX" />
+                        <ValidationMessage For="() => Input.RecoveryCode" class="text-red-600 text-sm" />
+                    </div>
+
+                    <button type="submit"
+                            class="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none
+                                   focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center
+                                   dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                        Log in
+                    </button>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Have access to your authenticator app?
+                        <a class="font-medium text-primary-600 hover:underline dark:text-primary-500"
+                           href="@(NavigationManager.GetUriWithQueryParameters("Account/LoginWith2fa", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">
+                            Return to 2FA login
+                        </a>
+                    </p>
+                </EditForm>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-        </EditForm>
+        </div>
     </div>
-</div>
+</section>
 
 @code {
-    private string? message;
-    private ApplicationUser user = default!;
+    private string? _message;
+    private ApplicationUser _user = default!;
 
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
 
@@ -45,17 +85,17 @@
     protected override async Task OnInitializedAsync()
     {
         // Ensure the user has gone through the username & password screen first
-        user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
-               throw new InvalidOperationException("Unable to load two-factor authentication user.");
+        _user = await SignInManager.GetTwoFactorAuthenticationUserAsync()
+               ?? throw new InvalidOperationException("Unable to load two-factor authentication user.");
     }
 
     private async Task OnValidSubmitAsync()
     {
-        var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty);
+        var raw = Input.RecoveryCode ?? string.Empty;
+        var recoveryCode = raw.Replace(" ", string.Empty).Replace("-", string.Empty);
 
         var result = await SignInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
-
-        var userId = await UserManager.GetUserIdAsync(user);
+        var userId = await UserManager.GetUserIdAsync(_user);
 
         if (result.Succeeded)
         {
@@ -69,8 +109,8 @@
         }
         else
         {
-            Logger.LogWarning("Invalid recovery code entered for user with ID '{UserId}' ", userId);
-            message = "Error: Invalid recovery code entered.";
+            Logger.LogWarning("Invalid recovery code entered for user with ID '{UserId}'.", userId);
+            _message = "Error: Invalid recovery code entered.";
         }
     }
 
@@ -81,5 +121,4 @@
         [Display(Name = "Recovery Code")]
         public string RecoveryCode { get; set; } = "";
     }
-
 }

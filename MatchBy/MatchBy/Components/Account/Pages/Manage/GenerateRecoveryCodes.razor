@@ -1,69 +1,81 @@
 ﻿@page "/Account/Manage/GenerateRecoveryCodes"
 
 @using Microsoft.AspNetCore.Identity
-@using MatchBy.Data
-@using MatchBy.Models
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityUserAccessor UserAccessor
-@inject IdentityRedirectManager RedirectManager
 @inject ILogger<GenerateRecoveryCodes> Logger
 
 <PageTitle>Generate two-factor authentication (2FA) recovery codes</PageTitle>
 
-@if (recoveryCodes is not null)
+@if (_recoveryCodes is not null)
 {
-    <ShowRecoveryCodes RecoveryCodes="recoveryCodes.ToArray()" StatusMessage="@message"/>
+    <ShowRecoveryCodes RecoveryCodes="_recoveryCodes.ToArray()" StatusMessage="@_message" />
 }
 else
 {
-    <h3>Generate two-factor authentication (2FA) recovery codes</h3>
-    <div class="alert alert-warning" role="alert">
-        <p>
-            <span class="glyphicon glyphicon-warning-sign"></span>
-            <strong>Put these codes in a safe place.</strong>
+<section class="space-y-6">
+    <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-6">Generate two-factor authentication (2FA) recovery codes</h2>
+
+    <div class="p-4 rounded-lg bg-yellow-50 dark:bg-gray-800 border border-yellow-200 dark:border-gray-700 text-yellow-800 dark:text-yellow-300">
+        <p class="font-medium mb-2 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.366-.446.988-.446 1.354 0l6.429 7.84A1 1 0 0115.429 12H4.571a1 1 0 01-.611-1.06l6.297-7.84zM9 13a1 1 0 102 0 1 1 0 00-2 0z" clip-rule="evenodd" />
+            </svg>
+            <strong>Store these recovery codes in a safe place.</strong>
         </p>
-        <p>
-            If you lose your device and don't have the recovery codes you will lose access to your account.
+        <p class="text-sm leading-relaxed">
+            If you lose your device and don’t have your recovery codes, you’ll lose access to your account.
         </p>
-        <p>
-            Generating new recovery codes does not change the keys used in authenticator apps. If you wish to change the key
-            used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator keys.</a>
+        <p class="text-sm leading-relaxed mt-2">
+            Generating new recovery codes does not change the keys used by authenticator apps.  
+            If you wish to reset your authenticator key, you should  
+            <a href="Account/Manage/ResetAuthenticator" class="text-blue-600 hover:underline dark:text-blue-400">
+                reset your authenticator keys
+            </a>.
         </p>
     </div>
-    <div>
-        <form @formname="generate-recovery-codes" @onsubmit="OnSubmitAsync" method="post">
-            <AntiforgeryToken/>
-            <button class="btn btn-danger" type="submit">Generate Recovery Codes</button>
-        </form>
-    </div>
+
+    <form @formname="generate-recovery-codes"
+          @onsubmit="OnSubmitAsync"
+          method="post"
+          class="pt-2">
+        <AntiforgeryToken />
+        <button type="submit"
+                class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white
+                       bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300
+                       dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+            Generate Recovery Codes
+        </button>
+    </form>
+</section>
 }
 
 @code {
-    private string? message;
-    private ApplicationUser user = default!;
-    private IEnumerable<string>? recoveryCodes;
+    private string? _message;
+    private ApplicationUser _user = default!;
+    private IEnumerable<string>? _recoveryCodes;
 
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
 
-        var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(user);
+        var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(_user);
         if (!isTwoFactorEnabled)
         {
-            throw new InvalidOperationException("Cannot generate recovery codes for user because they do not have 2FA enabled.");
+            throw new InvalidOperationException("Cannot generate recovery codes for this user because 2FA is not enabled.");
         }
     }
 
     private async Task OnSubmitAsync()
     {
-        var userId = await UserManager.GetUserIdAsync(user);
-        recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
-        message = "You have generated new recovery codes.";
+        var userId = await UserManager.GetUserIdAsync(_user);
+        _recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(_user, 10);
+        _message = "You have generated new recovery codes.";
 
         Logger.LogInformation("User with ID '{UserId}' has generated new 2FA recovery codes.", userId);
     }
-
 }
