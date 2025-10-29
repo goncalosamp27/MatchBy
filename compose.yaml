@@ -1,15 +1,15 @@
 ﻿services:
-  matchby:
-    image: matchby
-    build:
-      context: .
-      dockerfile: MatchBy/MatchBy/Dockerfile
+  #matchby:
+  #  image: matchby
+  #  build:
+  #    context: .
+  #    dockerfile: MatchBy/MatchBy/Dockerfile
 
-  matchby.client:
-    image: matchby.client
-    build:
-      context: .
-      dockerfile: MatchBy/MatchBy.Client/Dockerfile
+  #matchby.client:
+  #  image: matchby.client
+  #  build:
+  #    context: .
+  #    dockerfile: MatchBy/MatchBy.Client/Dockerfile
 
   matchby.postgres:
     image: postgres:17.2
@@ -19,6 +19,17 @@
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./.containers/database_data:/var/lib/postgressql/data
+      - ./.containers/database_data:/var/lib/postgresql/data
     ports:
       - 5432:5432
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin.matchby
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - matchby.postgres
