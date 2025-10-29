@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage"
+@page "/Account/Manage"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
@@ -32,19 +32,6 @@
                     class="bg-gray-100 border border-gray-300 text-gray-600 rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 cursor-not-allowed"/>
             </div>
 
-            <!-- Phone number -->
-            <div class="md:col-span-2">
-                <label for="Input.PhoneNumber" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                    Phone number
-                </label>
-                <InputText
-                    id="Input.PhoneNumber"
-                    @bind-Value="Input.PhoneNumber"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="+351 9xx xxx xxx"/>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-red-600 text-sm mt-1"/>
-            </div>
-
             <!-- User Bio -->
             <div class="md:col-span-2">
                 <label for="Input.Bio" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -72,7 +59,6 @@
 @code {
     private ApplicationUser _user = default!;
     private string? _username;
-    private string? _phoneNumber;
     private string? _bio;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
@@ -83,25 +69,13 @@
     {
         _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         _username = await UserManager.GetUserNameAsync(_user);
-        _phoneNumber = await UserManager.GetPhoneNumberAsync(_user);
         _bio = _user.Bio;
 
-        Input.PhoneNumber ??= _phoneNumber;
         Input.Bio ??= _bio;
     }
 
     private async Task OnValidSubmitAsync() {
         var changed = false;
-
-        if (Input.PhoneNumber != _phoneNumber) {
-            var setPhoneResult = await UserManager.SetPhoneNumberAsync(_user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
-            {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
-                return;
-            }
-            changed = true;
-        }
 
         if (Input.Bio != _bio) {
             _user.Bio = Input.Bio;
@@ -120,16 +94,10 @@
         }
     }
 
-    private sealed class InputModel
-    {
-        [Phone]
-        [Display(Name = "Phone number")]
-        public string? PhoneNumber { get; set; }
-
+    private sealed class InputModel {
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
     }
 
 }
-
