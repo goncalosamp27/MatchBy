@@ -2,8 +2,7 @@
 
 #nullable disable
 
-namespace MatchBy.Data.Migrations
-{
+namespace MatchBy.Data.Migrations;
     /// <inheritdoc />
     public partial class SyncSchema : Migration
     {
@@ -160,4 +159,3 @@ namespace MatchBy.Data.Migrations
                 oldNullable: true);
         }
     }
-}
