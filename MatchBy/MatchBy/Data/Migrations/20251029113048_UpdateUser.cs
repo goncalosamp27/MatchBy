@@ -2,8 +2,7 @@
 
 #nullable disable
 
-namespace MatchBy.Data.Migrations
-{
+namespace MatchBy.Data.Migrations;
     /// <inheritdoc />
     public partial class UpdateUser : Migration
     {
@@ -37,4 +36,3 @@ namespace MatchBy.Data.Migrations
                 oldNullable: true);
         }
     }
-}
