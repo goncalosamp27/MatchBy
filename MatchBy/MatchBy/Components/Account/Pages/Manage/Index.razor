@@ -125,10 +125,10 @@
         }
     }
 
-    private sealed class InputModel
-    {
+    private sealed class InputModel {
         [Phone]
         [Display(Name = "Phone number")]
+        [RegularExpression(@"^$|^\+?[0-9\s\-()]{6,}$", ErrorMessage = "The phone number is not valid.")]
         public string? PhoneNumber { get; set; }
 
         [Display(Name = "Bio")]
