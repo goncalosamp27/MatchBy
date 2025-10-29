@@ -2,11 +2,13 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using MatchBy.Enums
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
+@inject IJSRuntime JS
 
 <PageTitle>Profile</PageTitle>
 
@@ -46,6 +48,31 @@
             </div>
         </div>
 
+        <button id="dropdownBgHoverButton" data-dropdown-toggle="dropdownBgHover" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">Favorite Sports <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+        </svg>
+        </button>
+
+        <!-- Dropdown menu -->
+        <div id="dropdownBgHover" class="z-10 hidden w-48 bg-white rounded-lg shadow-sm dark:bg-gray-700">
+            <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownBgHoverButton">
+                @foreach (var sport in Enum.GetValues<Sports>()) {
+                    var id = $"sport-{(int)sport}";
+                    <li>
+                        <label for="@id"
+                            class="flex items-center p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                            <input id="@id"
+                                type="checkbox"
+                                checked="@Input.SelectedSports.Contains(sport)"
+                                @onchange="e => OnSportChanged(sport, e)"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500" />
+                            <span class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">@sport</span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        </div>
+
         <div class="pt-2">
             <button
                 type="submit"
@@ -62,16 +89,20 @@
     private string? _bio;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        await JS.InvokeVoidAsync("initFlowbite");
+    }
+
+    protected override async Task OnInitializedAsync() {
         _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         _username = await UserManager.GetUserNameAsync(_user);
+        
         _bio = _user.Bio;
-
         Input.Bio ??= _bio;
+
+        Input.SelectedSports = _user.PreferredSports?.ToHashSet() ?? new();
     }
 
     private async Task OnValidSubmitAsync() {
@@ -94,10 +125,19 @@
         }
     }
 
+    private void OnSportChanged(Sports sport, ChangeEventArgs e) {
+        var isChecked = e.Value?.ToString()?.ToLower() == "true";
+        if (isChecked)
+            Input.SelectedSports.Add(sport);
+        else
+            Input.SelectedSports.Remove(sport);
+    }
+
     private sealed class InputModel {
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
+        public HashSet<Sports> SelectedSports { get; set; } = new();
     }
 
 }

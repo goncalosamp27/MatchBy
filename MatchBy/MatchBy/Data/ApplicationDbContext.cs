@@ -2,6 +2,8 @@ using MatchBy.Enums;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+
 
 namespace MatchBy.Data;
 
@@ -23,7 +25,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
-        //Apply every configuration from assembly, so we dont have to apply one by one
+        builder.Entity<ApplicationUser>()
+            .Property(u => u.PreferredSports)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<Sports>>(v, (JsonSerializerOptions?)null) ?? new List<Sports>()
+            );
+
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }
