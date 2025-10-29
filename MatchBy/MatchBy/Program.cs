@@ -29,6 +29,7 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddScoped<ApplicationSeeder>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ISeeder, UserSeeder>();
 builder.Services.AddScoped<ISeeder, TeamSeeder>();
 builder.Services.AddScoped<ISeeder, MatchSeeder>();
@@ -120,6 +121,8 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
+    
+    //await app.RecreateDatabase();
     await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
@@ -132,9 +135,13 @@ else
 
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
-app.UseAntiforgery();
-
 app.MapStaticAssets();
+
+app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()

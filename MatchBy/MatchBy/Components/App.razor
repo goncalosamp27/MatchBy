@@ -5,6 +5,58 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <base href="/"/>
+    
+    <script>
+        (function () {
+            const KEY = 'color-theme';
+            const root = document.documentElement;
+
+            function desiredTheme() {
+                const saved = localStorage.getItem(KEY);
+                const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+                return saved ?? (prefersDark ? 'dark' : 'light');
+            }
+
+            function apply(theme) {
+                // keep .dark if needed
+                root.classList.toggle('dark', theme === 'dark');
+            }
+
+            // 1) apply immediately
+            apply(desiredTheme());
+
+            // 2) protect against clobbering of class attribute
+            const origSetAttribute = root.setAttribute.bind(root);
+            root.setAttribute = function (name, value) {
+                if (name === 'class') {
+                    const t = desiredTheme();
+                    if (t === 'dark' && value && !/\bdark\b/.test(value)) {
+                        value = (value + ' dark').trim();
+                    }
+                }
+                return origSetAttribute(name, value);
+            };
+
+            // 3) heal if someone still removes it later
+            let healing = false;
+            const mo = new MutationObserver((muts) => {
+                if (healing) return;
+                if (!root.classList.contains('dark') && desiredTheme() === 'dark') {
+                    healing = true;
+                    root.classList.add('dark');
+                    healing = false;
+                }
+            });
+            mo.observe(root, {attributes: true, attributeFilter: ['class']});
+
+            // optional: keep in sync with system when no saved preference
+            const saved = localStorage.getItem(KEY);
+            if (!saved && window.matchMedia) {
+                const mq = matchMedia('(prefers-color-scheme: dark)');
+                mq.addEventListener('change', () => apply(desiredTheme()));
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="@Assets["app.css"]"/>
     <link rel="stylesheet" href="@Assets["MatchBy.styles.css"]"/>
     <ImportMap/>
@@ -16,15 +68,16 @@
     <link href="_content/Blazorise.Icons.FontAwesome/v6/css/all.min.css" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="_content/Blazorise.Tailwind/blazorise.tailwind.config.js?v=1.8.5.0"></script>
+    <script src="tailwind.config.js"></script>
 
     <link href="_content/Blazorise/blazorise.css?v=1.8.5.0" rel="stylesheet"/>
     <link href="_content/Blazorise.Tailwind/blazorise.tailwind.css?v=1.8.5.0" rel="stylesheet"/>
 </head>
 
 <body>
-<Routes />
+<Routes/>
 <script src="https://unpkg.com/flowbite@1.5.4/dist/flowbite.js"></script>
+<script src="darkModeToggle.js"></script>
 <script src="_framework/blazor.web.js"></script>
 <script>
     window.timeZone = () => {

@@ -8,6 +8,26 @@ namespace MatchBy.Extensions;
 
 public static class DatabaseExtensions
 {
+    public static async Task RecreateDatabase(this WebApplication app)
+    {
+        // 1. "Vou ao armazém dos servicos da nossa app, criando temporariamente"
+        using IServiceScope scope = app.Services.CreateScope();
+        
+        // 2. "Quero o serviço da base de dados, por favor, dentro do scope e no provedor de servicos da nossa app"
+        await using ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        try
+        {
+            await dbContext.Database.EnsureDeletedAsync();
+            await dbContext.Database.EnsureCreatedAsync();
+        }
+        catch (System.Exception e)
+        {
+            app.Logger.LogError(e, "An error occurred while recreating the database.");
+            throw;
+        }
+    }
+    
     //metodo de extensao da WebApplication para adicionar a funcionalidade ApplyMigrationsAsync á app(pois usamos o 'this').
     public static async Task ApplyMigrationsAsync(this WebApplication app)
     {
