@@ -25,6 +25,9 @@ public class ApplicationUserConfiguration: IEntityTypeConfiguration<ApplicationU
 
         builder.Property(u => u.Rating)
             .IsRequired();
+
+        builder.Property(u => u.Bio)
+            .HasMaxLength(500);
         
         builder.Property(u => u.Status)
             .IsRequired();

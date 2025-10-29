@@ -9,7 +9,7 @@ public class ApplicationUser : IdentityUser
     public string DisplayName { get; set; }
     public ICollection<Sports> PreferredSports { get; set; } = [];
     public Location? BaseLocation { get; set; }
-    [MaxLength(1000)] public string? Bio { get; set; }
+    public string? Bio { get; set; }
     public float Rating { get; set; }
     public AccountStatus Status { get; set; }
     public FileStore? ProfileImage { get; set; }
