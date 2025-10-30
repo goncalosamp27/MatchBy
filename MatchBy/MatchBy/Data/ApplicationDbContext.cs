@@ -3,7 +3,7 @@ using MatchBy.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MatchBy.Data;
 
@@ -25,12 +25,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
+         var converter = new ValueConverter<ICollection<Sports>, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<ICollection<Sports>>(v, (JsonSerializerOptions?)null) ?? new List<Sports>()
+        );
+
         builder.Entity<ApplicationUser>()
             .Property(u => u.PreferredSports)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<Sports>>(v, (JsonSerializerOptions?)null) ?? new List<Sports>()
-            );
+            .HasConversion(converter);
 
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
