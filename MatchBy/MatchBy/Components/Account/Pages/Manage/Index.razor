@@ -63,8 +63,6 @@
                             class="flex items-center p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
                             <input id="@id"
                                 type="checkbox"
-                                checked="@Input.SelectedSports.Contains(sport)"
-                                @onchange="e => OnSportChanged(sport, e)"
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500" />
                             <span class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">@sport</span>
                         </label>
@@ -89,7 +87,7 @@
     private string? _bio;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] public InputModel Input { get; set; } = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         await JS.InvokeVoidAsync("initFlowbite");
@@ -102,7 +100,7 @@
         _bio = _user.Bio;
         Input.Bio ??= _bio;
 
-        Input.SelectedSports = _user.PreferredSports?.ToHashSet() ?? new();
+        
     }
 
     private async Task OnValidSubmitAsync() {
@@ -125,19 +123,9 @@
         }
     }
 
-    private void OnSportChanged(Sports sport, ChangeEventArgs e) {
-        var isChecked = e.Value?.ToString()?.ToLower() == "true";
-        if (isChecked)
-            Input.SelectedSports.Add(sport);
-        else
-            Input.SelectedSports.Remove(sport);
-    }
-
-    private sealed class InputModel {
+    public sealed class InputModel {
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
-        public HashSet<Sports> SelectedSports { get; set; } = new();
     }
-
 }
