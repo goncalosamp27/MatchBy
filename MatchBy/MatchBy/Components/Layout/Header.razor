@@ -51,7 +51,7 @@
         </div>
         <div class="flex items-center lg:order-2">
             <DarkModeToggle></DarkModeToggle>
-            <AuthorizeView >
+            <AuthorizeView>
                 <Authorized>
                     <!-- Notifications -->
                     <button
@@ -217,7 +217,8 @@
                                 <div class="pl-3 w-full">
                                     <div
                                         class="text-gray-500 font-normal text-sm mb-1.5 dark:text-gray-400">
-                                        <span class="font-semibold text-gray-900 dark:text-white">Leslie Livingston</span
+                                        <span
+                                            class="font-semibold text-gray-900 dark:text-white">Leslie Livingston</span
                                         >
                                         mentioned you in a comment:
                                         <span
@@ -267,7 +268,7 @@
                                 </div>
                             </a>
                         </div>
-                        <a
+                        <NavLink
                             href="#"
                             class="block py-2 text-md font-medium text-center text-gray-900 bg-gray-50 hover:bg-gray-100 dark:bg-gray-600 dark:text-white dark:hover:underline">
                             <div class="inline-flex items-center">
@@ -285,7 +286,7 @@
                                 </svg>
                                 View all
                             </div>
-                        </a>
+                        </NavLink>
                     </div>
                     <button
                         type="button"
@@ -304,14 +305,16 @@
                         class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                         id="dropdown">
                         <div class="py-3 px-4">
-                            <span class="block text-sm font-semibold text-gray-900 dark:text-white">@context.User.FindFirst(ClaimTypes.Name)?.Value</span>
-                            <span class="block text-sm text-gray-900 truncate dark:text-white">@context.User.FindFirst(ClaimTypes.Email)?.Value</span>
+                            <span
+                                class="block text-sm font-semibold text-gray-900 dark:text-white">@context.User.FindFirst(ClaimTypes.Name)?.Value</span>
+                            <span
+                                class="block text-sm text-gray-900 truncate dark:text-white">@context.User.FindFirst(ClaimTypes.Email)?.Value</span>
                         </div>
                         <ul
                             class="py-1 text-gray-700 dark:text-gray-300"
                             aria-labelledby="dropdown">
                             <li>
-                                <a
+                                <NavLink
                                     href="/profile"
                                     class="flex items-center py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
                                     <svg class="mr-2 w-5 h-5 text-gray-400" aria-hidden="true"
@@ -323,11 +326,12 @@
                                     </svg>
 
                                     My Profile
-                                </a>
+                                </NavLink>
                             </li>
                             <li>
-                                <a
+                                <NavLink
                                     href="/Account/Manage"
+                                    onclick="setTimeout(location.reload.bind(location), 1)"
                                     class="flex items-center py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
                                     <svg class="mr-2 w-5 h-5 text-gray-400" aria-hidden="true"
                                          xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
@@ -337,7 +341,7 @@
                                               clip-rule="evenodd"/>
                                     </svg>
                                     Account Settings
-                                </a>
+                                </NavLink>
                             </li>
 
                         </ul>
@@ -365,11 +369,15 @@
                     </div>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="/Account/Login"
-                       class="text-gray-800 dark:text-white hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 dark:hover:bg-gray-700 focus:outline-none dark:focus:ring-gray-800">Log
-                        in</a>
-                    <a href="/Account/Register"
-                       class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">Register</a>
+                    <NavLink href="/Account/Login"
+                             class="text-gray-800 dark:text-white hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 dark:hover:bg-gray-700 focus:outline-none dark:focus:ring-gray-800">
+                        Log
+                        in
+                    </NavLink>
+                    <NavLink href="/Account/Register"
+                             class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">
+                        Register
+                    </NavLink>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
@@ -429,5 +437,7 @@
         _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
         StateHasChanged();
     }
+
+    private void GoToAccountSettings() => NavigationManager.NavigateTo("/Account/Manage", forceLoad: true);
 
 }

@@ -47,7 +47,7 @@ builder.Services.Configure<ResendClientOptions>( o =>
 {
     o.ApiToken = builder.Configuration["Resend:ApiKey"] ?? throw new InvalidOperationException("Resend ApiKey not found in configuration.");
 } );
-builder.Services.AddScoped<IResend, ResendClient>();
+builder.Services.AddTransient<IResend, ResendClient>();
 
 /*builder.WebHost.UseSentry(options =>
 {
