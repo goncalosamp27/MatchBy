@@ -65,6 +65,7 @@
                             <input id="@id"
                                 type="checkbox"
                                 checked="@isChecked"
+                                @onchange="(e) => OnSportToggled(sport, e.Value)"
                                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500" />
                             <span class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">@sport</span>
                         </label>
@@ -120,7 +121,17 @@
             changed = true;
         }
 
+        if (!_user.PreferredSports.SequenceEqual(currentSports)) {
+            _user.PreferredSports = currentSports.ToList();
+            changed = true;
+        }
+
         if (changed) {
+            var update = await UserManager.UpdateAsync(_user);
+            if (!update.Succeeded) {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to update profile.", HttpContext);
+                return;
+            }
             await SignInManager.RefreshSignInAsync(_user);
             RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
         }
@@ -130,5 +141,17 @@
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
+    }
+
+    private void OnSportToggled(Sports sport, object? value) {
+        bool isChecked = value is bool b && b;
+
+        if (isChecked) {
+            if (!currentSports.Contains(sport))
+                currentSports.Add(sport);
+        }
+        else {
+            currentSports.Remove(sport);
+        }
     }
 }
