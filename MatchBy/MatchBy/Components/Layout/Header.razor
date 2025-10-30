@@ -437,7 +437,4 @@
         _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
         StateHasChanged();
     }
-
-    private void GoToAccountSettings() => NavigationManager.NavigateTo("/Account/Manage", forceLoad: true);
-
 }

@@ -1,9 +1,6 @@
-using MatchBy.Enums;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace MatchBy.Data;
 
@@ -24,16 +21,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-
-         var converter = new ValueConverter<ICollection<Sports>, string>(
-            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            v => JsonSerializer.Deserialize<ICollection<Sports>>(v, (JsonSerializerOptions?)null) ?? new List<Sports>()
-        );
-
-        builder.Entity<ApplicationUser>()
-            .Property(u => u.PreferredSports)
-            .HasConversion(converter);
-
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }

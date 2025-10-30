@@ -80,9 +80,9 @@ namespace MatchBy.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("PreferredSports")
+                    b.PrimitiveCollection<int[]>("PreferredSports")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("integer[]");
 
                     b.Property<float>("Rating")
                         .HasColumnType("real");
