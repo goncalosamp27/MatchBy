@@ -1,8 +1,6 @@
 @page "/Account/Manage"
-
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
-
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
@@ -12,7 +10,7 @@
 
 <section class="space-y-6">
     <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-6">Edit Profile</h2>
-    
+
     <StatusMessage/>
     <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post" class="space-y-6">
         <DataAnnotationsValidator/>
@@ -46,6 +44,39 @@
             </div>
         </div>
 
+        <button id="dropdownCheckboxButton" data-dropdown-toggle="dropdownDefaultCheckbox"
+                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                type="button">Preferred Sports
+            <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                 viewBox="0 0 10 6">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="m1 1 4 4 4-4"/>
+            </svg>
+        </button>
+
+        <!-- Dropdown menu -->
+        <div id="dropdownDefaultCheckbox"
+             class="z-10 hidden w-48 bg-white divide-y divide-gray-100 rounded-lg shadow-sm dark:bg-gray-700 dark:divide-gray-600">
+            <ul class="p-3 space-y-3 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownCheckboxButton">
+                @foreach (var sport in Enum.GetValues<Sports>()) {
+                    var isChecked = _currentSports.Contains(sport);
+                    <li>
+                        <label for="sport-@sport"
+                               class="flex items-center p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                            <input id="sport-@sport"
+                                   type="checkbox"
+                                   name="Input.PreferredSports"
+                                   value="@sport"
+                                   checked="@isChecked"
+                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500" />
+                            <span class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">@sport</span>
+                        </label>
+                        <input type="hidden" name="CheckboxViewModel.Status" value="false" />
+                    </li>
+                }
+            </ul>
+        </div>
+        
         <div class="pt-2">
             <button
                 type="submit"
@@ -60,6 +91,7 @@
     private ApplicationUser _user = default!;
     private string? _username;
     private string? _bio;
+    private ICollection<Sports> _currentSports = new List<Sports>();
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -69,15 +101,19 @@
     {
         _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         _username = await UserManager.GetUserNameAsync(_user);
-        _bio = _user.Bio;
 
+        _bio = _user.Bio;
         Input.Bio ??= _bio;
+
+        _currentSports = _user.PreferredSports;
     }
 
-    private async Task OnValidSubmitAsync() {
+    private async Task OnValidSubmitAsync()
+    {
         var changed = false;
 
-        if (Input.Bio != _bio) {
+        if (Input.Bio != _bio)
+        {
             _user.Bio = Input.Bio;
             var update = await UserManager.UpdateAsync(_user);
             if (!update.Succeeded)
@@ -85,19 +121,35 @@
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set bio.", HttpContext);
                 return;
             }
+
             changed = true;
         }
 
-        if (changed) {
+        if (!_user.PreferredSports.SequenceEqual(Input.PreferredSports))
+        {
+            _user.PreferredSports = Input.PreferredSports;
+            changed = true;
+        }
+        
+        if (changed)
+        {
+            var update = await UserManager.UpdateAsync(_user);
+            if (!update.Succeeded) {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to update profile.", HttpContext);
+                return;
+            }
             await SignInManager.RefreshSignInAsync(_user);
             RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
         }
     }
 
-    private sealed class InputModel {
+    private sealed class InputModel
+    {
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
+        
+        public List<Sports> PreferredSports { get; set; } = new();
     }
 
 }
