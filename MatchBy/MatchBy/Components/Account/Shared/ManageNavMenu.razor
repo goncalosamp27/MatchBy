@@ -6,8 +6,8 @@
         <NavLink href="/Account/Manage"
                  onclick="setTimeout(location.reload.bind(location), 1)"
                  Match="NavLinkMatch.All"
-                 class="inline-flex items-center px-4 py-3 rounded-lg w-full dark:hover:text-white hover:text-gray-900 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
-                 ActiveClass="text-white !bg-blue-700 dark:bg-blue-600 active">
+                 class="inline-flex items-center px-4 py-3 rounded-lg text-[var(--text)] hover:text-[var(--main)] w-full"
+                 ActiveClass="hover:text-[var(--text-contrast)] text-[var(--text-contrast)] !bg-[var(--main)] active">
             <svg class="w-4 h-4 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor"
                  viewBox="0 0 20 20">
                 <path
@@ -20,8 +20,8 @@
     <li>
         <NavLink href="/Account/Manage/Email"
                  Match="NavLinkMatch.Prefix"
-                 class="inline-flex items-center px-4 py-3 rounded-lg hover:text-gray-900 bg-gray-50 hover:bg-gray-100 w-full dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white"
-                 ActiveClass="text-white !bg-blue-700 dark:bg-blue-600 active">
+                 class="inline-flex items-center px-4 py-3 rounded-lg text-[var(--text)] hover:text-[var(--main)] w-full"
+                 ActiveClass="hover:text-[var(--text-contrast)] text-[var(--text-contrast)] !bg-[var(--main)] active">
             <svg class="me-2 w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true"
                  viewBox="0 0 640 640">
                 <path
@@ -34,8 +34,8 @@
     <li>
         <NavLink href="/Account/Manage/ChangePassword"
                  Match="NavLinkMatch.Prefix"
-                 class="inline-flex items-center px-4 py-3 rounded-lg hover:text-gray-900 bg-gray-50 hover:bg-gray-100 w-full dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white"
-                 ActiveClass="text-white !bg-blue-700 dark:bg-blue-600 active">
+                 class="inline-flex items-center px-4 py-3 rounded-lg text-[var(--text)] hover:text-[var(--main)] w-full"
+                 ActiveClass="hover:text-[var(--text-contrast)] text-[var(--text-contrast)] !bg-[var(--main)] active">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 me-2" aria-hidden="true"  fill="currentColor" viewBox="0 0 640 640"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M400 416C497.2 416 576 337.2 576 240C576 142.8 497.2 64 400 64C302.8 64 224 142.8 224 240C224 258.7 226.9 276.8 232.3 293.7L71 455C66.5 459.5 64 465.6 64 472L64 552C64 565.3 74.7 576 88 576L168 576C181.3 576 192 565.3 192 552L192 512L232 512C245.3 512 256 501.3 256 488L256 448L296 448C302.4 448 308.5 445.5 313 441L346.3 407.7C363.2 413.1 381.3 416 400 416zM440 160C462.1 160 480 177.9 480 200C480 222.1 462.1 240 440 240C417.9 240 400 222.1 400 200C400 177.9 417.9 160 440 160z"/></svg>
             Password
         </NavLink>
@@ -46,8 +46,8 @@
         <li>
             <NavLink href="/Account/Manage/ExternalLogins"
                      Match="NavLinkMatch.Prefix"
-                     class="inline-flex items-center px-4 py-3 rounded-lg hover:text-gray-900 bg-gray-50 hover:bg-gray-100 w-full dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white"
-                     ActiveClass="text-white !bg-blue-700 dark:bg-blue-600 active">
+                     class="inline-flex items-center px-4 py-3 rounded-lg text-[var(--text)] hover:text-[var(--main)] w-full"
+                    ActiveClass="hover:text-[var(--text-contrast)] text-[var(--text-contrast)] !bg-[var(--main)] active">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 me-2" aria-hidden="true" fill="currentColor" viewBox="0 0 640 640"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M384 64C366.3 64 352 78.3 352 96C352 113.7 366.3 128 384 128L466.7 128L265.3 329.4C252.8 341.9 252.8 362.2 265.3 374.7C277.8 387.2 298.1 387.2 310.6 374.7L512 173.3L512 256C512 273.7 526.3 288 544 288C561.7 288 576 273.7 576 256L576 96C576 78.3 561.7 64 544 64L384 64zM144 160C99.8 160 64 195.8 64 240L64 496C64 540.2 99.8 576 144 576L400 576C444.2 576 480 540.2 480 496L480 416C480 398.3 465.7 384 448 384C430.3 384 416 398.3 416 416L416 496C416 504.8 408.8 512 400 512L144 512C135.2 512 128 504.8 128 496L128 240C128 231.2 135.2 224 144 224L224 224C241.7 224 256 209.7 256 192C256 174.3 241.7 160 224 160L144 160z"/></svg>
                 External Logins
             </NavLink>
@@ -57,8 +57,8 @@
     <li>
         <NavLink href="/Account/Manage/TwoFactorAuthentication"
                  Match="NavLinkMatch.Prefix"
-                 class="inline-flex items-center px-4 py-3 rounded-lg hover:text-gray-900 bg-gray-50 hover:bg-gray-100 w-full dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white"
-                 ActiveClass="text-white !bg-blue-700 dark:bg-blue-600 active">
+                 class="inline-flex items-center px-4 py-3 rounded-lg text-[var(--text)] hover:text-[var(--main)] w-full"
+                 ActiveClass="hover:text-[var(--text-contrast)] text-[var(--text-contrast)] !bg-[var(--main)] active">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 me-2" aria-hidden="true" fill="currentColor" viewBox="0 0 640 640"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M320 64C324.6 64 329.2 65 333.4 66.9L521.8 146.8C543.8 156.1 560.2 177.8 560.1 204C559.6 303.2 518.8 484.7 346.5 567.2C329.8 575.2 310.4 575.2 293.7 567.2C121.3 484.7 80.6 303.2 80.1 204C80 177.8 96.4 156.1 118.4 146.8L306.7 66.9C310.9 65 315.4 64 320 64z"/></svg>
             Two-factor authentication
         </NavLink>
@@ -67,8 +67,8 @@
     <li>
         <NavLink href="/Account/Manage/PersonalData"
                  Match="NavLinkMatch.Prefix"
-                 class="inline-flex items-center px-4 py-3 rounded-lg hover:text-gray-900 bg-gray-50 hover:bg-gray-100 w-full dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white"
-                 ActiveClass="text-white !bg-blue-700 dark:bg-blue-600 active">
+                 class="inline-flex items-center px-4 py-3 rounded-lg text-[var(--text)] hover:text-[var(--main)] w-full"
+                 ActiveClass="hover:text-[var(--text-contrast)] text-[var(--text-contrast)] !bg-[var(--main)] active">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 me-2" aria-hidden="true" fill="currentColor" viewBox="0 0 640 640"><!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M544 269.8C529.2 279.6 512.2 287.5 494.5 293.8C447.5 310.6 385.8 320 320 320C254.2 320 192.4 310.5 145.5 293.8C127.9 287.5 110.8 279.6 96 269.8L96 352C96 396.2 196.3 432 320 432C443.7 432 544 396.2 544 352L544 269.8zM544 192L544 144C544 99.8 443.7 64 320 64C196.3 64 96 99.8 96 144L96 192C96 236.2 196.3 272 320 272C443.7 272 544 236.2 544 192zM494.5 453.8C447.6 470.5 385.9 480 320 480C254.1 480 192.4 470.5 145.5 453.8C127.9 447.5 110.8 439.6 96 429.8L96 496C96 540.2 196.3 576 320 576C443.7 576 544 540.2 544 496L544 429.8C529.2 439.6 512.2 447.5 494.5 453.8z"/></svg>
             Personal data
         </NavLink>

@@ -4,13 +4,13 @@
 @attribute [Authorize]
 
 <nav
-    class="bg-gray-50 border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700">
+    class="bg-[var(--section)] border-b border-[var(--main)] px-4 py-2.5">
     <div class="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl">
         <div class="flex justify-start items-center">
             <button
                 data-collapse-toggle="mobile-menu-2"
                 aria-controls="drawer-navigation"
-                class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:ring-2 focus:ring-gray-100 dark:focus:ring-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                class="p-2 mr-2 rounded-lg cursor-pointer md:hidden text-[var(--text)] hover:text-[var(--main)] focus:text-[var(--main)]"
             >
                 <svg
                     aria-hidden="true"
@@ -40,7 +40,7 @@
                 </svg>
                 <span class="sr-only">Toggle sidebar</span>
             </button>
-            <a href="https://flowbite.com" class="flex items-center justify-between mr-4">
+            <a href="" class="flex items-center justify-between mr-4">
                 <img
                     src="https://flowbite.s3.amazonaws.com/logo.svg"
                     class="mr-3 h-8"
@@ -57,7 +57,7 @@
                     <button
                         type="button"
                         data-dropdown-toggle="notification-dropdown"
-                        class="p-2 mr-1 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
+                        class="p-2 mr-1 text-[var(--text)] rounded-lg hover:text-[var(--main)]">
                         <span class="sr-only">View notifications</span>
                         <!-- Bell icon -->
                         <svg
@@ -72,7 +72,7 @@
                     </button>
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden overflow-hidden z-50 my-4 max-w-sm text-base list-none bg-white rounded divide-y divide-gray-100 shadow-lg dark:divide-gray-600 dark:bg-gray-700 rounded-xl"
+                        class="hidden overflow-hidden z-50 my-4 max-w-sm text-base list-none bg-white divide-y divide-gray-100 shadow-lg dark:divide-gray-600 dark:bg-gray-700 rounded-xl"
                         id="notification-dropdown">
                         <div
                             class="block py-2 px-4 text-base font-medium text-center text-gray-700 bg-gray-50 dark:bg-gray-600 dark:text-gray-300">
@@ -290,7 +290,7 @@
                     </div>
                     <button
                         type="button"
-                        class="flex mx-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                        class="flex mx-3 text-sm rounded-full md:mr-0 focus:ring-2 focus:ring-[var(--main)]"
                         id="user-menu-button"
                         aria-expanded="false"
                         data-dropdown-toggle="dropdown">
@@ -302,13 +302,13 @@
                     </button>
                     <!-- Dropdown menu -->
                     <div
-                        class="hidden z-50 my-4 w-56 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        class="hidden z-50 my-4 w-56 text-base list-none bg-[var(--section-secondary)] divide-y divide-[var(--main)] shadow rounded-xl"
                         id="dropdown">
                         <div class="py-3 px-4">
                             <span
-                                class="block text-sm font-semibold text-gray-900 dark:text-white">@context.User.FindFirst(ClaimTypes.Name)?.Value</span>
+                                class="block text-sm font-semibold text-[var(--text)] truncate">@context.User.FindFirst(ClaimTypes.Name)?.Value</span>
                             <span
-                                class="block text-sm text-gray-900 truncate dark:text-white">@context.User.FindFirst(ClaimTypes.Email)?.Value</span>
+                                class="block text-sm text-[var(--main)] truncate">@context.User.FindFirst(ClaimTypes.Email)?.Value</span>
                         </div>
                         <ul
                             class="py-1 text-gray-700 dark:text-gray-300"
@@ -316,8 +316,8 @@
                             <li>
                                 <NavLink
                                     href="/profile"
-                                    class="flex items-center py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                    <svg class="mr-2 w-5 h-5 text-gray-400" aria-hidden="true"
+                                    class="flex items-center py-2 px-4 text-sm hover:text-[var(--main)] text-[var(--text)]">
+                                    <svg class="mr-2 w-5 h-5 text-[var(--text)]" aria-hidden="true"
                                          xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                                          viewBox="0 0 24 24">
                                         <path fill-rule="evenodd"
@@ -332,8 +332,8 @@
                                 <NavLink
                                     href="/Account/Manage"
                                     onclick="setTimeout(location.reload.bind(location), 1)"
-                                    class="flex items-center py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                    <svg class="mr-2 w-5 h-5 text-gray-400" aria-hidden="true"
+                                    class="flex items-center py-2 px-4 text-sm hover:text-[var(--main)] text-[var(--text)]">
+                                    <svg class="mr-2 w-5 h-5 text-[var(--text)]" aria-hidden="true"
                                          xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                                          viewBox="0 0 24 24">
                                         <path fill-rule="evenodd"
@@ -353,8 +353,8 @@
                                     <AntiforgeryToken/>
                                     <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
                                     <button type="submit"
-                                            class="flex items-center py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                        <svg class="mr-2 w-5 h-5 text-gray-400" aria-hidden="true"
+                                            class="flex items-center py-2 px-4 text-sm text-[var(--text)] hover:text-[var(--main)]">
+                                        <svg class="mr-2 w-5 h-5 text-[var(--text)] " aria-hidden="true"
                                              xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                              viewBox="0 0 24 24">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
@@ -384,36 +384,35 @@
         <div class="hidden justify-between items-center w-full lg:flex lg:w-auto lg:order-1" id="mobile-menu-2">
             <ul class="flex flex-col mt-4 font-medium lg:flex-row lg:space-x-8 lg:mt-0">
                 <li>
-                    <NavLink href="/" Match="NavLinkMatch.All" ActiveClass="!text-primary-700 !dark:text-primary-700"
-                             class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 lg:hover:text-primary-700 lg:p-0 dark:text-gray-400 lg:dark:hover:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700"
+                    <NavLink href="/" Match="NavLinkMatch.All" ActiveClass="!text-[var(--main)]"
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0"
                              aria-current="page">Home
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink href="/matches" Match="NavLinkMatch.Prefix"
-                             ActiveClass="!text-primary-700 !dark:text-primary-700"
-                             class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 lg:hover:text-primary-700 lg:p-0 dark:text-gray-400 lg:dark:hover:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700">
+                    <NavLink href="/matches" Match="NavLinkMatch.Prefix" ActiveClass="!text-[var(--main)]"
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
                         Matches
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/teams" Match="NavLinkMatch.Prefix"
-                             ActiveClass="!text-primary-700 !dark:text-primary-700"
-                             class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 lg:hover:text-primary-700 lg:p-0 dark:text-gray-400 lg:dark:hover:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700">
+                            ActiveClass="!text-[var(--main)]"
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
                         Teams
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/community" Match="NavLinkMatch.Prefix"
-                             ActiveClass="!text-primary-700 !dark:text-primary-700"
-                             class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 lg:hover:text-primary-700 lg:p-0 dark:text-gray-400 lg:dark:hover:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700">
+                             ActiveClass="!text-[var(--main)]"
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
                         Community
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/contact" Match="NavLinkMatch.Prefix"
-                             ActiveClass="!text-primary-700 !dark:text-primary-700"
-                             class="block py-2 pr-4 pl-3 text-gray-700 border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 lg:hover:text-primary-700 lg:p-0 dark:text-gray-400 lg:dark:hover:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700">
+                             ActiveClass="!text-[var(--main)]"
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
                         Contact
                     </NavLink>
                 </li>
