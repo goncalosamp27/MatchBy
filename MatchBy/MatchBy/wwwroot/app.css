@@ -1,23 +1,30 @@
 @custom-variant dark (&:where(.dark, .dark *));
-/*
-:root{
-    --surface: #f9fafb;      
-    --elevated: #f3f4f6;     
-    --ink: #111827;          
-    --primary: #ece612;
+
+:root {
+    --main: #6547F6;
+    --main-hover: #311F8B;
+    --contrast: #D4FF00;
+    --dark-contrast: #6F8500;
+    --background: #f3f3f3;
+    --section: #D4D3D3;
+    --section-secondary: #ffffff;
+    --text: #1C1C1C;
+    --text-contrast: #f3f3f3;
+    --success: #00bd45;
+    --error: #cc0000;
+    --reset: #FF0000;
 }
 
-.dark{
-    --surface: #1f2937;       
-    --elevated:#374151;       
-    --ink:#f3f4f6;            
-    --primary:#ece612;
+.dark {
+    --main: #D4FF00;
+    --main-hover: #6F8500;
+    --contrast: #6547F6;
+    --dark-contrast: #311F8B;
+    --background: #1F1F1F;
+    --section: #1C1C1C;
+    --section-secondary: #373737;
+    --text: #E3E3E3;
+    --text-contrast: #1F1F1F;
+    --success: #1de667;
+    --error: #ff4d4d;
 }
-
-.bg-surface  { background-color: var(--surface); }
-.bg-elevated { background-color: var(--elevated); }
-.text-ink    { color: var(--ink); }
-.bg-primary  { background-color: var(--primary); }
-.text-primary{ color: var(--primary); }
-.bg-primary-90 { background-color: color-mix(in oklab, var(--primary) 90%, transparent); }
-*/

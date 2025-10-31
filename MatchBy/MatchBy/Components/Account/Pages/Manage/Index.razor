@@ -38,7 +38,7 @@
                 <InputText
                     id="Input.Bio"
                     @bind-Value="Input.Bio"
-                    class="block w-full p-2.5 rounded-lg
+                     class="block w-full p-2.5 rounded-lg
                         bg-[var(--section-secondary)]
                         text-[var(--text)]
                         focus:border-[var(--main)]
@@ -47,50 +47,48 @@
                     placeholder="Let's play together!"/>
                 <ValidationMessage For="() => Input.Bio" class="text-[var(--error)] text-sm mt-1"/>
             </div>
+        </div>
 
             <button id="dropdownCheckboxButton" data-dropdown-toggle="dropdownDefaultCheckbox"
                     class="text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center"
                     type="button">Favorite Sports
                 <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                     viewBox="0 0 10 6">
+                    viewBox="0 0 10 6">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="m1 1 4 4 4-4"/>
+                        d="m1 1 4 4 4-4"/>
                 </svg>
             </button>
+            
 
-
-            <!-- Dropdown menu -->
-            <div id="dropdownDefaultCheckbox"
-                 class="z-10 hidden w-48 bg-[var(--section-secondary)] divide-y divide-[var(--main)] rounded-lg shadow-sm">
-                <ul class="p-3 space-y-3 text-sm text-[var(--text)]" aria-labelledby="dropdownCheckboxButton">
-                    @foreach (var sport in Enum.GetValues<Sports>())
-                    {
-                        var isChecked = _currentSports.Contains(sport);
-                        <li>
-                            <label for="sport-@sport"
-                                   class="flex items-center p-2 rounded-sm hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer">
-                                <input id="sport-@sport"
-                                       type="checkbox"
-                                       name="Input.PreferredSports"
-                                       value="@sport"
-                                       checked="@isChecked"
-                                       class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-2"/>
-                                <span
-                                    class="ms-2 text-sm font-medium text-[var(--text)] hover:text-[var(--text-contrast)]">@sport</span>
-                            </label>
-                            <input type="hidden" name="CheckboxViewModel.Status" value="false"/>
-                        </li>
-                    }
-                </ul>
-            </div>
-
-            <div class="pt-2">
-                <button
-                    type="submit"
-                    class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)]">
-                    Save
-                </button>
-            </div>
+        <!-- Dropdown menu -->
+        <div id="dropdownDefaultCheckbox"
+             class="z-10 hidden w-48 bg-[var(--section-secondary)] divide-y divide-[var(--main)] rounded-lg shadow-sm">
+            <ul class="p-3 space-y-3 text-sm text-[var(--text)]" aria-labelledby="dropdownCheckboxButton">
+                @foreach (var sport in Enum.GetValues<Sports>()) {
+                    var isChecked = _currentSports.Contains(sport);
+                    <li>
+                        <label for="sport-@sport"
+                               class="flex items-center p-2 rounded-sm hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer">
+                            <input id="sport-@sport"
+                                   type="checkbox"
+                                   name="Input.PreferredSports"
+                                   value="@sport"
+                                   checked="@isChecked"
+                                   class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-2" />
+                            <span class="ms-2 text-sm font-medium text-[var(--text)] hover:text-[var(--text-contrast)]">@sport</span>
+                        </label>
+                        <input type="hidden" name="CheckboxViewModel.Status" value="false" />
+                    </li>
+                }
+            </ul>
+        </div>
+        
+        <div class="pt-2">
+            <button
+                type="submit"
+                class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)]">
+                Save
+            </button>
         </div>
     </EditForm>
 </section>
@@ -138,16 +136,14 @@
             _user.PreferredSports = Input.PreferredSports;
             changed = true;
         }
-
+        
         if (changed)
         {
             var update = await UserManager.UpdateAsync(_user);
-            if (!update.Succeeded)
-            {
+            if (!update.Succeeded) {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to update profile.", HttpContext);
                 return;
             }
-
             await SignInManager.RefreshSignInAsync(_user);
             RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
         }
@@ -158,7 +154,7 @@
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
-
+        
         public List<Sports> PreferredSports { get; set; } = new();
     }
 

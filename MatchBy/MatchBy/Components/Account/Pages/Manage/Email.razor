@@ -31,13 +31,13 @@
               method="post"
               class="space-y-6">
         <DataAnnotationsValidator />
-        <ValidationSummary class="text-red-600 text-sm" />
+        <ValidationSummary class="text-[var(--error)] text-sm" />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <!-- Current email (read-only) -->
             <div class="md:col-span-2">
-                <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                <label for="email" class="block mb-2 text-sm font-medium text-[var(--text)]">
                     Current email
                 </label>
 
@@ -47,12 +47,12 @@
                            value="@_email"
                            disabled
                            aria-readonly="true"
-                           class="bg-gray-100 border border-gray-300 text-gray-600 rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 cursor-not-allowed" />
+                           class="bg-[var(--section-secondary)] focus:border-[var(--main)] text-[var(--text)] rounded-lg block w-full p-2.5 cursor-not-allowed" />
 
                     @if (_isEmailConfirmed)
                     {
                         <span class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg
-                                     bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                     bg-[var(--success)] text-[var(--text-contrast)]">
                             Confirmed ✓
                         </span>
                     }
@@ -72,7 +72,7 @@
 
             <!-- New email -->
             <div class="md:col-span-2">
-                <label for="Input.NewEmail" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                <label for="Input.NewEmail" class="block mb-2 text-sm font-medium text-[var(--text)]">
                     New email
                 </label>
                 <InputText id="Input.NewEmail"
@@ -80,19 +80,20 @@
                            autocomplete="email"
                            aria-required="true"
                            placeholder="Enter your new email"
-                           class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600
-                                  focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600
-                                  dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500
-                                  dark:focus:border-blue-500" />
-                <ValidationMessage For="() => Input.NewEmail" class="text-red-600 text-sm mt-1" />
+                           class="block w-full p-2.5 rounded-lg
+                        bg-[var(--section-secondary)]
+                        text-[var(--text)]
+                        focus:border-[var(--main)]
+                        focus:ring-1 focus:ring-[var(--main)]
+                        focus:outline-none"/>
+                <ValidationMessage For="() => Input.NewEmail" class="text-[var(--error)] text-sm mt-1" />
             </div>
         </div>
 
         <div class="pt-2">
             <button type="submit"
                     class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium
-                           text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-4
-                           focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                           text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none">
                 Save changes
             </button>
         </div>
