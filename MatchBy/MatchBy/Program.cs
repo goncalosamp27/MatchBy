@@ -40,6 +40,9 @@ builder.Services.AddScoped<ISeeder, MatchChatMessageSeeder>();
 builder.Services.AddScoped<ISeeder, PrivateChatMessageSeeder>();
 builder.Services.AddScoped<ISeeder, PlayerRatingSeeder>();
 builder.Services.AddScoped<ISeeder, FriendSeeder>();
+builder.Services.AddScoped<IFileValidator, FileValidator>();
+
+builder.Services.AddAwsS3(builder.Configuration);
 
 builder.Services.AddOptions();
 builder.Services.AddHttpClient<ResendClient>();
@@ -122,7 +125,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     
-    await app.RecreateDatabase();
+    //await app.RecreateDatabase();
     await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
