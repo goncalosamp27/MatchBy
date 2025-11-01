@@ -59,7 +59,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         match.Sport = updatedMatch.Sport;
         match.Status = updatedMatch.Status;
         match.CreatorId = updatedMatch.CreatorId;
-        match.UpdatedAtUtc = updatedMatch.UpdatedAtUtc;
+        match.UpdatedAtUtc = DateTime.UtcNow;
 
         await applicationDbContext.SaveChangesAsync();
         return true;
