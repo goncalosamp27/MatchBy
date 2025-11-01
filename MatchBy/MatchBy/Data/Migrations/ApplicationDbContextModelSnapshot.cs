@@ -22,6 +22,21 @@ namespace MatchBy.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ConversationParticipants", b =>
+                {
+                    b.Property<string>("ConversationId")
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ParticipantsId")
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("ConversationId", "ParticipantsId");
+
+                    b.HasIndex("ParticipantsId");
+
+                    b.ToTable("ConversationParticipants");
+                });
+
             modelBuilder.Entity("MatchBy.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -122,6 +137,96 @@ namespace MatchBy.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("MatchBy.Models.ChatMessage", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ConversationId")
+                        .IsRequired()
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReplyToMessageId")
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("ReplyToMessageId");
+
+                    b.HasIndex("SenderId");
+
+                    b.ToTable("ChatMessages", (string)null);
+                });
+
+            modelBuilder.Entity("MatchBy.Models.Conversation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatorId")
+                        .IsRequired()
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastMessageAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MatchId")
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("TeamId")
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("MatchId")
+                        .IsUnique();
+
+                    b.HasIndex("TeamId")
+                        .IsUnique();
+
+                    b.ToTable("Conversations", (string)null);
+                });
+
             modelBuilder.Entity("MatchBy.Models.Friend", b =>
                 {
                     b.Property<string>("Id")
@@ -160,6 +265,9 @@ namespace MatchBy.Data.Migrations
                     b.Property<string>("Id")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ConversationId")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -203,46 +311,6 @@ namespace MatchBy.Data.Migrations
                     b.HasIndex("CreatorId");
 
                     b.ToTable("Matches", (string)null);
-                });
-
-            modelBuilder.Entity("MatchBy.Models.MatchChatMessage", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MatchId")
-                        .IsRequired()
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("SenderId")
-                        .IsRequired()
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MatchId");
-
-                    b.HasIndex("SenderId");
-
-                    b.ToTable("MatchChatMessages", (string)null);
                 });
 
             modelBuilder.Entity("MatchBy.Models.MatchInvite", b =>
@@ -335,51 +403,14 @@ namespace MatchBy.Data.Migrations
                     b.ToTable("PlayerRatings", (string)null);
                 });
 
-            modelBuilder.Entity("MatchBy.Models.PrivateChatMessage", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReceiverId")
-                        .IsRequired()
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("SenderId")
-                        .IsRequired()
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReceiverId");
-
-                    b.HasIndex("SenderId");
-
-                    b.ToTable("PrivateChatMessages", (string)null);
-                });
-
             modelBuilder.Entity("MatchBy.Models.Team", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ConversationId")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -410,46 +441,6 @@ namespace MatchBy.Data.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Teams", (string)null);
-                });
-
-            modelBuilder.Entity("MatchBy.Models.TeamChatMessage", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("SenderId")
-                        .IsRequired()
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TeamId")
-                        .IsRequired()
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SenderId");
-
-                    b.HasIndex("TeamId");
-
-                    b.ToTable("TeamChatMessages", (string)null);
                 });
 
             modelBuilder.Entity("MatchBy.Models.TeamInvite", b =>
@@ -496,21 +487,6 @@ namespace MatchBy.Data.Migrations
                     b.HasIndex("TeamId");
 
                     b.ToTable("TeamInvites", (string)null);
-                });
-
-            modelBuilder.Entity("MatchChatMessageReceiver", b =>
-                {
-                    b.Property<string>("MatchChatMessageId")
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("ReceiversId")
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("MatchChatMessageId", "ReceiversId");
-
-                    b.HasIndex("ReceiversId");
-
-                    b.ToTable("MatchChatMessageReceiver");
                 });
 
             modelBuilder.Entity("MatchParticipants", b =>
@@ -660,21 +636,6 @@ namespace MatchBy.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("TeamChatMessageReceivers", b =>
-                {
-                    b.Property<string>("ReceiversId")
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("TeamChatMessageId")
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("ReceiversId", "TeamChatMessageId");
-
-                    b.HasIndex("TeamChatMessageId");
-
-                    b.ToTable("TeamChatMessageReceivers");
-                });
-
             modelBuilder.Entity("TeamMembers", b =>
                 {
                     b.Property<string>("MembersId")
@@ -688,6 +649,21 @@ namespace MatchBy.Data.Migrations
                     b.HasIndex("TeamId");
 
                     b.ToTable("TeamMembers");
+                });
+
+            modelBuilder.Entity("ConversationParticipants", b =>
+                {
+                    b.HasOne("MatchBy.Models.Conversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MatchBy.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ParticipantsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MatchBy.Models.ApplicationUser", b =>
@@ -757,6 +733,92 @@ namespace MatchBy.Data.Migrations
                     b.Navigation("ProfileImage");
                 });
 
+            modelBuilder.Entity("MatchBy.Models.ChatMessage", b =>
+                {
+                    b.HasOne("MatchBy.Models.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MatchBy.Models.ChatMessage", "ReplyToMessage")
+                        .WithMany()
+                        .HasForeignKey("ReplyToMessageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MatchBy.Models.ApplicationUser", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("ReplyToMessage");
+
+                    b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("MatchBy.Models.Conversation", b =>
+                {
+                    b.HasOne("MatchBy.Models.ApplicationUser", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MatchBy.Models.Match", "Match")
+                        .WithOne("Conversation")
+                        .HasForeignKey("MatchBy.Models.Conversation", "MatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MatchBy.Models.Team", "Team")
+                        .WithOne("Conversation")
+                        .HasForeignKey("MatchBy.Models.Conversation", "TeamId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsOne("MatchBy.Models.FileStore", "Image", b1 =>
+                        {
+                            b1.Property<string>("ConversationId")
+                                .HasColumnType("character varying(500)");
+
+                            b1.Property<DateTime>("CreatedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<DateTime>("ExpireDateTimeUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<int>("FileCategory")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("FileType")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Key")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Url")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("ConversationId");
+
+                            b1.ToTable("Conversations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ConversationId");
+                        });
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Image");
+
+                    b.Navigation("Match");
+
+                    b.Navigation("Team");
+                });
+
             modelBuilder.Entity("MatchBy.Models.Friend", b =>
                 {
                     b.HasOne("MatchBy.Models.ApplicationUser", "Receiver")
@@ -817,25 +879,6 @@ namespace MatchBy.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("MatchBy.Models.MatchChatMessage", b =>
-                {
-                    b.HasOne("MatchBy.Models.Match", "Match")
-                        .WithMany()
-                        .HasForeignKey("MatchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MatchBy.Models.ApplicationUser", "Sender")
-                        .WithMany()
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Match");
-
-                    b.Navigation("Sender");
-                });
-
             modelBuilder.Entity("MatchBy.Models.MatchInvite", b =>
                 {
                     b.HasOne("MatchBy.Models.Match", "Match")
@@ -890,25 +933,6 @@ namespace MatchBy.Data.Migrations
                     b.Navigation("SentBy");
                 });
 
-            modelBuilder.Entity("MatchBy.Models.PrivateChatMessage", b =>
-                {
-                    b.HasOne("MatchBy.Models.ApplicationUser", "Receiver")
-                        .WithMany()
-                        .HasForeignKey("ReceiverId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MatchBy.Models.ApplicationUser", "Sender")
-                        .WithMany()
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Receiver");
-
-                    b.Navigation("Sender");
-                });
-
             modelBuilder.Entity("MatchBy.Models.Team", b =>
                 {
                     b.HasOne("MatchBy.Models.ApplicationUser", "Owner")
@@ -918,25 +942,6 @@ namespace MatchBy.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("MatchBy.Models.TeamChatMessage", b =>
-                {
-                    b.HasOne("MatchBy.Models.ApplicationUser", "Sender")
-                        .WithMany()
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MatchBy.Models.Team", "Team")
-                        .WithMany()
-                        .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Sender");
-
-                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("MatchBy.Models.TeamInvite", b =>
@@ -964,21 +969,6 @@ namespace MatchBy.Data.Migrations
                     b.Navigation("Sender");
 
                     b.Navigation("Team");
-                });
-
-            modelBuilder.Entity("MatchChatMessageReceiver", b =>
-                {
-                    b.HasOne("MatchBy.Models.MatchChatMessage", null)
-                        .WithMany()
-                        .HasForeignKey("MatchChatMessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MatchBy.Models.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("ReceiversId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("MatchParticipants", b =>
@@ -1047,21 +1037,6 @@ namespace MatchBy.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("TeamChatMessageReceivers", b =>
-                {
-                    b.HasOne("MatchBy.Models.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("ReceiversId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MatchBy.Models.TeamChatMessage", null)
-                        .WithMany()
-                        .HasForeignKey("TeamChatMessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("TeamMembers", b =>
                 {
                     b.HasOne("MatchBy.Models.ApplicationUser", null)
@@ -1075,6 +1050,21 @@ namespace MatchBy.Data.Migrations
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("MatchBy.Models.Conversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("MatchBy.Models.Match", b =>
+                {
+                    b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("MatchBy.Models.Team", b =>
+                {
+                    b.Navigation("Conversation");
                 });
 #pragma warning restore 612, 618
         }

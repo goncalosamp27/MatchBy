@@ -37,11 +37,10 @@ builder.Services.AddScoped<ISeeder, TeamSeeder>();
 builder.Services.AddScoped<ISeeder, MatchSeeder>();
 builder.Services.AddScoped<ISeeder, TeamInviteSeeder>();
 builder.Services.AddScoped<ISeeder, MatchInviteSeeder>();
-builder.Services.AddScoped<ISeeder, TeamChatMessageSeeder>();
-builder.Services.AddScoped<ISeeder, MatchChatMessageSeeder>();
-builder.Services.AddScoped<ISeeder, PrivateChatMessageSeeder>();
 builder.Services.AddScoped<ISeeder, PlayerRatingSeeder>();
 builder.Services.AddScoped<ISeeder, FriendSeeder>();
+builder.Services.AddScoped<ISeeder, ConversationSeeder>();
+builder.Services.AddScoped<ISeeder, ChatMessageSeeder>();
 builder.Services.AddScoped<IFileValidator, FileValidator>();
 
 builder.Services.AddAwsS3(builder.Configuration);

@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MatchBy.Data.Configurations;
 
-public class TeamChatMessageConfiguration: IEntityTypeConfiguration<TeamChatMessage>
+public class ChatMessageConfiguration: IEntityTypeConfiguration<ChatMessage>
 {
-    public void Configure(EntityTypeBuilder<TeamChatMessage> builder)
+    public void Configure(EntityTypeBuilder<ChatMessage> builder)
     {
-        builder.ToTable("TeamChatMessages");
+        builder.ToTable("ChatMessages");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id)
             .HasMaxLength(500)
@@ -18,27 +18,25 @@ public class TeamChatMessageConfiguration: IEntityTypeConfiguration<TeamChatMess
             .HasMaxLength(500)
             .IsRequired();
         
-        builder.Property(c => c.Status)
-            .IsRequired();
-        
         builder.Property(c => c.SenderId)
             .IsRequired();
         
+        //MatchChatMessage is associated with one Sender
         builder.HasOne(c => c.Sender)
             .WithMany()
             .HasForeignKey(c => c.SenderId)
             .OnDelete(DeleteBehavior.Restrict);
         
-        builder.HasMany(c => c.Receivers)
+        //MatchChatMessage can be associated with one ReplyToMessage
+        builder.HasOne(c => c.ReplyToMessage)
             .WithMany()
-            .UsingEntity("TeamChatMessageReceivers");
+            .HasForeignKey(c => c.ReplyToMessageId)
+            .OnDelete(DeleteBehavior.Restrict);
         
-        builder.Property(c => c.TeamId)
-            .IsRequired();
-        
-        builder.HasOne(c => c.Team)
+        //MatchChatMessage is associated with one Conversation
+        builder.HasOne(c => c.Conversation)
             .WithMany()
-            .HasForeignKey(c => c.TeamId)
+            .HasForeignKey(c => c.ConversationId)
             .OnDelete(DeleteBehavior.Restrict);
         
         builder.Property(c => c.CreatedAtUtc)
