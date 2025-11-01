@@ -724,7 +724,10 @@ namespace MatchBy.Data.Migrations
                             b1.Property<string>("ApplicationUserId")
                                 .HasColumnType("character varying(500)");
 
-                            b1.Property<DateTime?>("ExpireDateTime")
+                            b1.Property<DateTime>("CreatedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<DateTime>("ExpireDateTimeUtc")
                                 .HasColumnType("timestamp with time zone");
 
                             b1.Property<int>("FileCategory")
@@ -737,10 +740,8 @@ namespace MatchBy.Data.Migrations
                                 .IsRequired()
                                 .HasColumnType("text");
 
-                            b1.Property<int>("StorageType")
-                                .HasColumnType("integer");
-
                             b1.Property<string>("Url")
+                                .IsRequired()
                                 .HasColumnType("text");
 
                             b1.HasKey("ApplicationUserId");

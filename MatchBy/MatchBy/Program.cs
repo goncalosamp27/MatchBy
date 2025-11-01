@@ -24,6 +24,8 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
 
+builder.Services.AddControllers();
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
@@ -110,6 +112,8 @@ builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddCors(options => 
 {
     options.AddPolicy("NewPolicy", corsPolicyBuilder =>
@@ -139,6 +143,7 @@ else
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
+app.MapControllers();
 
 app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
 

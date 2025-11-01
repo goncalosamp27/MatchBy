@@ -1,10 +1,15 @@
 @page "/Account/Manage"
 @using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using Amazon.S3
+@using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
+@inject IFileValidator FileValidator
+@inject IS3Service S3Service
 
 <PageTitle>Profile</PageTitle>
 
@@ -12,7 +17,8 @@
     <h2 class="text-lg font-medium text-[var(--text)]">Edit Profile</h2>
 
     <StatusMessage/>
-    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post" class="space-y-6">
+    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post" class="space-y-6"
+              enctype="multipart/form-data">
         <DataAnnotationsValidator/>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -38,7 +44,7 @@
                 <InputText
                     id="Input.Bio"
                     @bind-Value="Input.Bio"
-                     class="block w-full p-2.5 rounded-lg
+                    class="block w-full p-2.5 rounded-lg
                         bg-[var(--section-secondary)]
                         text-[var(--text)]
                         focus:border-[var(--main)]
@@ -47,42 +53,76 @@
                     placeholder="Let's play together!"/>
                 <ValidationMessage For="() => Input.Bio" class="text-[var(--error)] text-sm mt-1"/>
             </div>
+
+            <div class="md:col-span-2 space-y-2">
+                <label class="block mb-2 text-sm font-medium text-[var(--text)]" for="ProfilePicture">Profile
+                    Image</label>
+
+                <div class="flex items-center gap-3">
+                    <InputFile
+                        class="block w-full text-sm text-[var(--text)] border rounded-lg cursor-pointer bg-[var(--section-secondary)] focus:outline-none focus:border-[var(--main)]"
+                        id="ProfilePicture" name="Input.ProfilePicture" type="file" accept="image/*"/>
+
+                    @if (_user?.ProfileImage is not null)
+                    {
+                        <button type="submit" form="removeImageForm"
+                                class="shrink-0 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium
+                           bg-[var(--main)] hover:bg-[var(--main-hover)] hover:text-[var(--text-contrast)]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2">
+                                <path d="M10 11v6"/>
+                                <path d="M14 11v6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                                <path d="M3 6h18"/>
+                                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                        </button>
+                    }
+                </div>
+
+                <ValidationMessage For="() => Input.ProfilePicture" class="text-red-600 text-sm mt-1"/>
+            </div>
+
+            <div class="md:col-span-2">
+                <button id="dropdownCheckboxButton" data-dropdown-toggle="dropdownDefaultCheckbox"
+                        class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center justify-center"
+                        type="button">
+                    Favorite Sports
+                    <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 10 6">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="m1 1 4 4 4-4"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Dropdown menu -->
+            <div id="dropdownDefaultCheckbox"
+                 class="z-10 hidden w-48 bg-[var(--section-secondary)] divide-y divide-[var(--main)] rounded-lg shadow-sm">
+                <ul class="p-3 space-y-3 text-sm text-[var(--text)]" aria-labelledby="dropdownCheckboxButton">
+                    @foreach (var sport in Enum.GetValues<Sports>())
+                    {
+                        var isChecked = _currentSports.Contains(sport);
+                        <li>
+                            <label for="sport-@sport"
+                                   class="flex items-center p-2 rounded-sm hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer">
+                                <input id="sport-@sport"
+                                       type="checkbox"
+                                       name="Input.PreferredSports"
+                                       value="@sport"
+                                       checked="@isChecked"
+                                       class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-2"/>
+                                <span
+                                    class="ms-2 text-sm font-medium text-[var(--text)] hover:text-[var(--text-contrast)]">@sport</span>
+                            </label>
+                            <input type="hidden" name="CheckboxViewModel.Status" value="false"/>
+                        </li>
+                    }
+                </ul>
+            </div>
         </div>
 
-            <button id="dropdownCheckboxButton" data-dropdown-toggle="dropdownDefaultCheckbox"
-                    class="text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center"
-                    type="button">Favorite Sports
-                <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 10 6">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="m1 1 4 4 4-4"/>
-                </svg>
-            </button>
-            
-
-        <!-- Dropdown menu -->
-        <div id="dropdownDefaultCheckbox"
-             class="z-10 hidden w-48 bg-[var(--section-secondary)] divide-y divide-[var(--main)] rounded-lg shadow-sm">
-            <ul class="p-3 space-y-3 text-sm text-[var(--text)]" aria-labelledby="dropdownCheckboxButton">
-                @foreach (var sport in Enum.GetValues<Sports>()) {
-                    var isChecked = _currentSports.Contains(sport);
-                    <li>
-                        <label for="sport-@sport"
-                               class="flex items-center p-2 rounded-sm hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer">
-                            <input id="sport-@sport"
-                                   type="checkbox"
-                                   name="Input.PreferredSports"
-                                   value="@sport"
-                                   checked="@isChecked"
-                                   class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-2" />
-                            <span class="ms-2 text-sm font-medium text-[var(--text)] hover:text-[var(--text-contrast)]">@sport</span>
-                        </label>
-                        <input type="hidden" name="CheckboxViewModel.Status" value="false" />
-                    </li>
-                }
-            </ul>
-        </div>
-        
         <div class="pt-2">
             <button
                 type="submit"
@@ -91,6 +131,10 @@
             </button>
         </div>
     </EditForm>
+
+    <form id="removeImageForm" method="post" action="/api/profile-image/remove" class="hidden">
+        <AntiforgeryToken/>
+    </form>
 </section>
 
 @code {
@@ -106,7 +150,7 @@
     protected override async Task OnInitializedAsync()
     {
         _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        _username = await UserManager.GetUserNameAsync(_user);
+        _username = _user.UserName;
 
         _bio = _user.Bio;
         Input.Bio ??= _bio;
@@ -131,19 +175,62 @@
             changed = true;
         }
 
+        if (Input.ProfilePicture is not null)
+        {
+            if (!FileValidator.IsValidFormImage(Input.ProfilePicture))
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to update profile.", HttpContext);
+                return;
+            }
+
+            var imageKey = await S3Service.UploadFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
+            if (imageKey is null)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to upload profile picture.", HttpContext);
+                return;
+            }
+
+            if (_user.ProfileImage is not null)
+            {
+                await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-picture/{_user.ProfileImage.Key}");
+            }
+
+            var imageUrl = await S3Service.GetPresignedUrlAsync($"users/{_user.Id}/profile-pictures/{imageKey}", HttpVerb.GET);
+            if (imageUrl is null)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to upload profile picture.", HttpContext);
+                await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-pictures/{imageKey}");
+                return;
+            }
+
+            _user.ProfileImage = new FileStore(
+                Url: imageUrl,
+                ExpireDateTimeUtc: DateTime.UtcNow.AddMinutes(30),
+                Key: imageKey,
+                FileCategory: FileCategory.ProfileImage,
+                FileType: FileType.Image,
+                CreatedAtUtc: DateTime.UtcNow
+            );
+            changed = true;
+        }
+
+
         if (!_user.PreferredSports.SequenceEqual(Input.PreferredSports))
         {
             _user.PreferredSports = Input.PreferredSports;
             changed = true;
         }
-        
+
         if (changed)
         {
             var update = await UserManager.UpdateAsync(_user);
-            if (!update.Succeeded) {
+            if (!update.Succeeded)
+            {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to update profile.", HttpContext);
                 return;
             }
+
+
             await SignInManager.RefreshSignInAsync(_user);
             RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
         }
@@ -154,8 +241,10 @@
         [Display(Name = "Bio")]
         [StringLength(500, ErrorMessage = "Your bio must be at most 500 characters long.")]
         public string? Bio { get; set; }
-        
+
         public List<Sports> PreferredSports { get; set; } = new();
+
+        public IFormFile? ProfilePicture { get; set; } = null;
     }
 
 }

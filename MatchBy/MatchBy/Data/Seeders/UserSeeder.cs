@@ -51,13 +51,6 @@ public class UserSeeder(ILogger<UserSeeder> logger) : ISeeder
             BaseLocation = new Location(40.7128, -74.0060, "New York", "USA"),
             Rating = 5.0f,
             Status = AccountStatus.Available,
-            ProfileImage = new FileStore(
-                Url: "https://example.com/default-profile.png",
-                Key: "default-profile",
-                ExpireDateTime: null,
-                StorageType: StorageType.Local,
-                FileCategory: FileCategory.ProfileImage,
-                FileType: FileType.Image),
             CreatedAtUtc = DateTime.UtcNow
         };
 

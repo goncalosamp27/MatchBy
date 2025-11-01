@@ -19,4 +19,4 @@ public class ApplicationUser : IdentityUser
 }
 
 public record Location(double Latitude, double Longitude, string City, string Country);
-public record FileStore(string? Url, string Key, DateTime? ExpireDateTime, StorageType StorageType, FileCategory FileCategory, FileType FileType);
+public record FileStore(string Url,DateTime ExpireDateTimeUtc, string Key, FileCategory FileCategory, FileType FileType, DateTime CreatedAtUtc);
