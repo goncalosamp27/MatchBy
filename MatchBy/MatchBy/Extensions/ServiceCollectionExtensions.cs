@@ -15,8 +15,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAmazonS3>(sp =>
         {
             S3Settings s3 = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+
             var creds = new BasicAWSCredentials(s3.AccessKey, s3.SecretKey);
-            var cfg = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3.Region) };
+
+            var cfg = new AmazonS3Config
+            {
+                ServiceURL = "https://nnuhjbuxyanjwvtgxsyt.storage.supabase.co/storage/v1/s3",
+                ForcePathStyle = true,
+                AuthenticationRegion = s3.Region
+            };
+
             return new AmazonS3Client(creds, cfg);
         });
         services.AddSingleton<IS3Service, S3Service>();
