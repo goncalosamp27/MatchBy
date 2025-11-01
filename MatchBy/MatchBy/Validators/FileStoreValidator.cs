@@ -14,24 +14,10 @@ public class FileStoreValidator : AbstractValidator<FileStore>
         RuleFor(i => i.Key)
             .NotEmpty().WithMessage("Key is required.")
             .MaximumLength(2048).WithMessage("Key cannot exceed 2048 characters.");
-
-        RuleFor(i => i.StorageType)
-            .NotEmpty().WithMessage("StorageType is required.");
-
-        When(i => i.StorageType == StorageType.S3, () =>
-        {
-            RuleFor(i => i.ExpireDateTime)
-                .NotNull().WithMessage("ExpireDateTime is required when using S3 storage.")
-                .GreaterThan(DateTime.UtcNow)
-                .WithMessage("ExpireDateTime must be in the future.");
-        });
-
-        When(i => i.StorageType == StorageType.Local, () =>
-        {
-            RuleFor(i => i.ExpireDateTime)
-                .Must(date => date == null || date > DateTime.UtcNow)
-                .WithMessage("ExpireDateTime must be in the future if provided.");
-        });
+        
+        RuleFor(i => i.ExpireDateTimeUtc)
+            .Must(date => date > DateTime.UtcNow)
+            .WithMessage("ExpireDateTimeUtc must be in the future if provided.");
 
         RuleFor(i => i.FileType)
             .IsInEnum().WithMessage("Invalid file type.")
