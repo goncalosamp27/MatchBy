@@ -215,9 +215,14 @@
         }
 
 
-        if (!_user.PreferredSports.SequenceEqual(Input.PreferredSports))
+        if (Input.PreferredSports != null && !_user.PreferredSports.SequenceEqual(Input.PreferredSports))
         {
             _user.PreferredSports = Input.PreferredSports;
+            changed = true;
+        }
+        else if(_currentSports.Count > 0 && (Input.PreferredSports == null || Input.PreferredSports.Count == 0))
+        {
+            _user.PreferredSports = new List<Sports>();
             changed = true;
         }
 
