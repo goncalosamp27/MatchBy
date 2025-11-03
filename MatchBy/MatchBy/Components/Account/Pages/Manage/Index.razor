@@ -112,7 +112,7 @@
                                        name="Input.PreferredSports"
                                        value="@sport"
                                        checked="@isChecked"
-                                       class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-2"/>
+                                       class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
                                 <span
                                     class="ms-2 text-sm font-medium text-[var(--text)] hover:text-[var(--text-contrast)]">@sport</span>
                             </label>
@@ -215,11 +215,11 @@
         }
 
 
-        if (!_user.PreferredSports.SequenceEqual(Input.PreferredSports))
-        {
-            _user.PreferredSports = Input.PreferredSports;
+        if (!(_user.PreferredSports ?? new List<Sports>()).SequenceEqual(Input.PreferredSports ?? new List<Sports>())) {
+            _user.PreferredSports = Input.PreferredSports ?? new List<Sports>();
             changed = true;
         }
+
 
         if (changed)
         {
