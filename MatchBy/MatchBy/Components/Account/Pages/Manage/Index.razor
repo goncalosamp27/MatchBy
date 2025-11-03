@@ -22,6 +22,17 @@
         <DataAnnotationsValidator/>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Avatar centrado e maior -->
+            <div class="md:col-span-2 flex flex-col items-center">
+                <div class="relative w-40 h-40 md:w-64 md:h-64 rounded-full overflow-hidden border-2 border-[var(--main)] shadow-md">
+                    <img src="@(_user?.ProfileImage?.Url ?? "/images/user-avatar.png")"
+                        alt="Profile picture"
+                        class="absolute inset-0 w-full h-full object-cover" />
+                </div>
+            </div>
+
+
             <!-- Username (read-only) -->
             <div class="md:col-span-2">
                 <label for="username" class="block mb-2 text-sm font-medium text-[var(--text)]">
@@ -60,8 +71,11 @@
 
                 <div class="flex items-center gap-3">
                     <InputFile
-                        class="block w-full text-sm text-[var(--text)] border rounded-lg cursor-pointer bg-[var(--section-secondary)] focus:outline-none focus:border-[var(--main)]"
-                        id="ProfilePicture" name="Input.ProfilePicture" type="file" accept="image/*"/>
+                        class="block w-full text-sm text-[var(--text)] border-0 focus:border-2 rounded-lg cursor-pointer bg-[var(--section-secondary)] focus:outline-none focus:border-[var(--main)]"
+                        id="ProfilePicture" 
+                        name="Input.ProfilePicture" 
+                        type="file" 
+                        ccept="image/*"/>
 
                     @if (_user?.ProfileImage is not null)
                     {
@@ -246,5 +260,4 @@
 
         public IFormFile? ProfilePicture { get; set; } = null;
     }
-
 }
