@@ -37,7 +37,7 @@ public class ConversationService(ApplicationDbContext applicationDbContext) : IC
         return conversation;
     }
 
-    public async Task<bool> CreateConversationAsync(Conversation conversation, string creatorUserId,
+    public async Task<bool> CreateConversationAsync(Conversation conversation, string creatorUserId, List<string> participantIds,
         CancellationToken ct = default)
     {
         conversation.Id = $"conversation_{Guid.CreateVersion7()}";
@@ -45,13 +45,19 @@ public class ConversationService(ApplicationDbContext applicationDbContext) : IC
         conversation.CreatedAtUtc = DateTime.UtcNow;
         conversation.UpdatedAtUtc = null;
         conversation.DeletedAtUtc = null;
+        
+        List<ApplicationUser> participants = await applicationDbContext.Users
+            .Where(u => participantIds.Contains(u.Id))
+            .ToListAsync(ct);
+        
+        conversation.Participants = participants;
 
         await applicationDbContext.Conversations.AddAsync(conversation, ct);
         await applicationDbContext.SaveChangesAsync(ct);
         return true;
     }
 
-    public async Task<bool> UpdateConversationAsync(string conversationId, Conversation updated, string userId,
+    public async Task<bool> UpdateConversationAsync(string conversationId, Conversation updated, string userId, List<string> participantIds,
         CancellationToken ct = default)
     {
         // só permite editar se for o criador
@@ -71,6 +77,12 @@ public class ConversationService(ApplicationDbContext applicationDbContext) : IC
         convo.TeamId = updated.TeamId;
         convo.MatchId = updated.MatchId;
         convo.UpdatedAtUtc = DateTime.UtcNow;
+        
+        List<ApplicationUser> participants = await applicationDbContext.Users
+            .Where(u => participantIds.Contains(u.Id))
+            .ToListAsync(ct);
+        
+        convo.Participants = participants;
 
         await applicationDbContext.SaveChangesAsync(ct);
         return true;

@@ -41,7 +41,7 @@
                     class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
                     <span class="relative">
                         <img class="size-10 rounded-full"
-                             src="@(privateConversation.Image is null ? "https://i.pravatar.cc/40?img=32" : privateConversation.Image)"
+                             src="@(privateConversation.Image is null ? "/images/user-avatar.png" : privateConversation.Image.Url)"
                              alt="">
                         <span
                             class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900"></span>
@@ -49,7 +49,10 @@
                     <span class="min-w-0 flex-1 text-left">
                         <span class="flex items-center justify-between">
                             <span class="text-[15px] font-medium truncate">@privateConversation.Title</span>
-                            <span class="text-[11px] text-gray-500">@privateConversation.LastMessageAtUtc</span>
+                            @if (privateConversation.LastMessageAtUtc.HasValue)
+                            {
+                                <span class="text-[11px] text-gray-500">@privateConversation.LastMessageAtUtc.Value.ToString("HH:mm")</span>   
+                            }
                         </span>
                         <span
                             class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">@(privateConversation.Messages.FirstOrDefault() is not null ? privateConversation.Messages.FirstOrDefault()?.Content : "")</span>
@@ -70,7 +73,7 @@
                     class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
                     <span class="relative">
                         <img class="size-10 rounded-full"
-                             src="@(privateConversation.Image is null ? "https://i.pravatar.cc/40?img=32" : privateConversation.Image)"
+                             src="@(privateConversation.Image is null ? "/images/user-avatar.png" : privateConversation.Image.Url)"
                              alt="">
                         <span
                             class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900"></span>
@@ -78,7 +81,10 @@
                     <span class="min-w-0 flex-1 text-left">
                         <span class="flex items-center justify-between">
                             <span class="text-[15px] font-medium truncate">@privateConversation.Title</span>
-                            <span class="text-[11px] text-gray-500">@privateConversation.LastMessageAtUtc</span>
+                            @if (privateConversation.LastMessageAtUtc.HasValue)
+                            {
+                                <span class="text-[11px] text-gray-500">@privateConversation.LastMessageAtUtc.Value.ToString("HH:mm")</span>   
+                            }
                         </span>
                         <span
                             class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">@(privateConversation.Messages.FirstOrDefault() is not null ? privateConversation.Messages.FirstOrDefault()?.Content : "")</span>
@@ -100,7 +106,7 @@
                     class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
                     <span class="relative">
                         <img class="size-10 rounded-full"
-                             src="@(privateConversation.Image is null ? "https://i.pravatar.cc/40?img=32" : privateConversation.Image)"
+                             src="@(privateConversation.Image is null ? "/images/user-avatar.png" : privateConversation.Image.Url)"
                              alt="">
                         <span
                             class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900"></span>
@@ -108,7 +114,10 @@
                     <span class="min-w-0 flex-1 text-left">
                         <span class="flex items-center justify-between">
                             <span class="text-[15px] font-medium truncate">@privateConversation.Title</span>
-                            <span class="text-[11px] text-gray-500">@privateConversation.LastMessageAtUtc</span>
+                            @if (privateConversation.LastMessageAtUtc.HasValue)
+                            {
+                                <span class="text-[11px] text-gray-500">@privateConversation.LastMessageAtUtc.Value.ToString("HH:mm")</span>   
+                            }
                         </span>
                         <span
                             class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">@(privateConversation.Messages.FirstOrDefault() is not null ? privateConversation.Messages.FirstOrDefault()?.Content : "")</span>
