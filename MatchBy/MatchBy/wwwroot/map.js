@@ -31,11 +31,24 @@ window.initMapOn = async (el) => {
     }
     
     if (el.id === 'matchMap') {
-        map.on('click', (e) => {
+        map.on('click', async (e) => {
             const { lat, lng } = e.latlng;
             setPosition(lat, lng, `Your match will be here!`);
+
+            let city = "";
+            let country = "";
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+                const data = await res.json();
+                city = data.address.city || data.address.town || data.address.village || "";
+                country = data.address.country || "";
+            } catch (err) {
+                console.warn("Reverse geocoding failed:", err);
+            }
+
             if (window._matchComponent) {
-                window._matchComponent.invokeMethodAsync("UpdateLocationFromMap", lat, lng);
+                window._matchComponent.invokeMethodAsync("UpdateLocationFromMap", lat, lng, city, country);
             }
         });
     }

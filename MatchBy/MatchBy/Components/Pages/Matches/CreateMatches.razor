@@ -340,12 +340,18 @@ else
     }
 
     [JSInvokable]
-    public void UpdateLocationFromMap(double lat, double lng)
+    public void UpdateLocationFromMap(double lat, double lng, string city, string country)
     {
         if (Match is null) return;
 
-        Match.Location = Match.Location with { Latitude = lat, Longitude = lng };
+        Match.Location = Match.Location with 
+        { 
+            Latitude = lat, 
+            Longitude = lng,
+            City = city,
+            Country = country
+        };
+
         InvokeAsync(StateHasChanged);
     }
-
 }

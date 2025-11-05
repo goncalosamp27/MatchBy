@@ -5,6 +5,7 @@ public sealed class Match
 {
     public string Id { get; set; }
     public Location Location { get; set; }
+    // public string Address { get; set; }
     public DateTime MatchDateTimeUtc { get; set; }
     public string Description { get; set; }
     public int minPlayers { get; set; }
