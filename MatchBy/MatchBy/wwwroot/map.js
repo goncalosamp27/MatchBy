@@ -26,8 +26,18 @@ window.initMapOn = async (el) => {
         }
         if (!centeredOnce) {
             centeredOnce = true;
-            map.setView(latlng, 10);
+            map.setView(latlng, 80);
         }
+    }
+    
+    if (el.id === 'matchMap') {
+        map.on('click', (e) => {
+            const { lat, lng } = e.latlng;
+            setPosition(lat, lng, `Your match will be here!`);
+            if (window._matchComponent) {
+                window._matchComponent.invokeMethodAsync("UpdateLocationFromMap", lat, lng);
+            }
+        });
     }
 
     if ('geolocation' in navigator) {
@@ -51,7 +61,7 @@ window.initMapOn = async (el) => {
             const locRes = await fetch('https://ipapi.co/json/');
             const locData = await locRes.json();
             const country = locData.country_name;
-
+            
             if (country) {
                 const capRes = await fetch(`https://restcountries.com/v3.1/name/${country}`);
                 const capData = await capRes.json();
@@ -74,13 +84,17 @@ window.initMapOn = async (el) => {
     setTimeout(() => map.invalidateSize(), 0);
 };
 
+window.registerMatchComponent = (dotnetObj) => {
+    window._matchComponent = dotnetObj;
+};
+
 (function () {
     const ensureInit = (node) => {
         if (!node || node.nodeType !== 1) return;
 
         const candidates = [];
-        if (node.id === 'map') candidates.push(node);
-        const q = node.querySelector?.('#map');
+        if (node.id === 'matchMap') candidates.push(node);
+        const q = node.querySelector?.('#matchMap');
         if (q) candidates.push(q);
 
         for (const el of candidates) {
@@ -91,7 +105,7 @@ window.initMapOn = async (el) => {
             }
         }
     };
-    ensureInit(document.getElementById('map'));
+    ensureInit(document.getElementById('matchMap'));
     const obs = new MutationObserver((muts) => {
         for (const m of muts) {
             for (const n of m.addedNodes) ensureInit(n);

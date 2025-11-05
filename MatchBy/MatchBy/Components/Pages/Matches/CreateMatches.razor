@@ -13,14 +13,17 @@
 }
 else
 {   
-    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-4">
+    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-8">
         <Heading Size="HeadingSize.Is2" Margin="Margin.Is3.FromBottom">
             @(Id is null ? "Create Match" : "Edit Match")
         </Heading>
         @*@(Id is null ? ValidationMode.Manual : ValidationMode.Auto)*@
+
         <Validations @ref="@_fluentValidations" Mode="ValidationMode.Manual" Model="@Match"
                      HandlerType="typeof(FluentValidationHandler)">
             <Fields>
+                <FieldLabel> Choose a location </FieldLabel>
+                    <div id="matchMap" class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-2 border-[var(--main)] shadow-sm"></div>
                 <Validation>
                     <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
                         <FieldLabel>
@@ -332,7 +335,17 @@ else
         //utcNow = DateTime.UtcNow;                  // this is UTC
         //localNow = Tz.ToLocal(utcNow, tz);         // -> local in user's TZ
 
+        await Js.InvokeVoidAsync("registerMatchComponent", DotNetObjectReference.Create(this));
         StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void UpdateLocationFromMap(double lat, double lng)
+    {
+        if (Match is null) return;
+
+        Match.Location = Match.Location with { Latitude = lat, Longitude = lng };
+        InvokeAsync(StateHasChanged);
     }
 
 }
