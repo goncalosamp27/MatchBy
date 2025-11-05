@@ -2,31 +2,33 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using MatchBy.Settings;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Options;
 
 namespace MatchBy.Services;
 
-public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILogger<S3Service> logger) : IS3Service
+public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILogger<S3Service> logger, IOptions<UploadSettings> uploadOptions) : IS3Service
 {
-    public async Task<string?> UploadFileAsync(
-        IFormFile file,
+    private async Task<string?> UploadFileAsync(
+        Stream stream,
+        string fileName, 
+        string contentType,
         string folder)
     {
         try
         {
-            string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            string ext = Path.GetExtension(fileName).ToLowerInvariant();
             string key = $"{Guid.CreateVersion7()}{ext}";
-            await using Stream stream = file.OpenReadStream();
 
             var request = new PutObjectRequest
             {
                 BucketName = s3Settings.Value.BucketName,
                 Key = $"{folder}/{key}",
                 InputStream = stream,
-                ContentType = file.ContentType,
+                ContentType = contentType,
                 Metadata =
                 {
-                    ["file-name"] = file.FileName
+                    ["file-name"] = fileName
                 }
             };
 
@@ -35,24 +37,40 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
             if (response.HttpStatusCode == HttpStatusCode.OK)
             {
                 logger.LogInformation("File '{File}' uploaded successfully to bucket '{Bucket}' as '{Key}'.",
-                    file.FileName, s3Settings.Value.BucketName, key);
+                    fileName, s3Settings.Value.BucketName, key);
                 return key;
             }
 
             logger.LogWarning("File upload failed for '{File}' (bucket '{Bucket}'). Status code: {Status}",
-                file.FileName, s3Settings.Value.BucketName, response.HttpStatusCode);
+                fileName, s3Settings.Value.BucketName, response.HttpStatusCode);
             return null;
         }
         catch (AmazonS3Exception ex)
         {
-            logger.LogError(ex, "AWS S3 error while uploading '{File}'.", file.FileName);
+            logger.LogError(ex, "AWS S3 error while uploading '{File}'.", fileName);
             return null;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unexpected error while uploading '{File}'.", file.FileName);
+            logger.LogError(ex, "Unexpected error while uploading '{File}'.", fileName);
             return null;
         }
+    }
+    
+    public async Task<string?> UploadFormFileAsync(
+        IFormFile file,
+        string folder)
+    {
+        await using Stream stream = file.OpenReadStream();
+        return await UploadFileAsync(stream, file.FileName, file.ContentType, folder);
+    }
+    
+    public async Task<string?> UploadBrowserFileAsync(
+        IBrowserFile file,
+        string folder)
+    {
+        await using Stream stream = file.OpenReadStream(maxAllowedSize: uploadOptions.Value.MaxFileSizeBytes);
+        return await UploadFileAsync(stream, file.Name, file.ContentType, folder);
     }
 
     public async Task<string?> GetPresignedUrlAsync(string key, HttpVerb verb)

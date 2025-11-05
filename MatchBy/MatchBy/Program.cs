@@ -13,6 +13,7 @@ using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
 using MatchBy.Services;
+using MatchBy.Settings;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
@@ -44,6 +45,8 @@ builder.Services.AddScoped<ISeeder, ChatMessageSeeder>();
 builder.Services.AddScoped<IFileValidator, FileValidator>();
 
 builder.Services.AddAwsS3(builder.Configuration);
+builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("UploadSettings"));
+
 
 builder.Services.AddOptions();
 builder.Services.AddHttpClient<ResendClient>();
@@ -112,6 +115,7 @@ builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
 

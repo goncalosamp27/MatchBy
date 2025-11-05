@@ -63,6 +63,18 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         {
             return null;
         }
+        
+        Conversation? conversation = await applicationDbContext.Conversations
+            .Where(c => c.Id == conversationId)
+            .Where(c => c.CreatorId == creatorUserId || c.Participants.Any(p => p.Id == creatorUserId))
+            .FirstOrDefaultAsync(ct);
+        if (conversation is null)
+        {
+            return null;
+        }
+        
+        conversation.LastMessageAtUtc = DateTime.UtcNow;
+        
         var chatMessage = new ChatMessage
         {
             Id = $"chatMessage_{Guid.CreateVersion7()}",
@@ -115,6 +127,18 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         {
             return null;
         }
+        
+        Conversation? conversation = await applicationDbContext.Conversations
+            .Where(c => c.Id == chatMessage.ConversationId)
+            .Include(c => c.Messages)
+            .FirstOrDefaultAsync(ct);
+        
+        if (conversation is null)
+        {
+            return null;
+        }
+
+        conversation.LastMessageAtUtc = DateTime.UtcNow;
 
         chatMessage.Content = content;
         chatMessage.UpdatedAtUtc = DateTime.UtcNow;
@@ -126,7 +150,30 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
 
     public async Task<bool> DeleteChatMessageAsync(string chatMessageId, string userId, CancellationToken ct = default)
     {
-        // só sender pode apagar
+        ChatMessage? chatMessage = await applicationDbContext.ChatMessages
+            .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
+            .Where(c => c.SenderId == userId)
+            .FirstOrDefaultAsync(ct);
+        
+        if (chatMessage is null)
+        {
+            return false;
+        }
+        
+        Conversation? conversation = await applicationDbContext.Conversations
+            .Where(c => c.Id == chatMessage.ConversationId)
+            .Include(c => c.Messages)
+            .FirstOrDefaultAsync(ct);
+        
+        if (conversation is null)
+        {
+            return false;
+        }
+
+        //we have a query filter for DeletedAtUtc == null, so Messages will not include deleted messages
+        conversation.LastMessageAtUtc = conversation.Messages.Count == 1 ? null : conversation.Messages.Last(m => m.Id != chatMessageId).CreatedAtUtc;
+
+        // only the sender can delete their message
         bool canDelete = await applicationDbContext.ChatMessages
             .AnyAsync(c => c.Id == chatMessageId && c.SenderId == userId && c.DeletedAtUtc == null, ct);
 
@@ -139,6 +186,7 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
             .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
 
+        await applicationDbContext.SaveChangesAsync(ct);
         return affected == 1;
     }
 }

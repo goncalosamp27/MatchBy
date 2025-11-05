@@ -181,7 +181,7 @@
                 return;
             }
 
-            var imageKey = await S3Service.UploadFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
+            var imageKey = await S3Service.UploadFormFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
             if (imageKey is null)
             {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to upload profile picture.", HttpContext);

@@ -10,6 +10,8 @@ public class FileValidator(ILogger<FileValidator> logger): IFileValidator
     private static readonly string[] AllowedVideoExtensions = [".mp4"];
     private static readonly string[] AllowedVideoTypes = ["video/mp4"];
 
+    public long GetMaxFileBytes() => MaxFileBytes;
+    
     // -------- IFormFile --------
 
     public bool IsValidFormImage(IFormFile file)

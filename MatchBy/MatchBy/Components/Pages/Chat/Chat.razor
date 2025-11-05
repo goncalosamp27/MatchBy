@@ -1,327 +1,165 @@
 ﻿@page "/chat"
 @using Microsoft.AspNetCore.Authorization
-@using Blazorise
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider Auth
 @inject IConversationService ConversationService
 @inject IChatMessageService ChatMessageService
-@rendermode InteractiveServer
-@attribute [Authorize]
-@inject AuthenticationStateProvider AuthenticationStateProvider
-
+@inject IUsersService UsersService
+@inject ChatState State
 
 <div class="fixed inset-0 flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
     <div class="mt-14 flex flex-1 min-h-0">
-        <!-- Sidebar -->
         <div class="w-72 hidden md:flex flex-col border-r border-gray-200 dark:border-neutral-800">
-            <ChatSidebar @rendermode="InteractiveServer" 
-                         Conversations="Conversations"
-                         OnConversationSelected="OnSelectConversation"/>
+            <ChatSidebar @rendermode="InteractiveServer"
+                         Conversations="State.Conversations"
+                         OnConversationSelected="OnConversationSelected"
+                         OnShowModal="ShowModal"/>
         </div>
 
-        <!-- Conteúdo principal (chat) -->
         <main class="flex-1 flex flex-col min-w-0 min-h-0">
-            @if (SelectedConversation is not null)
+            @if (State.Selected is null)
             {
-                <!-- Header fixo -->
-                <header class="flex-none bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-4 py-3">
-                    <div class="flex items-center gap-3">
-                        <img class="size-9 rounded-full flex-none"
-                             src="@(SelectedConversation.Image is null ? "/images/user-avatar.png" : SelectedConversation.Image.Url)"
-                             alt="@SelectedConversation.Title image"/>
-                        <div class="min-w-0 flex-1">
-                            <div class="font-semibold truncate">@SelectedConversation.Title</div>
-                        </div>
-                        <Button Clicked="@ShowOffcanvas"
-                                class="flex-none px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">
-                            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true"
-                                 xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                 viewBox="0 0 24 24">
-                                <path fill-rule="evenodd"
-                                      d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm9.408-5.5a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2h-.01ZM10 10a1 1 0 1 0 0 2h1v3h-1a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-1v-4a1 1 0 0 0-1-1h-2Z"
-                                      clip-rule="evenodd"/>
-                            </svg>
-                        </Button>
-                    </div>
-                </header>
-
-                <!-- Área de mensagens com scroll -->
-                <section class="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-                    <div class="space-y-4">
-                        <Virtualize Items="GroupedMessages" Context="group" ItemSize="56">
-                            <div class="flex justify-center mb-4">
-                                <span class="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 shadow-sm">
-                                    @group.Date.ToString("dd MMM yyyy")
-                                </span>
-                            </div>
-
-                            @foreach (var m in group.Messages)
-                            {
-                                <ChatMessage Message="m" CurrentUserId="@UserId" OnEditClicked="OnEditMessage" OnReplyToClicked="OnReplyToMessage" OnDeleteClicked="OnDeleteMessage"/>
-                            }
-                        </Virtualize>
-                    </div>
-                </section>
-
-                <!-- Footer fixo -->
-                <footer class="flex-none bg-white dark:bg-neutral-900 border-t border-gray-200 dark:border-neutral-800 px-4 py-3">
-                    <div class="flex flex-col gap-2">
-                        <!-- Reply Preview -->
-                        @if (_replyToMessage != null)
-                        {
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-neutral-800 border-l-4 border-indigo-600 rounded">
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                                        </svg>
-                                        @if (_replyToMessage.Sender is not null)
-                                        {
-                                            <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Replying to @_replyToMessage.Sender.DisplayName</span>
-                                        }
-                                    </div>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 truncate">@_replyToMessage.Content</p>
-                                </div>
-                                <button @onclick="CancelReply" 
-                                        class="shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded transition-colors">
-                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        }
-                        
-                        <!-- Input Area -->
-                        <div class="flex flex-row gap-2">
-                            <InputTextArea @bind-Value="_messageText"
-                                           rows="1"
-                                           placeholder="Write a message..."
-                                           class="w-full resize-none rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 transition-shadow"></InputTextArea>
-                            <Button Clicked="HandleSubmit"
-                                    class="shrink-0 rounded-lg px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                                Send
-                            </Button>
-                        </div>
-                    </div>
-                </footer>
+                <ChatEmptyState/>
             }
             else
             {
-                <!-- Empty state - No conversation selected -->
-                <div class="flex-1 flex items-center justify-center px-4">
-                    <div class="max-w-md text-center">
-                        <!-- Decorative icon -->
-                        <div class="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
-                            <svg class="w-10 h-10 text-indigo-600 dark:text-indigo-400" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                        </div>
-
-                        <!-- Title -->
-                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-                            Select a conversation
-                        </h2>
-
-                        <!-- Description -->
-                        <p class="text-gray-600 dark:text-gray-400 mb-6">
-                            Choose a conversation from the sidebar to start messaging or create a new one.
-                        </p>
-
-                        <!-- Features -->
-                        <div class="space-y-3 text-left bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
-                            <div class="flex items-start gap-3">
-                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="currentColor"
-                                         viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                              clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                                        Real-time conversations
-                                    </h4>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                                        Messages are automatically synchronized
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-start gap-3">
-                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="currentColor"
-                                         viewBox="0 0 20 20">
-                                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                                        Group chats
-                                    </h4>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                                        Chat with multiple participants
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-start gap-3">
-                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="currentColor"
-                                         viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                              d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                              clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                                        Secure and private
-                                    </h4>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                                        Your messages are protected
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ChatHeader Conversation="State.Selected" OnOpenInfo="ShowOffcanvas"/>
+                <MessageList ChatMessages="@State.MessagesOfSelectedConversation"
+                             CurrentUserId="@State.UserId"
+                             OnEdit="OnEditMessage"
+                             OnReply="OnReplyToMessage"
+                             OnDelete="OnDeleteMessage"/>
+                <ChatFooter Text="@_messageText"
+                            TextChanged="(v => _messageText = v)"
+                            ReplyTo="@_replyToMessage"
+                            OnCancelReply="CancelReply"
+                            OnSend="HandleSubmit"/>
             }
         </main>
     </div>
 
-    <!-- Offcanvas -->
-    <Offcanvas @ref="_offcanvasRef" ShowBackdrop Placement="Placement.End">
-        <OffcanvasHeader>
-            Conversation Info
-            <CloseButton Clicked="@HideOffcanvas"/>
-        </OffcanvasHeader>
-        <OffcanvasBody>
-            @if (SelectedConversation is not null)
-            {
-                <div class="space-y-4">
-                    <div class="text-center">
-                        <img class="w-20 h-20 rounded-full mx-auto mb-3"
-                             src="@(SelectedConversation.Image is null ? "/images/user-avatar.png" : SelectedConversation.Image.Url)"
-                             alt="@SelectedConversation.Title"/>
-                        <h3 class="font-semibold text-lg">@SelectedConversation.Title</h3>
-                    </div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                        <p>Messages: @SelectedConversation.Messages.Count</p>
-                    </div>
-                </div>
-            }
-        </OffcanvasBody>
-    </Offcanvas>
+    @if (State.Selected is not null)
+    {
+        <ConversationInfoOffcanvas @ref="_offcanvas"
+                                   SelectedConversation="@State.Selected"
+                                   OnLeaveConversation="LeaveConversation"
+                                   OnDeleteConversation="DeleteConversation"
+                                   OnImageSubmit="OnConversationImageUpload"
+                                   UserId="@State.UserId"/>
+    }
+
+    <NewConversationModal @ref="_modal"
+                          OnCreate="StartChat"
+                          Users="@_allUsers"/>
 </div>
 
-@code
-{
-    private Offcanvas _offcanvasRef = null!;
-    private string _messageText = string.Empty;
-
-    private Task ShowOffcanvas() => _offcanvasRef.Show();
-    private Task HideOffcanvas() => _offcanvasRef.Hide();
-
-    private List<MatchBy.Models.ChatMessage> Messages { get; set; } = [];
-    private List<Conversation> Conversations { get; set; } = [];
-    private Conversation? SelectedConversation { get; set; }
-    private List<MessageGroup> GroupedMessages => GroupByDay(Messages);
-    private string? UserId { get; set; }
-    private MatchBy.Models.ChatMessage? _replyToMessage = null;
-
-    private static List<MessageGroup> GroupByDay(IEnumerable<MatchBy.Models.ChatMessage> messages)
-        => messages.GroupBy(m => m.CreatedAtUtc.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new MessageGroup(g.Key, g.ToList()))
-            .ToList();
-
-    private sealed record MessageGroup(DateTime Date, List<MatchBy.Models.ChatMessage> Messages);
+@code{
+    private ConversationInfoOffcanvas _offcanvas = default!;
+    private NewConversationModal _modal = default!;
+    private string? _messageText;
+    private MatchBy.Models.ChatMessage? _replyToMessage;
+    private IReadOnlyList<ApplicationUser> _allUsers = [];
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("Chat component initialized.");
-        UserId = await GetUserId();
-        if (UserId is null)
-        {
-            return;
-        }
-
-        Console.WriteLine($"Fetching conversations... -> {UserId}");
-        Conversations = await ConversationService.GetConversationsAsync(UserId);
-    }
-
-    async Task<string?> GetUserId()
-    {
-        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        State.Changed += (_, _) => StateHasChanged();
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
         var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
-        return userId;
+        if (userId is null) return;
+
+        State.InitUser(userId);
+        var conversations = await ConversationService.GetConversationsAsync(userId);
+        State.SetConversations(conversations);
+        _allUsers = await UsersService.GetUsers();
     }
 
-    public void OnSelectConversation(Conversation conversation)
-    {
-        Console.WriteLine($"Conversation selected: {conversation.Title}");
-        SelectedConversation = conversation;
-        Messages = conversation.Messages.ToList();
-        StateHasChanged();
-    }
+    private Task ShowOffcanvas() => _offcanvas.Show();
+    private Task ShowModal() => _modal.Show();
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(_messageText) || SelectedConversation is null)
-            return;
-
-        await Task.Delay(100);
-        
         Console.WriteLine($"Sending message: {_messageText}");
-        var newMessage = await ChatMessageService.CreateChatMessageAsync(_messageText, UserId! , SelectedConversation.Id, replyToMessageId: _replyToMessage?.Id);
-        if (newMessage is null)
+        if (string.IsNullOrWhiteSpace(_messageText) || State.Selected is null) return;
+
+        var newMsg = await ChatMessageService.CreateChatMessageAsync(
+            _messageText, State.UserId!, State.Selected.Id, replyToMessageId: _replyToMessage?.Id);
+
+        if (newMsg is not null)
         {
-            Console.WriteLine($"Message was not sent!!!");
+            State.UpsertMessage(newMsg);
+            _messageText = null;
+            _replyToMessage = null;
         }
-        else
-        {
-            Messages.Add(newMessage);
-            Console.WriteLine($"Message sent successfully: {newMessage.Id}");   
-        }
-        
-        _messageText = string.Empty;
+
+        Console.WriteLine($"Message sent successfully: {newMsg?.Id}");
+    }
+
+    private async Task OnEditMessage(MatchBy.Models.ChatMessage msg)
+    {
+        var updated = await ChatMessageService.UpdateChatMessageAsync(msg.Id, msg.Content, State.UserId!);
+        if (updated is not null) State.UpsertMessage(updated);
+    }
+
+    private async Task OnDeleteMessage(MatchBy.Models.ChatMessage msg)
+    {
+        await ChatMessageService.DeleteChatMessageAsync(msg.Id, State.UserId!);
+        State.RemoveMessage(msg.ConversationId, msg.Id);
+    }
+
+    private Task OnReplyToMessage(MatchBy.Models.ChatMessage msg)
+    {
+        _replyToMessage = msg;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelReply()
+    {
         _replyToMessage = null;
-        StateHasChanged();
+        return Task.CompletedTask;
     }
 
-    public async Task OnEditMessage(MatchBy.Models.ChatMessage message)
+    private async Task StartChat(string otherUserId)
     {
-        var updatedMessage = await ChatMessageService.UpdateChatMessageAsync(message.Id, message.Content, UserId!);
-        if (updatedMessage is not null)
+        var conv = await ConversationService.CreateConversationAsync(State.UserId!, ConversationType.Private,
+            [otherUserId, State.UserId!], null, null, null, CancellationToken.None);
+        if (conv is not null)
         {
-            var index = Messages.FindIndex(m => m.Id == updatedMessage.Id);
-            if (index != -1)
-            {
-                Messages[index] = updatedMessage;
-                StateHasChanged();
-            }
-            Console.WriteLine($"Edit message requested: {message.Id}");
-        }
-        else
-        {
-            Console.WriteLine($"Error Editing message requested: {message.Id}");
+            State.Conversations.Add(conv);
+            await OnConversationSelected(conv);
         }
     }
 
-    public async Task OnDeleteMessage(MatchBy.Models.ChatMessage message)
+    private async Task LeaveConversation()
     {
-        await ChatMessageService.DeleteChatMessageAsync(message.Id, UserId!);
-        Messages.RemoveAll(m => m.Id == message.Id);
-        StateHasChanged();
+        var id = State.Selected?.Id;
+        if (id is null) return;
+        var ok = await ConversationService.LeaveConversationAsync(id, State.UserId!);
+        if (ok) State.RemoveConversation(id);
     }
 
-    public void OnReplyToMessage(MatchBy.Models.ChatMessage message)
+    private async Task DeleteConversation()
     {
-        _replyToMessage = message;
-        StateHasChanged();
-        Console.WriteLine($"Reply to message requested: {message.Id}");
+        var id = State.Selected?.Id;
+        if (id is null) return;
+        var ok = await ConversationService.DeleteConversationAsync(id, State.UserId!);
+        if (ok) State.RemoveConversation(id);
     }
-    
-    private void CancelReply() => _replyToMessage = null;
+
+    public async Task OnConversationSelected(Conversation conversation)
+    {
+        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId!);
+        State.Select(conversation, messages);
+    }
+
+    public async Task OnConversationImageUpload(IBrowserFile newConversationImage)
+    {
+        if (State.Selected is null)
+        {
+            Console.WriteLine("No conversation selected.");
+            return;
+        }
+        await ConversationService.UpdateConversationImageAsync(State.Selected.Id, State.UserId!, newConversationImage);
+    }
+
 }

@@ -57,4 +57,6 @@ public interface IFileValidator
     /// otherwise, <c>false</c>.
     /// </returns>
     bool IsValidBrowserVideo(IBrowserFile file);
+    
+    long GetMaxFileBytes();
 }

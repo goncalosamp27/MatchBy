@@ -1,0 +1,35 @@
+﻿<section class="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+    <div class="space-y-4">
+        <Virtualize Items="Groups" Context="group" ItemSize="56">
+            <div class="flex justify-center mb-4">
+                <span class="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-neutral-700 shadow-sm">
+                    @group.Date.ToString("dd MMM yyyy")
+                </span>
+            </div>
+            @foreach (var m in group.Messages)
+            {
+                <ChatMessage Message="m" CurrentUserId="@CurrentUserId"
+                             OnEditClicked="OnEdit"
+                             OnReplyToClicked="OnReply"
+                             OnDeleteClicked="OnDelete" />
+            }
+        </Virtualize>
+    </div>
+</section>
+@code{
+    [Parameter] public required List<MatchBy.Models.ChatMessage> ChatMessages { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public EventCallback<MatchBy.Models.ChatMessage> OnEdit { get; set; }
+    [Parameter] public EventCallback<MatchBy.Models.ChatMessage> OnReply { get; set; }
+    [Parameter] public EventCallback<MatchBy.Models.ChatMessage> OnDelete { get; set; }
+
+    private List<MessageGroup> Groups => GroupByDay(ChatMessages);
+
+    private static List<MessageGroup> GroupByDay(List<MatchBy.Models.ChatMessage> messages)
+        => messages.GroupBy(m => m.CreatedAtUtc.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new MessageGroup(g.Key, g.ToList()))
+            .ToList();
+
+    private sealed record MessageGroup(DateTime Date, List<MatchBy.Models.ChatMessage> Messages);
+}
