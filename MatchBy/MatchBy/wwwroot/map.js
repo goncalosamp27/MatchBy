@@ -37,18 +37,20 @@ window.initMapOn = async (el) => {
 
             let city = "";
             let country = "";
+            let address = "";
 
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
                 const data = await res.json();
                 city = data.address.city || data.address.town || data.address.village || "";
                 country = data.address.country || "";
+                address = data.display_name || "";
             } catch (err) {
                 console.warn("Reverse geocoding failed:", err);
             }
 
             if (window._matchComponent) {
-                window._matchComponent.invokeMethodAsync("UpdateLocationFromMap", lat, lng, city, country);
+                window._matchComponent.invokeMethodAsync("UpdateLocationFromMap", lat, lng, city, country, address);
             }
         });
     }

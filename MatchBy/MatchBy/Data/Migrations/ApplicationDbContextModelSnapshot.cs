@@ -266,6 +266,10 @@ namespace MatchBy.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ConversationId")
                         .HasColumnType("text");
 
