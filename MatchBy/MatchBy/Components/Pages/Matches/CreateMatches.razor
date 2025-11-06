@@ -27,8 +27,9 @@ else
         <Validations @ref="@_fluentValidations" Mode="ValidationMode.Manual" Model="@Match"
                      HandlerType="typeof(FluentValidationHandler)">
             <Fields>
-                <FieldLabel> Choose a location </FieldLabel>
+                <FieldLabel> Choose the match location by clicking on the map: </FieldLabel>
                 <div id="matchMap" class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-2 border-[var(--main)] shadow-sm"></div>
+                @* HIDDEN *@
                 <div style="display:none">
                     <Validation>
                         <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
@@ -94,6 +95,7 @@ else
                     </Validation>
                 </div>
             </Fields>
+            @* END HIDDEN *@
 
              <Validation>
                 <Field>
@@ -101,7 +103,7 @@ else
                         Address
                     </FieldLabel>
                     <FieldBody>
-                        <TextEdit Placeholder="Type your match address" @bind-Text="@Match.Address">
+                        <TextEdit Placeholder="Type your match address" @bind-Text="@Match.Address" @onblur="@OnAddressBlur" >
                             <Feedback>
                                 <ValidationError/>
                             </Feedback>
@@ -293,6 +295,12 @@ else
         }
     }
 
+    private async Task OnAddressBlur(FocusEventArgs _)
+    {
+        if (string.IsNullOrWhiteSpace(Match?.Address)) return;
+        await Js.InvokeVoidAsync("geocodeAddress", Match.Address);
+    }
+
     protected override async Task OnInitializedAsync() {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -347,6 +355,7 @@ else
         await Js.InvokeVoidAsync("registerMatchComponent", DotNetObjectReference.Create(this));
         StateHasChanged();
     }
+    
 
     [JSInvokable]
     public void UpdateLocationFromMap(double lat, double lng, string city, string country, string address)
