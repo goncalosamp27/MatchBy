@@ -4,8 +4,13 @@
 @inject IMatchesService MatchesService
 @inject IUsersService UsersService
 @inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Components.Forms
 @using Blazorise
+@using System.Security.Claims
 @inject IJSRuntime Js
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+
 
 @if (Match is null || _tz is null)
 {
@@ -13,84 +18,92 @@
 }
 else
 {   
-    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-4">
+    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-8">
         <Heading Size="HeadingSize.Is2" Margin="Margin.Is3.FromBottom">
             @(Id is null ? "Create Match" : "Edit Match")
         </Heading>
         @*@(Id is null ? ValidationMode.Manual : ValidationMode.Auto)*@
+
         <Validations @ref="@_fluentValidations" Mode="ValidationMode.Manual" Model="@Match"
                      HandlerType="typeof(FluentValidationHandler)">
             <Fields>
-                <Validation>
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
-                        <FieldLabel>
-                            Latitude
-                        </FieldLabel>
-                        <FieldBody>
-                            <NumericEdit TValue="double" Placeholder="Match Latitude"
-                                         @bind-Value:get="Match.Location.Latitude"
-                                         @bind-Value:set="v => Match.Location = Match.Location with { Latitude = v }">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </NumericEdit>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-                <Validation>
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
-                        <FieldLabel>
-                            Longitude
-                        </FieldLabel>
-                        <FieldBody>
-                            <NumericEdit TValue="double" Placeholder="Match Longitude"
-                                         @bind-Value:get="Match.Location.Longitude"
-                                         @bind-Value:set="v => Match.Location = Match.Location with { Longitude = v }">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </NumericEdit>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-                <Validation>
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
-                        <FieldLabel>
-                            City
-                        </FieldLabel>
-                        <FieldBody>
-                            <TextEdit Placeholder="Match City" @bind-Text:get="@Match.Location.City"
-                                      @bind-Text:set="v => Match.Location = Match.Location with { City = v }">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </TextEdit>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-                <Validation>
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
-                        <FieldLabel>
-                            Country
-                        </FieldLabel>
-                        <FieldBody>
-                            <TextEdit Placeholder="Match Country" @bind-Text:get="@Match.Location.Country"
-                                      @bind-Text:set="v => Match.Location = Match.Location with { Country = v }">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </TextEdit>
-                        </FieldBody>
-                    </Field>
-                </Validation>
+                <FieldLabel> Choose the match location by clicking on the map: </FieldLabel>
+                <div id="matchMap" class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-2 border-[var(--main)] shadow-sm"></div>
+                @* HIDDEN *@
+                <div style="display:none">
+                    <Validation>
+                        <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
+                            <FieldLabel>
+                                Latitude
+                            </FieldLabel>
+                            <FieldBody>
+                                <NumericEdit TValue="double" Placeholder="Match Latitude"
+                                            @bind-Value:get="Match.Location.Latitude"
+                                            @bind-Value:set="v => Match.Location = Match.Location with { Latitude = v }">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </NumericEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+                    <Validation>
+                        <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
+                            <FieldLabel>
+                                Longitude
+                            </FieldLabel>
+                            <FieldBody>
+                                <NumericEdit TValue="double" Placeholder="Match Longitude"
+                                            @bind-Value:get="Match.Location.Longitude"
+                                            @bind-Value:set="v => Match.Location = Match.Location with { Longitude = v }">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </NumericEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+                    <Validation>
+                        <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
+                            <FieldLabel>
+                                City
+                            </FieldLabel>
+                            <FieldBody>
+                                <TextEdit Placeholder="Match City" @bind-Text:get="@Match.Location.City"
+                                        @bind-Text:set="v => Match.Location = Match.Location with { City = v }">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </TextEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+                    <Validation>
+                        <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsQuarter.OnDesktop">
+                            <FieldLabel>
+                                Country
+                            </FieldLabel>
+                            <FieldBody>
+                                <TextEdit Placeholder="Match Country" @bind-Text:get="@Match.Location.Country"
+                                        @bind-Text:set="v => Match.Location = Match.Location with { Country = v }">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </TextEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+                </div>
             </Fields>
-            <Validation>
+            @* END HIDDEN *@
+
+             <Validation>
                 <Field>
                     <FieldLabel>
-                        Description
+                        Address
                     </FieldLabel>
                     <FieldBody>
-                        <TextEdit Placeholder="Type product name" @bind-Text="@Match.Description">
+                        <TextEdit Placeholder="Type your match address" @bind-Text="@Match.Address" @onblur="@OnAddressBlur" >
                             <Feedback>
                                 <ValidationError/>
                             </Feedback>
@@ -98,6 +111,23 @@ else
                     </FieldBody>
                 </Field>
             </Validation>
+
+
+            <Validation>
+                <Field>
+                    <FieldLabel>
+                        Description
+                    </FieldLabel>
+                    <FieldBody>
+                        <TextEdit Placeholder="Type a description for your match" @bind-Text="@Match.Description">
+                            <Feedback>
+                                <ValidationError/>
+                            </Feedback>
+                        </TextEdit>
+                    </FieldBody>
+                </Field>
+            </Validation>
+
             <Fields>
                 <Validation>
                     <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsHalf.OnDesktop">
@@ -146,23 +176,7 @@ else
                         </FieldBody>
                     </Field>
                 </Validation>
-                <Validation>
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsThird.OnDesktop">
-                        <FieldLabel>
-                            Status
-                        </FieldLabel>
-                        <FieldBody>
-                            <FieldBody>
-                                <Select TValue="MatchStatus" @bind-SelectedValue="@Match.Status">
-                                    @foreach (var item in Enum.GetValues<MatchStatus>())
-                                    {
-                                        <SelectItem Value="@item">@item.ToString()</SelectItem>
-                                    }
-                                </Select>
-                            </FieldBody>
-                        </FieldBody>
-                    </Field>
-                </Validation>
+                
                 <Validation>
                     <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsThird.OnDesktop">
                         <FieldLabel>
@@ -180,25 +194,8 @@ else
                         </FieldBody>
                     </Field>
                 </Validation>
-            </Fields>
-            <Fields>
-                <Validation>
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsHalf.OnDesktop">
-                        <FieldLabel>
-                            Creator UserName
-                        </FieldLabel>
-                        <FieldBody>
-                            <Select TValue="string" @bind-SelectedValue="Match.CreatorId">
-                                @foreach (var item in Users)
-                                {
-                                    <SelectItem Value="@item.Id">@item.UserName</SelectItem>
-                                }
-                            </Select>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-                <Validation Validator="ValidateDateTimePicker">
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsHalf.OnDesktop">
+                 <Validation Validator="ValidateDateTimePicker">
+                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsThird.OnDesktop">
                         <FieldLabel>MatchDateTime</FieldLabel>
                         <DatePicker TValue="DateTime"
                                     InputMode="DateInputMode.DateTime"
@@ -215,7 +212,6 @@ else
                         @*<FieldHelp>Format: DD/MM/YYYY - HH:mm</FieldHelp>*@
                     </Field>
                 </Validation>
-
             </Fields>
             <Field>
                 <Button Color="Color.Primary" Clicked="@CreateMatch" Loading="@(Match is null)"
@@ -230,9 +226,10 @@ else
 @code {
     Validations _fluentValidations = null!;
     private Models.Match? Match { get; set; }
-    private List<ApplicationUser> Users { get; set; } = [];
     private string? _tzId;
     private TimeZoneInfo? _tz;
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? userId;
 
     [Parameter] public string? Id { get; set; }
 
@@ -298,17 +295,40 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync() => Users = await UsersService.GetUsers();
+    private async Task OnAddressBlur(FocusEventArgs _)
+    {
+        if (string.IsNullOrWhiteSpace(Match?.Address)) return;
+        await Js.InvokeVoidAsync("geocodeAddress", Match.Address);
+    }
+
+    protected override async Task OnInitializedAsync() {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            NavigationManager.NavigateTo("/Account/Login", true);
+            return;
+        }
+
+        userId = user.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+    }
 
     protected override async Task OnParametersSetAsync()
-    {
+    {   
+        if (userId is null) 
+        {
+            NavigationManager.NavigateTo("/Account/Login", true);
+            return;
+        }
         if (Id is null)
         {
             Match = new Models.Match
             {
                 MatchDateTimeUtc = DateTime.UtcNow,
                 Location = new Location(0, 0, string.Empty, string.Empty),
-                CreatorId = Users.FirstOrDefault()?.Id ?? string.Empty
+                CreatorId = userId,
+                Status = MatchStatus.Pendent
             };
         }
         else
@@ -332,7 +352,26 @@ else
         //utcNow = DateTime.UtcNow;                  // this is UTC
         //localNow = Tz.ToLocal(utcNow, tz);         // -> local in user's TZ
 
+        await Js.InvokeVoidAsync("registerMatchComponent", DotNetObjectReference.Create(this));
         StateHasChanged();
     }
+    
 
+    [JSInvokable]
+    public void UpdateLocationFromMap(double lat, double lng, string city, string country, string address)
+    {
+        if (Match is null) return;
+
+        Match.Location = Match.Location with 
+        { 
+            Latitude = lat, 
+            Longitude = lng,
+            City = city,
+            Country = country
+        };
+
+        Match.Address = address;
+
+        InvokeAsync(StateHasChanged);
+    }
 }
