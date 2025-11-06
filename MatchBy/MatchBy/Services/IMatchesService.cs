@@ -9,4 +9,7 @@ public interface IMatchesService
     Task<bool> CreateMatch(Match match);
     Task<bool> UpdateMatch(string matchId, Match updatedMatch);
     Task<bool> DeleteMatch(string matchId);
+    Task<List<Match>> GetMatchesForUser(string userId);
+    Task<List<Match>> GetMatchesExceptUser(string userId);
 }
+
