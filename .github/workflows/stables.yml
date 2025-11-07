@@ -19,13 +19,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Verify that the tag belongs to the 'production' branch
-        run: |
-          if ! git branch -r --contains "$GITHUB_SHA" | grep -q "origin/production"; then
-            echo "The tag ${GITHUB_REF_NAME} is not part of the 'production' branch history. Aborting."
-            exit 1
-          fi
-
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
