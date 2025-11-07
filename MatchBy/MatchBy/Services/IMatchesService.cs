@@ -5,6 +5,7 @@ namespace MatchBy.Services;
 public interface IMatchesService
 {
     Task<List<Match>> GetMatches();
+    Task<List<Match>> GetCompletedMatches();
     Task<Match?> GetMatchById(string matchId);
     Task<bool> CreateMatch(Match match);
     Task<bool> UpdateMatch(string matchId, Match updatedMatch);
