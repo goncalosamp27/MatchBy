@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history + tags for MinVer)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Verify that the tag belongs to the 'production' branch
+        run: |
+          if ! git branch -r --contains "$GITHUB_SHA" | grep -q "origin/production"; then
+            echo "The tag ${GITHUB_REF_NAME} is not part of the 'production' branch history. Aborting."
+            exit 1
+          fi
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore MatchBy.sln
+
+      - name: Build
+        run: dotnet build MatchBy.sln -c Release --no-restore
+
+      - name: Run tests
+        run: dotnet test MatchBy.sln -c Release --no-build --verbosity normal
+
+      - name: Read MinVer version
+        id: ver
+        run: echo "value=$(dotnet msbuild -nologo -v:m -getProperty:PackageVersion)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release (no assets)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ steps.ver.outputs.value }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
