@@ -5,7 +5,7 @@ using MatchBy.Settings;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Options;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.S3;
 
 public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILogger<S3Service> logger, IOptions<UploadSettings> uploadOptions) : IS3Service
 {
@@ -69,7 +69,7 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
         IBrowserFile file,
         string folder)
     {
-        await using Stream stream = file.OpenReadStream(maxAllowedSize: uploadOptions.Value.MaxFileSizeBytes);
+        await using Stream stream = file.OpenReadStream(maxAllowedSize: uploadOptions.Value.MaxFileSizeMegaBytes * 1024 * 1024);
         return await UploadFileAsync(stream, file.Name, file.ContentType, folder);
     }
 

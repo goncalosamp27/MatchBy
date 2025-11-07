@@ -2,5 +2,5 @@
 
 public sealed class UploadSettings
 {
-    public long MaxFileSizeBytes { get; init; } = 50 * 1024 * 1024;
+    public long MaxFileSizeMegaBytes { get; init; }
 }

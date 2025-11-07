@@ -1,7 +1,7 @@
 ﻿using Amazon.S3;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.S3;
 
 public interface IS3Service
 {

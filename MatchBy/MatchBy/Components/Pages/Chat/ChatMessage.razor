@@ -1,165 +1,229 @@
-﻿@using Blazorise
+﻿@using MatchBy.DTOs.Chat.Messages
+@using FluentValidation
+@using FluentValidation.Results
+@inject IValidator<UpdateChatMessageDto> UpdateValidator
+@using Blazorise
 
-@if (Message?.Sender != null && CurrentUserId != null)
-{
+@{
     var isCurrentUser = Message.Sender.Id == CurrentUserId;
-    
-    <div class="@(isCurrentUser ? "flex items-start gap-2.5 flex-row-reverse" : "flex items-start gap-2.5")">
-        <img class="w-8 h-8 rounded-full" 
-             src="@(Message.Sender.ProfileImage is null ? "/images/user-avatar.png" : Message.Sender.ProfileImage.Url)"
-             alt="@Message.Sender.DisplayName image">
-        
-        <div class="flex flex-col w-full max-w-[320px] leading-1.5 p-4 border-gray-200 @(isCurrentUser ? "bg-blue-100 dark:bg-blue-900" : "bg-gray-100 dark:bg-gray-700") @(isCurrentUser ? "rounded-s-xl rounded-ee-xl" : "rounded-e-xl rounded-es-xl")">
-            <div class="flex items-center space-x-2 rtl:space-x-reverse">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">@Message.Sender.DisplayName</span>
-                <span class="text-sm font-normal text-gray-500 dark:text-gray-400">@Message.CreatedAtUtc.ToString("HH:mm")</span>
-            </div>
-            
-            @* Reply Preview *@
-            @if (Message.ReplyToMessage != null)
-            {
-                <div class="mt-2 mb-1 px-3 py-2 bg-white/50 dark:bg-black/20 border-l-2 border-indigo-500 rounded">
-                    <div class="flex items-center gap-1 mb-1">
-                        <svg class="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                        </svg>
-                        <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                            @Message.ReplyToMessage.Sender?.DisplayName
-                        </span>
-                    </div>
-                    <p class="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
-                        @Message.ReplyToMessage.Content
-                    </p>
-                </div>
-            }
-            
-            @if (_isEditing)
-            {
-                <div class="py-2.5">
-                    <textarea @bind="_editedContent"
-                              @bind:event="oninput"
-                              class="w-full text-sm font-normal text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                              rows="3"
-                              placeholder="Edit message..."></textarea>
-                    <div class="flex gap-2 mt-2">
-                        <button @onclick="SaveEdit" 
-                                class="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            Save
-                        </button>
-                        <button @onclick="CancelEdit" 
-                                class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <p class="text-sm font-normal py-2.5 text-gray-900 dark:text-white">@Message.Content</p>
-                @if (Message.UpdatedAtUtc != null)
-                {
-                    <span class="text-xs text-gray-500 dark:text-gray-400 italic">(edited)</span>
-                }
-            }
+}
+
+<div class="@(isCurrentUser ? "flex items-start gap-2.5 flex-row-reverse" : "flex items-start gap-2.5")">
+    <img class="w-8 h-8 rounded-full"
+         src="@(Message.Sender.AvatarUrl ?? "/images/user-avatar.png")"
+         alt="@Message.Sender.DisplayName image">
+
+    <div
+        class="flex flex-col w-full max-w-[320px] leading-1.5 p-4 border-gray-200 @(isCurrentUser ? "bg-blue-100 dark:bg-blue-900" : "bg-gray-100 dark:bg-gray-700") @(isCurrentUser ? "rounded-s-xl rounded-ee-xl" : "rounded-e-xl rounded-es-xl")">
+        <div class="flex items-center space-x-2 rtl:space-x-reverse">
+            <span class="text-sm font-semibold text-gray-900 dark:text-white">@Message.Sender.DisplayName</span>
+            <span
+                class="text-sm font-normal text-gray-500 dark:text-gray-400">@Message.CreatedAtUtc.ToString("HH:mm")</span>
         </div>
         
-        @if (!_isEditing)
+        @if (_validationResult is not null && _validationResult.Errors.Any())
         {
-            <Dropdown>
-                <DropdownToggle ToggleIconVisible="false"
-                                class="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 bg-white rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none dark:text-white focus:ring-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
-                    <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
-                         xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 4 15">
-                        <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/>
+            var contentError = _validationResult.Errors
+                .Where(e => e.PropertyName == nameof(UpdateChatMessageDto.Content))
+                .Select(e => e.ErrorMessage)
+                .Distinct()
+                .FirstOrDefault();
+
+            if (contentError is not null)
+            {
+                <ul class="mt-1 text-xs text-red-600 dark:text-red-400">
+                    <li>@contentError</li>
+                </ul>
+            }
+        }
+
+        @* Reply Preview *@
+        @if (Message.ReplyToMessage != null)
+        {
+            <div class="mt-2 mb-1 px-3 py-2 bg-white/50 dark:bg-black/20 border-l-2 border-indigo-500 rounded">
+                <div class="flex items-center gap-1 mb-1">
+                    <svg class="w-3 h-3 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor"
+                         viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
                     </svg>
-                </DropdownToggle>
-                <DropdownMenu Class="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600">
-                    <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
-                        @if(isCurrentUser)
-                        {
-                            <li>
-                                <Button Clicked="StartEdit" 
-                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white w-full text-left">
-                                    Edit
-                                </Button>
-                            </li>
-                        }
-                        <li>
-                            <Button Clicked="ReplyToMessage" 
-                                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white w-full text-left">
-                                Reply
-                            </Button>
-                        </li>
-                        @if (isCurrentUser)
-                        {
-                            <li>
-                                <Button Clicked="DeleteMessage" 
-                                        class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white w-full text-left">
-                                    Delete
-                                </Button>
-                            </li>
-                        }
-                    </ul>
-                </DropdownMenu>
-            </Dropdown>
+                    <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                        @Message.ReplyToMessage.Sender.DisplayName
+                    </span>
+                </div>
+                <p class="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
+                    @Message.ReplyToMessage.Content
+                </p>
+            </div>
+        }
+
+        @if (_isEditing)
+        {
+            <div class="py-2.5">
+                <textarea @ref="_textAreaRef"
+                  @bind="_editedContent"
+                  @bind:event="oninput"
+                  class="@TextAreaClass"
+                  rows="3"
+                  maxlength="4000"
+                  aria-invalid="@HasContentError"
+                  placeholder="Edit message..."></textarea>
+
+                <!-- contador -->
+                <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400 text-right">
+                    @_editedContent.Length / 500
+                </div>
+                
+                <div class="flex gap-2 mt-2">
+                    <button @onclick="SaveEdit"
+                            class="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        Save
+                    </button>
+                    <button @onclick="CancelEdit"
+                            class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <p class="text-sm font-normal py-2.5 text-gray-900 dark:text-white">@Message.Content</p>
+            @if (Message.UpdatedAtUtc != null)
+            {
+                <span class="text-xs text-gray-500 dark:text-gray-400 italic">(edited)</span>
+            }
         }
     </div>
-}
-else
-{
-    <p>Sender is null && CurrentUserId is null</p>
-}
 
-@code
-{
-    [Parameter] public MatchBy.Models.ChatMessage? Message { get; set; }
-    [Parameter] public string? CurrentUserId { get; set; }
-    [Parameter] public EventCallback<MatchBy.Models.ChatMessage> OnReplyToClicked { get; set; }
-    [Parameter] public EventCallback<MatchBy.Models.ChatMessage> OnEditClicked { get; set; }
-    [Parameter] public EventCallback<MatchBy.Models.ChatMessage> OnDeleteClicked { get; set; }
-    
-    private bool _isEditing = false;
-    private string _editedContent = string.Empty;
-    
-    private void StartEdit()
+    @if (!_isEditing)
     {
-        if (Message == null) return;
-        _editedContent = Message.Content;
-        _isEditing = true;
+        <Dropdown>
+            <DropdownToggle ToggleIconVisible="false"
+                            class="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 bg-white rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none dark:text-white focus:ring-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 4 15">
+                    <path
+                        d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/>
+                </svg>
+            </DropdownToggle>
+            <DropdownMenu
+                Class="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600">
+                <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+                    @if (isCurrentUser)
+                    {
+                        <li>
+                            <Button Clicked="StartEdit"
+                                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white w-full text-left">
+                                Edit
+                            </Button>
+                        </li>
+                    }
+                    <li>
+                        <Button Clicked="ReplyToMessage"
+                                class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white w-full text-left">
+                            Reply
+                        </Button>
+                    </li>
+                    @if (isCurrentUser)
+                    {
+                        <li>
+                            <Button Clicked="DeleteMessage"
+                                    class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white w-full text-left">
+                                Delete
+                            </Button>
+                        </li>
+                    }
+                </ul>
+            </DropdownMenu>
+        </Dropdown>
     }
-    
-    private async Task SaveEdit()
+</div>
+
+@code {
+    [Parameter] public required ChatMessageDto Message { get; set; }
+    [Parameter] public required string CurrentUserId { get; set; }
+    [Parameter] public EventCallback<UpdateChatMessageDto> OnEditClicked { get; set; }
+    [Parameter] public EventCallback<ChatMessageDto> OnReplyToClicked { get; set; }
+    [Parameter] public EventCallback<ChatMessageDto> OnDeleteClicked { get; set; }
+
+    private bool _isEditing;
+    private string _editedContent = string.Empty;
+    private ValidationResult? _validationResult;
+
+    private ElementReference _textAreaRef;
+    private bool _shouldFocus;
+
+    private IEnumerable<string> ContentErrors =>
+        _validationResult?.Errors
+            .Where(e => e.PropertyName == nameof(UpdateChatMessageDto.Content))
+            .Select(e => e.ErrorMessage)
+            .Distinct() ?? [];
+
+    private bool HasContentError => ContentErrors.Any();
+
+    private string TextAreaClass =>
+        "w-full text-sm font-normal text-gray-900 dark:text-white " +
+        "bg-white dark:bg-gray-800 border rounded-lg p-2 focus:ring-2 focus:border-transparent resize-none " +
+        (HasContentError
+            ? "border-red-500 dark:border-red-500 focus:ring-red-500"
+            : "border-gray-300 dark:border-gray-600 focus:ring-blue-500");
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Message != null && !string.IsNullOrWhiteSpace(_editedContent))
+        if (_shouldFocus)
         {
-            var updatedMessage = Message;
-            updatedMessage.Content = _editedContent.Trim();
-            await OnEditClicked.InvokeAsync(updatedMessage);
-            
-            _isEditing = false;
-            StateHasChanged();
+            _shouldFocus = false;
+            await _textAreaRef.FocusAsync(); // sem JS custom
         }
     }
-    
+
+    private async Task ValidateLiveAsync()
+    {
+        var dto = new UpdateChatMessageDto {
+            ChatMessageId = Message.Id,
+            Content = _editedContent,
+            CreatorUserId = CurrentUserId
+        };
+        _validationResult = await UpdateValidator.ValidateAsync(dto);
+        StateHasChanged();
+    }
+
+    private void StartEdit()
+    {
+        _editedContent = Message.Content;
+        _validationResult = null;
+        _isEditing = true;
+        _shouldFocus = true; // foca quando entra no modo edição
+    }
+
+    private async Task SaveEdit()
+    {
+        await ValidateLiveAsync();
+        if (!(_validationResult?.IsValid ?? true))
+        {
+            _shouldFocus = true; // volta a focar no erro
+            return;
+        }
+
+        var dto = new UpdateChatMessageDto {
+            ChatMessageId = Message.Id,
+            Content = _editedContent.Trim(), // normalização após validação
+            CreatorUserId = CurrentUserId
+        };
+
+        await OnEditClicked.InvokeAsync(dto);
+        _isEditing = false;
+        _validationResult = null;
+    }
+
     private void CancelEdit()
     {
         _isEditing = false;
         _editedContent = string.Empty;
+        _validationResult = null;
     }
     
-    private async Task DeleteMessage()
-    {
-        if (Message != null)
-        {
-            await OnDeleteClicked.InvokeAsync(Message);
-        }
-    }
-    
-    private async Task ReplyToMessage()
-    {
-        if (Message != null)
-        {
-            await OnReplyToClicked.InvokeAsync(Message);
-        }
-    }
+    private async Task DeleteMessage() => await OnDeleteClicked.InvokeAsync(Message);
+    private async Task ReplyToMessage() => await OnReplyToClicked.InvokeAsync(Message);
 }

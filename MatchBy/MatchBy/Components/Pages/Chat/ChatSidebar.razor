@@ -1,4 +1,5 @@
-﻿@using Blazorise
+﻿@using MatchBy.DTOs.Chat.Conversations
+@using Blazorise
 
 <!-- Sidebar -->
 <aside
@@ -96,9 +97,9 @@
 @code
 {
     private string _search = "";
-    [Parameter] public List<Conversation> Conversations { get; set; } = new();
-    [Parameter] public EventCallback<Conversation> OnConversationSelected { get; set; }
-    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public List<ConversationDto> Conversations { get; set; } = new();
+    [Parameter] public EventCallback<ConversationDto> OnConversationSelected { get; set; }
+    [Parameter] public required string CurrentUserId { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnShowModal { get; set; }
 
 }

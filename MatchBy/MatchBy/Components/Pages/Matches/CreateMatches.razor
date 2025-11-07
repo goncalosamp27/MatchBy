@@ -4,8 +4,10 @@
 @inject IMatchesService MatchesService
 @inject IUsersService UsersService
 @inject NavigationManager NavigationManager
-@using Blazorise
+@using MatchBy.Services.Matches
+@using MatchBy.Services.Users
 @inject IJSRuntime Js
+@using Blazorise
 
 @if (Match is null || _tz is null)
 {

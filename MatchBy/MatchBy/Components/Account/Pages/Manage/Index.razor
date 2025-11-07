@@ -1,6 +1,8 @@
 @page "/Account/Manage"
 @using System.ComponentModel.DataAnnotations
 @using Amazon.S3
+@using MatchBy.Services.FileValidator
+@using MatchBy.Services.S3
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -190,7 +192,7 @@
 
             if (_user.ProfileImage is not null)
             {
-                await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-picture/{_user.ProfileImage.Key}");
+                await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-pictures/{_user.ProfileImage.Key}");
             }
 
             var imageUrl = await S3Service.GetPresignedUrlAsync($"users/{_user.Id}/profile-pictures/{imageKey}", HttpVerb.GET);

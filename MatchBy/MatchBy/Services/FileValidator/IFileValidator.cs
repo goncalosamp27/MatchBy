@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.FileValidator;
 
 /// <summary>
 /// Defines methods for validating uploaded image and video files

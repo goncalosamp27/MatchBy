@@ -3,7 +3,7 @@ using MatchBy.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.Matches;
 
 public class MatchesService(ApplicationDbContext applicationDbContext) : IMatchesService
 {
@@ -16,7 +16,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
             .ToListAsync();
         return matches;
     }
-
+    
     public async Task<Match?> GetMatchById(string matchId)
     {
         Match? match = await applicationDbContext

@@ -1,4 +1,10 @@
 ﻿@page "/chat"
+
+@using MatchBy.DTOs.Chat.Conversations
+@using MatchBy.DTOs.Chat.Messages
+@using MatchBy.Services.ChatMessages
+@using MatchBy.Services.Conversations
+@using MatchBy.Services.Users
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -11,8 +17,7 @@
 <div class="fixed inset-0 flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
     <div class="mt-14 flex flex-1 min-h-0">
         <div class="w-72 hidden md:flex flex-col border-r border-gray-200 dark:border-neutral-800">
-            <ChatSidebar @rendermode="InteractiveServer"
-                         Conversations="State.Conversations"
+            <ChatSidebar Conversations="State.Conversations"
                          OnConversationSelected="OnConversationSelected"
                          OnShowModal="ShowModal"/>
         </div>
@@ -45,7 +50,7 @@
                                    SelectedConversation="@State.Selected"
                                    OnLeaveConversation="LeaveConversation"
                                    OnDeleteConversation="DeleteConversation"
-                                   OnImageSubmit="OnConversationImageUpload"
+                                   OnImageSubmit="OnUpdateConversation"
                                    UserId="@State.UserId"/>
     }
 
@@ -58,7 +63,7 @@
     private ConversationInfoOffcanvas _offcanvas = default!;
     private NewConversationModal _modal = default!;
     private string? _messageText;
-    private MatchBy.Models.ChatMessage? _replyToMessage;
+    private ChatMessageDto? _replyToMessage;
     private IReadOnlyList<ApplicationUser> _allUsers = [];
 
     protected override async Task OnInitializedAsync()
@@ -82,8 +87,16 @@
         Console.WriteLine($"Sending message: {_messageText}");
         if (string.IsNullOrWhiteSpace(_messageText) || State.Selected is null) return;
 
-        var newMsg = await ChatMessageService.CreateChatMessageAsync(
-            _messageText, State.UserId!, State.Selected.Id, replyToMessageId: _replyToMessage?.Id);
+        CreateChatMessageDto createChatMessageDto = new()
+        {
+            Content = _messageText,
+            CreatorUserId = State.UserId!,
+            ConversationId = State.Selected.Id,
+            ReplyToMessageId = _replyToMessage?.Id
+        };
+        
+
+        var newMsg = await ChatMessageService.CreateChatMessageAsync(createChatMessageDto);
 
         if (newMsg is not null)
         {
@@ -95,19 +108,22 @@
         Console.WriteLine($"Message sent successfully: {newMsg?.Id}");
     }
 
-    private async Task OnEditMessage(MatchBy.Models.ChatMessage msg)
+    private async Task OnEditMessage(UpdateChatMessageDto msg)
     {
-        var updated = await ChatMessageService.UpdateChatMessageAsync(msg.Id, msg.Content, State.UserId!);
-        if (updated is not null) State.UpsertMessage(updated);
+        var updated = await ChatMessageService.UpdateChatMessageAsync(msg);
+        if (updated is not null)
+        {
+            State.UpsertMessage(updated);
+        }
     }
 
-    private async Task OnDeleteMessage(MatchBy.Models.ChatMessage msg)
+    private async Task OnDeleteMessage(ChatMessageDto msg)
     {
         await ChatMessageService.DeleteChatMessageAsync(msg.Id, State.UserId!);
         State.RemoveMessage(msg.ConversationId, msg.Id);
     }
 
-    private Task OnReplyToMessage(MatchBy.Models.ChatMessage msg)
+    private Task OnReplyToMessage(ChatMessageDto msg)
     {
         _replyToMessage = msg;
         return Task.CompletedTask;
@@ -121,8 +137,17 @@
 
     private async Task StartChat(string otherUserId)
     {
-        var conv = await ConversationService.CreateConversationAsync(State.UserId!, ConversationType.Private,
-            [otherUserId, State.UserId!], null, null, null, CancellationToken.None);
+        var createConversationDto = new CreateConversationDto
+        {
+            CreatorUserId = State.UserId!,
+            ConversationType = ConversationType.Private,
+            ParticipantIds = [otherUserId, State.UserId!],
+            TeamId = null,
+            MatchId = null,
+            Title = null
+        };
+        
+        var conv = await ConversationService.CreateConversationAsync(createConversationDto);
         if (conv is not null)
         {
             State.Conversations.Add(conv);
@@ -146,20 +171,20 @@
         if (ok) State.RemoveConversation(id);
     }
 
-    public async Task OnConversationSelected(Conversation conversation)
+    public async Task OnConversationSelected(ConversationDto conversation)
     {
         var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId!);
         State.Select(conversation, messages);
     }
 
-    public async Task OnConversationImageUpload(IBrowserFile newConversationImage)
+    public async Task OnUpdateConversation(UpdateConversationDto updateConversationDto)
     {
         if (State.Selected is null)
         {
             Console.WriteLine("No conversation selected.");
             return;
         }
-        await ConversationService.UpdateConversationImageAsync(State.Selected.Id, State.UserId!, newConversationImage);
+        await ConversationService.UpdateConversationAsync(updateConversationDto);
     }
 
 }

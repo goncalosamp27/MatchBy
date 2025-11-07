@@ -1,4 +1,6 @@
-﻿@using Blazorise
+﻿@using MatchBy.DTOs.Chat.Conversations
+@using Blazorise
+
 <!-- Offcanvas: Conversation Info -->
 <Offcanvas @ref="OffcanvasRef"
            ShowBackdrop
@@ -20,7 +22,7 @@
         <!-- Hero (fixo) -->
         <div class="px-4 py-5 text-center border-b border-gray-200 dark:border-neutral-800">
             <Image
-                Src="@(SelectedConversation.Image is null ? "/images/user-avatar.png" : SelectedConversation.Image.Url)"
+                Src="@(SelectedConversation.ImageUrl ?? "/images/user-avatar.png")"
                 Alt="@SelectedConversation.Title"
                 Class="rounded-full mx-auto mb-3"
                 Style="width:72px;height:72px;object-fit:cover;"/>
@@ -54,7 +56,7 @@
             <div class="px-4 py-4 border-b border-gray-200 dark:border-neutral-800">
                 <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-500 dark:text-gray-400">Messages</span>
-                    <span class="font-semibold">@SelectedConversation.Messages.Count</span>
+                    <span class="font-semibold">@SelectedConversation.MessagesCount</span>
                 </div>
                 <div class="flex items-center justify-between mt-2">
                     <span class="text-sm text-gray-500 dark:text-gray-400">Participants</span>
@@ -68,12 +70,12 @@
                 <ListGroup Flush Class="divide-y divide-gray-200 dark:divide-neutral-800">
                     @foreach (var p in SelectedConversation.Participants)
                     {
-                        var photo = p.ProfileImage?.Url ?? "/images/user-avatar.png";
+                        var photo = p.ImageUrl ?? "/images/user-avatar.png";
                         var isOwner = p.Id == SelectedConversation.CreatorId;
                         <ListGroupItem Class="!p-0">
                             <div class="flex items-center gap-3 px-2 py-2">
                                 <Image Src="@photo"
-                                       Alt="@p.DisplayName"
+                                       Alt="@p.Username"
                                        Class="rounded-full"
                                        Style="width:32px;height:32px;object-fit:cover;"/>
                                 <div class="flex flex-col">
@@ -125,14 +127,24 @@
 @code
 {
     private Offcanvas OffcanvasRef { get; set; } = new();
-    [Parameter] public required Conversation SelectedConversation { get; set; }
+    [Parameter] public required ConversationDto SelectedConversation { get; set; }
     [Parameter] public EventCallback OnLeaveConversation { get; set; }
     [Parameter] public EventCallback OnDeleteConversation { get; set; }
-    [Parameter] public EventCallback<IBrowserFile> OnImageSubmit { get; set; }
+    [Parameter] public EventCallback<UpdateConversationDto> OnImageSubmit { get; set; }
     [Parameter] public required string UserId { get; set; }
 
     public async Task Hide() => await OffcanvasRef.Hide();
     public async Task Show() => await OffcanvasRef.Show();
 
-    private async Task OnImageSelected(InputFileChangeEventArgs e) => await OnImageSubmit.InvokeAsync(e.File);
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        UpdateConversationDto dto = new()
+        {
+            ConversationId = SelectedConversation.Id,
+            File = e.File,
+            CreatorUserId = UserId,
+            ParticipantIds = SelectedConversation.Participants.Select(p => p.Id).ToList()
+        };
+        await OnImageSubmit.InvokeAsync(dto);
+    }
 }

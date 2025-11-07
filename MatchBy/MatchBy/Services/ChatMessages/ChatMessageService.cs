@@ -1,13 +1,14 @@
 ﻿using MatchBy.Data;
+using MatchBy.DTOs.Chat.Messages;
 using MatchBy.Models;
 using Microsoft.EntityFrameworkCore;
 using ChatMessage = MatchBy.Models.ChatMessage;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.ChatMessages;
 
 public class ChatMessageService(ApplicationDbContext applicationDbContext): IChatMessageService
 {
-    public async Task<List<ChatMessage>> GetChatMessagesAsync(string conversationId, string userId, CancellationToken ct = default)
+    public async Task<List<ChatMessageDto>> GetChatMessagesAsync(string conversationId, string userId, CancellationToken ct = default)
     {
         bool isUserInvolved = await applicationDbContext.Conversations
             .Where(c => c.Id == conversationId)
@@ -23,19 +24,21 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
             .ChatMessages
             .Include(m => m.Sender)
             .Include(m => m.ReplyToMessage)
+            .ThenInclude(r => r!.Sender) 
             .Include(m => m.Conversation)
             .Where(m => m.ConversationId == conversationId)
             .AsNoTracking()
             .ToListAsync(ct);
         
-        return chatMessages;
+        return [.. chatMessages.Select(c => c.ToDto())];
     }
 
-    public async Task<ChatMessage?> GetChatMessageByIdAsync(string chatMessageId, string userId, CancellationToken ct = default)
+    public async Task<ChatMessageDto?> GetChatMessageByIdAsync(string chatMessageId, string userId, CancellationToken ct = default)
     {
         ChatMessage? chatMessage = await applicationDbContext.ChatMessages
             .Include(m => m.Sender)
             .Include(m => m.ReplyToMessage)
+            .ThenInclude(r => r!.Sender)
             .Include(m => m.Conversation)
             .Where(m => m.Id.Equals(chatMessageId))
             .FirstOrDefaultAsync(ct);
@@ -50,14 +53,13 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
             .Where(c => c.CreatorId == userId || c.Participants.Any(p => p.Id == userId))
             .AnyAsync(ct);
         
-        return isUserInvolved ? chatMessage : null;
+        return isUserInvolved ? chatMessage.ToDto() : null;
     }
 
-    public async Task<ChatMessage?> CreateChatMessageAsync(string content, string creatorUserId, string conversationId, string? replyToMessageId = null,
-        CancellationToken ct = default)
+    public async Task<ChatMessageDto?> CreateChatMessageAsync(CreateChatMessageDto createChatMessageDto, CancellationToken ct = default)
     {
         ApplicationUser? sender = await applicationDbContext.Users
-            .Where(u => u.Id == creatorUserId)
+            .Where(u => u.Id == createChatMessageDto.CreatorUserId)
             .FirstOrDefaultAsync(ct);
         if (sender is null)
         {
@@ -65,8 +67,8 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         }
         
         Conversation? conversation = await applicationDbContext.Conversations
-            .Where(c => c.Id == conversationId)
-            .Where(c => c.CreatorId == creatorUserId || c.Participants.Any(p => p.Id == creatorUserId))
+            .Where(c => c.Id == createChatMessageDto.ConversationId)
+            .Where(c => c.CreatorId == createChatMessageDto.CreatorUserId || c.Participants.Any(p => p.Id ==  createChatMessageDto.CreatorUserId))
             .FirstOrDefaultAsync(ct);
         if (conversation is null)
         {
@@ -74,41 +76,18 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         }
         
         conversation.LastMessageAtUtc = DateTime.UtcNow;
-        
-        var chatMessage = new ChatMessage
-        {
-            Id = $"chatMessage_{Guid.CreateVersion7()}",
-            Content = content,
-            SenderId = creatorUserId,
-            ReplyToMessageId = replyToMessageId,
-            ConversationId = conversationId,
-            CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
-        };
+        ChatMessage chatMessage = createChatMessageDto.ToEntity();
         
         await applicationDbContext.ChatMessages.AddAsync(chatMessage, ct);
         await applicationDbContext.SaveChangesAsync(ct);
         
-        chatMessage.Sender = sender;
-        if (replyToMessageId == null)
-        {
-            return chatMessage;
-        }
-
-        ChatMessage? replyToMessage = await applicationDbContext.ChatMessages
-            .Where(m => m.Id == replyToMessageId)
-            .FirstOrDefaultAsync(ct);
-            
-        chatMessage.ReplyToMessage = replyToMessage;
-        return chatMessage;
+        return chatMessage.ToDto();
     }
 
-    public async Task<ChatMessage?> UpdateChatMessageAsync(string chatMessageId, string content, string creatorUserId,
-        CancellationToken ct = default)
+    public async Task<ChatMessageDto?> UpdateChatMessageAsync(UpdateChatMessageDto updateChatMessageDto, CancellationToken ct = default)
     {
         ApplicationUser? sender = await applicationDbContext.Users
-            .Where(u => u.Id == creatorUserId)
+            .Where(u => u.Id == updateChatMessageDto.CreatorUserId)
             .FirstOrDefaultAsync(ct);
         if (sender is null)
         {
@@ -116,8 +95,8 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         }
         
         ChatMessage? chatMessage = await applicationDbContext.ChatMessages
-            .Where(m => m.Id == chatMessageId && m.DeletedAtUtc == null)
-            .Where(m => m.SenderId == creatorUserId )
+            .Where(m => m.Id == updateChatMessageDto.ChatMessageId && m.DeletedAtUtc == null)
+            .Where(m => m.SenderId == updateChatMessageDto.CreatorUserId )
             .Include(m => m.ReplyToMessage)
             .Include(m => m.Conversation)
             .Include(m => m.Sender)
@@ -139,13 +118,12 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         }
 
         conversation.LastMessageAtUtc = DateTime.UtcNow;
-
-        chatMessage.Content = content;
+        chatMessage.Content = updateChatMessageDto.Content;
         chatMessage.UpdatedAtUtc = DateTime.UtcNow;
 
         await applicationDbContext.SaveChangesAsync(ct);
             
-        return chatMessage;
+        return chatMessage.ToDto();
     }
 
     public async Task<bool> DeleteChatMessageAsync(string chatMessageId, string userId, CancellationToken ct = default)

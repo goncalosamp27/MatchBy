@@ -1,26 +1,31 @@
-﻿<button onclick="@(async () => await OnConversationSelected.InvokeAsync(Conversation))"
+﻿@using MatchBy.DTOs.Chat.Conversations
+
+<button @onclick="() => OnConversationSelected.InvokeAsync(Conversation)"
         class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
     <span class="relative">
         <img class="size-10 rounded-full"
-             src="@(Conversation.Image is null ? "/images/user-avatar.png" : Conversation.Image.Url)"
+             src="@(Conversation.ImageUrl ?? "/images/user-avatar.png")"
              alt="">
-        <span
-            class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900"></span>
+        <span class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900"></span>
     </span>
+
     <span class="min-w-0 flex-1 text-left">
         <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">@Conversation.Title</span>
-            @if (Conversation.LastMessageAtUtc.HasValue)
+            <span class="text-[15px] font-medium truncate">@Conversation?.Title</span>
+
+            @if (Conversation?.LastMessageAtUtc is not null)
             {
-                <span class="text-[11px] text-gray-500">@Conversation.LastMessageAtUtc.Value.ToString("HH:mm")</span>
+                <span class="text-[11px] text-gray-500">@Conversation?.LastMessageAtUtc.Value.ToString("HH:mm")</span>
             }
         </span>
-        <span
-            class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">@(Conversation.Messages.LastOrDefault() is not null ? Conversation.Messages.LastOrDefault()?.Content : "")</span>
+
+        <span class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">
+            @(Conversation?.LastMessageContent ?? "No messages yet")
+        </span>
     </span>
 </button>
 
 @code {
-    [Parameter] public EventCallback<Conversation> OnConversationSelected { get; set; }
-    [Parameter] public Conversation Conversation { get; set; } = new();
+    [Parameter] public EventCallback<ConversationDto> OnConversationSelected { get; set; }
+    [Parameter] public required ConversationDto Conversation { get; set; }
 }

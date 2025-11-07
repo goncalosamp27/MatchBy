@@ -1,6 +1,7 @@
 ﻿using Amazon.S3;
 using MatchBy.Models;
 using MatchBy.Services;
+using MatchBy.Services.S3;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -60,6 +61,7 @@ public class ProfileImageController(IS3Service s3, UserManager<ApplicationUser> 
     public async Task<IActionResult> RemoveImage([FromServices] IAntiforgery antiforgery)
     {
         await antiforgery.ValidateRequestAsync(HttpContext);
+        
         ApplicationUser? user = await userManager.GetUserAsync(User);
         if (user is null)
         {

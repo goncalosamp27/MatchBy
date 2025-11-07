@@ -1,6 +1,6 @@
 ﻿using MatchBy.Models;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.Matches;
 
 public interface IMatchesService
 {

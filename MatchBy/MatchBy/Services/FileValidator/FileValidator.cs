@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
-namespace MatchBy.Services;
+namespace MatchBy.Services.FileValidator;
 
 public class FileValidator(ILogger<FileValidator> logger): IFileValidator
 {
