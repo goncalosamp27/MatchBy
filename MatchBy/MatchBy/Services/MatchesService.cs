@@ -1,5 +1,6 @@
 ﻿using MatchBy.Data;
 using MatchBy.Models;
+using MatchBy.Enums; 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -13,6 +14,20 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
             .Matches
             .Include(m => m.Participants)
             .Include(m => m.Creator)
+            .Where(m =>
+                m.Status == MatchStatus.Pendent &&
+                m.Participants.Count < m.maxPlayers)
+            .ToListAsync();
+        return matches;
+    }
+    public async Task<List<Match>> GetCompletedMatches()
+    {
+        List<Match> matches = await applicationDbContext
+            .Matches
+            .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Where(m =>
+                m.Status == MatchStatus.Completed)
             .ToListAsync();
         return matches;
     }
@@ -71,4 +86,36 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
             .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.DeletedAtUtc, DateTime.UtcNow));
         return true;
     }
+
+    public async Task<List<Match>> GetMatchesForUser(string userId)
+    {
+        return await applicationDbContext
+            .Matches
+            .AsNoTracking()
+            .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Where(m =>
+                m.DeletedAtUtc == null &&
+                m.Status == MatchStatus.Pendent &&
+                m.CreatorId == userId &&
+                m.Participants.Count < m.maxPlayers)
+            .ToListAsync();
+    }
+
+    public async Task<List<Match>> GetMatchesExceptUser(string userId)
+    {
+        return await applicationDbContext
+            .Matches
+            .AsNoTracking()
+            .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Where(m =>
+                m.DeletedAtUtc == null &&
+                m.Status == MatchStatus.Pendent &&
+                m.CreatorId != userId &&
+                !m.Participants.Any(p => p.Id == userId) &&
+                m.Participants.Count < m.maxPlayers)
+            .ToListAsync();
+    }
+
 }

@@ -5,101 +5,96 @@
 @rendermode @(new InteractiveServerRenderMode(false))
 @attribute [StreamRendering]
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Security.Claims
 
-<h3 class="text-4xl font-extrabold dark:text-white my-4">Matches</h3>
-<Button Color="Color.Primary" @onclick="GoToCreateMatch">Create Match</Button>
+<section class="bg-[var(--background)]">
+    <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
+        <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Create your Match!</h1>
+        <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage matches.</p>
+        <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes the setup quick, simple and collaborative!</p>
+        <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
+            <a @onclick="GoToCreateMatch" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]">
+                Get started
+                <svg class="w-3.5 h-3.5 ms-2 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+                </svg>
+            </a>
+            <button class="py-3 px-5 sm:ms-4 text-sm font-medium text-[var(--text)] focus:outline-none bg-[var(--section)] rounded-lg border border-[var(--text)] hover:bg-[var(--main-hover)] focus:z-10">
+                Learn more
+            </button>  
+        </div>
+    </div>
+</section>
 
-@if(matches is null)
-{
-    <SkeletonTable Rows="5" Columns="15" Class="mt-2" />
-}
-else
-{
-    
-    <Table class="mt-2">
-        <TableHeader ThemeContrast="ThemeContrast.Light">
-            <TableRow>
-                <TableHeaderCell>#</TableHeaderCell>
-                <TableHeaderCell>Location</TableHeaderCell>
-                <TableHeaderCell>MatchDateTime</TableHeaderCell>
-                <TableHeaderCell>Description</TableHeaderCell>
-                <TableHeaderCell>MinPlayers</TableHeaderCell>
-                <TableHeaderCell>MaxPlayers</TableHeaderCell>
-                <TableHeaderCell>Sport</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell>Privacy</TableHeaderCell>
-                <TableHeaderCell>CreatorId</TableHeaderCell>
-                <TableHeaderCell>ParticipantsIds</TableHeaderCell>
-                <TableHeaderCell>CreatedAt</TableHeaderCell>
-                <TableHeaderCell>UpdatedAt</TableHeaderCell>
-                <TableHeaderCell>DeletedAt</TableHeaderCell>
-                <TableHeaderCell>Actions</TableHeaderCell>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            @foreach(var match in matches)
-            {
-                <TableRow>
-                    <TableRowHeader>@match.Id</TableRowHeader>
-                    <TableRowCell>@match.Location</TableRowCell>
-                    <TableRowCell>@(tz is null ? "Null" : Tz.ToLocal(match.MatchDateTimeUtc, tz))</TableRowCell>
-                    <TableRowCell>@match.Description</TableRowCell>
-                    <TableRowCell>@match.minPlayers</TableRowCell>
-                    <TableRowCell>@match.maxPlayers</TableRowCell>
-                    <TableRowCell>@match.Sport</TableRowCell>
-                    <TableRowCell>@match.Status</TableRowCell>
-                    <TableRowCell>@match.Privacy</TableRowCell>
-                    <TableRowCell>@match.CreatorId</TableRowCell>
-                    <TableRowCell>@string.Join(", ", match.Participants.Select(p => p.Id))</TableRowCell>
-                    <TableRowCell>@(tz is null ? "Null" : Tz.ToLocal(match.CreatedAtUtc, tz))</TableRowCell>
-                    <TableRowCell>@(tz is null || match.UpdatedAtUtc is null ? "Null" : Tz.ToLocal(match.UpdatedAtUtc.Value, tz))</TableRowCell>
-                    <TableRowCell>@(tz is null || match.DeletedAtUtc is null? "Null" : Tz.ToLocal(match.DeletedAtUtc.Value, tz))</TableRowCell>
-                    <TableRowCell>
-                        <Div class="flex flex-row gap-2">
-                            <Button Color="Color.Secondary" Clicked="@(() => GoToEditMatch(match.Id))">Edit</Button>
-                            <Button Color="Color.Danger" Clicked="@(() => DeleteMatch(match.Id))">Delete</Button>
-                        </Div>
-                    </TableRowCell>
-                </TableRow>
-            }
-        </TableBody>
-    </Table>
-}
+
+<div class="w-full max-w-[90vw] mx-auto"> 
+@if (isAuthenticated) { 
+    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your Matches:</h1> 
+        @if(yourMatches is null) { 
+            <Loading></Loading> 
+        } 
+        else { 
+            <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(400px,1fr))] mb-8"> 
+            @foreach (var match in yourMatches) { 
+                <MatchCard Match="@match" /> 
+            } 
+            </div> 
+        } 
+    } 
+<h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Matches:</h1> 
+    @if(matches is null) { 
+        <Loading></Loading> 
+    } 
+    else { 
+        <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(400px,1fr))] mb-8"> 
+            @foreach (var match in matches) { 
+                <MatchCard Match="@match" /> 
+            } 
+        </div> 
+        } 
+    </div>
 
 
 @code {
+    private bool isAuthenticated;
+    private List<Models.Match>? yourMatches { get; set; }
     private List<Models.Match>? matches { get; set; }
-    private string? tzId;
-    private TimeZoneInfo? tz;
 
-    protected override async Task OnInitializedAsync() => matches = await MatchesService.GetMatches();
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync() {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (!isAuthenticated) {
+            yourMatches = null;
+            matches = await MatchesService.GetMatches();
+            return;
+        }
+
+        _userId = user.FindFirst("sub")?.Value?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(_userId)) {    
+            yourMatches = new();
+            return;
+        }
+
+        yourMatches = await MatchesService.GetMatchesForUser(_userId);
+        matches = await MatchesService.GetMatchesExceptUser(_userId);
+    }
 
     private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
-    private void GoToEditMatch(string matchId) => NavigationManager.NavigateTo($"/EditMatch/{matchId}");
-
-    private async Task DeleteMatch(string matchId)
-    {
-        await MatchesService.DeleteMatch(matchId);
-        var matchToDelete = matches?.FirstOrDefault(m => m.Id == matchId);
-        if(matchToDelete != null)
-        {
-            matches?.Remove(matchToDelete);
-        }
-    }
     
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (!firstRender) return Task.CompletedTask;
 
-        tzId = await JS.InvokeAsync<string>("timeZone");
-        tz = Tz.FromId(tzId);
         SentrySdk.CaptureMessage("Hello Sentry");
-
-
-        // Example conversions
-        //utcNow = DateTime.UtcNow;                  // this is UTC
-        //localNow = Tz.ToLocal(utcNow, tz);         // -> local in user's TZ
-
         StateHasChanged();
+
+        return Task.CompletedTask;
     }
 }
