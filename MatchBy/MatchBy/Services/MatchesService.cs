@@ -20,6 +20,17 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
             .ToListAsync();
         return matches;
     }
+    public async Task<List<Match>> GetCompletedMatches()
+    {
+        List<Match> matches = await applicationDbContext
+            .Matches
+            .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Where(m =>
+                m.Status == MatchStatus.Completed)
+            .ToListAsync();
+        return matches;
+    }
 
     public async Task<Match?> GetMatchById(string matchId)
     {
