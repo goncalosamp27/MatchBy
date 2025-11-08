@@ -14,5 +14,5 @@ public interface IConversationService
         CancellationToken ct = default);
 
     Task<bool> DeleteConversationAsync(string conversationId, string userId, CancellationToken ct = default);
-    Task<bool> LeaveConversationAsync(string conversationId, string userId, CancellationToken ct = default);
+    Task<int> LeaveConversationAsync(string conversationId, string userId, CancellationToken ct = default);
 }

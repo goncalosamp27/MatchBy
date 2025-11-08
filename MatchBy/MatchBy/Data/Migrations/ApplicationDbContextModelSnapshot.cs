@@ -198,6 +198,9 @@ namespace MatchBy.Data.Migrations
                     b.Property<DateTime?>("LastMessageAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("LastMessageContent")
+                        .HasColumnType("text");
+
                     b.Property<string>("MatchId")
                         .HasColumnType("character varying(500)");
 

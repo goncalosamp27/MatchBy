@@ -1,4 +1,5 @@
-﻿using MatchBy.Data;
+﻿using MatchBy.Components.Pages.Chat;
+using MatchBy.Data;
 using MatchBy.DTOs.Chat.Messages;
 using MatchBy.Models;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
     {
         bool isUserInvolved = await applicationDbContext.Conversations
             .Where(c => c.Id == conversationId)
-            .Where(c => c.CreatorId == userId || c.Participants.Any(p => p.Id == userId))
+            .Where(c => c.Participants.Any(p => p.Id == userId))
             .AnyAsync(ct);
 
         if (!isUserInvolved)
@@ -50,7 +51,7 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         
         bool isUserInvolved = await applicationDbContext.Conversations
             .Where(c => c.Id == chatMessage.ConversationId)
-            .Where(c => c.CreatorId == userId || c.Participants.Any(p => p.Id == userId))
+            .Where(c => c.Participants.Any(p => p.Id == userId))
             .AnyAsync(ct);
         
         return isUserInvolved ? chatMessage.ToDto() : null;
@@ -74,14 +75,16 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         {
             return null;
         }
-        
+
+        conversation.LastMessageContent = createChatMessageDto.Content;
         conversation.LastMessageAtUtc = DateTime.UtcNow;
         ChatMessage chatMessage = createChatMessageDto.ToEntity();
         
         await applicationDbContext.ChatMessages.AddAsync(chatMessage, ct);
         await applicationDbContext.SaveChangesAsync(ct);
         
-        return chatMessage.ToDto();
+        ChatMessageDto? chatMessageDto = await GetChatMessageByIdAsync(chatMessage.Id, createChatMessageDto.CreatorUserId, ct);
+        return chatMessageDto;
     }
 
     public async Task<ChatMessageDto?> UpdateChatMessageAsync(UpdateChatMessageDto updateChatMessageDto, CancellationToken ct = default)
@@ -150,6 +153,7 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
 
         //we have a query filter for DeletedAtUtc == null, so Messages will not include deleted messages
         conversation.LastMessageAtUtc = conversation.Messages.Count == 1 ? null : conversation.Messages.Last(m => m.Id != chatMessageId).CreatedAtUtc;
+        conversation.LastMessageContent = conversation.Messages.Count == 1 ? null : conversation.Messages.Last(m => m.Id != chatMessageId).Content;
 
         // only the sender can delete their message
         bool canDelete = await applicationDbContext.ChatMessages
@@ -163,8 +167,8 @@ public class ChatMessageService(ApplicationDbContext applicationDbContext): ICha
         int affected = await applicationDbContext.ChatMessages
             .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
-
         await applicationDbContext.SaveChangesAsync(ct);
+        
         return affected == 1;
     }
 }

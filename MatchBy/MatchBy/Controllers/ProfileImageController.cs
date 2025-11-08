@@ -9,13 +9,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Controllers;
-[ApiController]
+[ApiController]    
+[Authorize]
 [Route("api/profile-image")]
 
 public class ProfileImageController(IS3Service s3, UserManager<ApplicationUser> userManager) : ControllerBase
 {
-    [AllowAnonymous]
-    [HttpGet("me")]
+    [HttpGet]
     public async Task<IActionResult> GetMine()
     {
         ApplicationUser? user = await userManager.Users
@@ -56,8 +56,7 @@ public class ProfileImageController(IS3Service s3, UserManager<ApplicationUser> 
         return Redirect(url);
     }
     
-    [Authorize]
-    [HttpPost("remove")]
+    [HttpPost("delete")]
     public async Task<IActionResult> RemoveImage([FromServices] IAntiforgery antiforgery)
     {
         await antiforgery.ValidateRequestAsync(HttpContext);

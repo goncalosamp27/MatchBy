@@ -12,6 +12,7 @@ using Blazorise.FluentValidation;
 using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
+using MatchBy.Hubs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
 using MatchBy.Services.Email;
@@ -19,12 +20,13 @@ using MatchBy.Services.FileValidator;
 using MatchBy.Services.Matches;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.ResponseCompression;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents()
@@ -113,6 +115,12 @@ builder.Services
     .AddFontAwesomeIcons()
     .AddBlazoriseFluentValidation();
 
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        [ "application/octet-stream" ]);
+});
+
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
@@ -134,19 +142,19 @@ builder.Services.AddCors(options =>
 
 WebApplication app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseResponseCompression();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     
     //await app.RecreateDatabase();
-    await app.ApplyMigrationsAsync();
+    //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -154,18 +162,15 @@ app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
 app.MapControllers();
-
 app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
-
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(MatchBy.Client._Imports).Assembly);
-
-// Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
 await app.RunAsync();

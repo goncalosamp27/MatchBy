@@ -6,11 +6,6 @@ public static class ConversationMappings
 {
     public static ConversationDto ToDto(this Conversation conversation)
     {
-        string? lastMessageContent = conversation.Messages
-            .OrderByDescending(m => m.CreatedAtUtc)
-            .Select(m => m.Content)
-            .FirstOrDefault();
-
         return new ConversationDto
         {
             Id = conversation.Id,
@@ -22,7 +17,7 @@ public static class ConversationMappings
             MatchId = conversation.MatchId,
             CreatedAtUtc = conversation.CreatedAtUtc,
             UpdatedAtUtc = conversation.UpdatedAtUtc,
-            LastMessageContent = lastMessageContent,
+            LastMessageContent = conversation.LastMessageContent,
             MessagesCount = conversation.Messages.Count,
             LastMessageAtUtc = conversation.LastMessageAtUtc,
             Participants = [.. conversation.Participants.Select(p => new ConversationParticipantDto

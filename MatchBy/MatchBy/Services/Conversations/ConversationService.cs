@@ -21,7 +21,6 @@ public class ConversationService(ApplicationDbContext applicationDbContext, IS3S
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Include(m => m.Messages)
-            .Where(m => m.CreatorId == creatorUserId)
             .Where(m => m.Participants.Any(p => p.Id == creatorUserId))
             .AsNoTracking()
             .ToListAsync(ct);
@@ -43,7 +42,6 @@ public class ConversationService(ApplicationDbContext applicationDbContext, IS3S
             .Include(m => m.Creator)
             .Include(m => m.Messages)
             .Where(m => m.Id.Equals(conversationId))
-            .Where(m => m.CreatorId == creatorUserId)
             .Where(m => m.Participants.Any(p => p.Id == creatorUserId))
             .FirstOrDefaultAsync(ct);
 
@@ -139,7 +137,7 @@ public class ConversationService(ApplicationDbContext applicationDbContext, IS3S
         return affected == 1;
     }
     
-    public async Task<bool> LeaveConversationAsync(string conversationId, string userId, CancellationToken ct = default)
+    public async Task<int> LeaveConversationAsync(string conversationId, string userId, CancellationToken ct = default)
     {
         Conversation? convo = await applicationDbContext.Conversations
             .Include(c => c.Participants)
@@ -147,13 +145,13 @@ public class ConversationService(ApplicationDbContext applicationDbContext, IS3S
 
         if (convo is null)
         {
-            return false;
+            return 0;
         }
         
         ApplicationUser? me = convo.Participants.FirstOrDefault(p => p.Id == userId);
         if (me is null)
         {
-            return false;
+            return 0;
         }
         
         convo.Participants.Remove(me);
@@ -162,7 +160,7 @@ public class ConversationService(ApplicationDbContext applicationDbContext, IS3S
         // Se não ficou ninguém (ou conversa privada com menos de 2), faz soft-delete
         int remaining = convo.Participants.Count;
 
-        bool mustSoftDelete = remaining == 0;
+        bool mustSoftDelete = remaining == 1;
 
         if (mustSoftDelete)
         {
@@ -170,7 +168,8 @@ public class ConversationService(ApplicationDbContext applicationDbContext, IS3S
         }
         
         await applicationDbContext.SaveChangesAsync(ct);
-        return true;
+
+        return mustSoftDelete ? 1 : 2;
     }
     
     private async Task<ConversationDto?> UpdateConversationImageAsync(

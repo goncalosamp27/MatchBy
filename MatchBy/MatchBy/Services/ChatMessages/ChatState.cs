@@ -70,25 +70,18 @@ public sealed class ChatState
         NotifyStateChanged();
     }
 
-    public void RemoveMessage(string conversationId, string messageId)
+    public void RemoveMessage(ConversationDto updatedConversationDto, string messageId)
     {
-        if (Selected?.Id == conversationId)
+        if (Selected?.Id == updatedConversationDto.Id)
         {
             MessagesOfSelectedConversation.RemoveAll(m => m.Id == messageId);
-            
-            ChatMessageDto? newLast = MessagesOfSelectedConversation.LastOrDefault();
-            ConversationDto updatedSelected = Selected with
-            {
-                LastMessageAtUtc = newLast?.CreatedAtUtc,
-                LastMessageContent = newLast?.Content
-            };
-            Selected = updatedSelected;
-            
-            int idxSel = Conversations.FindIndex(c => c.Id == conversationId);
-            if (idxSel >= 0)
-            {
-                Conversations[idxSel] = updatedSelected;
-            }
+            Selected = updatedConversationDto;
+        }
+        
+        int idxSel = Conversations.FindIndex(c => c.Id == updatedConversationDto.Id);
+        if (idxSel >= 0)
+        {
+            Conversations[idxSel] = updatedConversationDto;
         }
         
         NotifyStateChanged();
@@ -100,6 +93,26 @@ public sealed class ChatState
         if (Selected?.Id == conversationId)
         {
             Selected = null;
+        }
+
+        NotifyStateChanged();
+    }
+    
+    public void UpdateConversation(ConversationDto updated)
+    {
+        int idx = Conversations.FindIndex(c => c.Id == updated.Id);
+        if (idx >= 0)
+        {
+            Conversations[idx] = updated;
+        }
+        else
+        {
+            Conversations.Add(updated);
+        }
+
+        if (Selected?.Id == updated.Id)
+        {
+            Selected = updated;
         }
 
         NotifyStateChanged();

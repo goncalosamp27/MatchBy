@@ -6,6 +6,7 @@
 @using MatchBy.Services.Conversations
 @using MatchBy.Services.Users
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider Auth
@@ -13,6 +14,7 @@
 @inject IChatMessageService ChatMessageService
 @inject IUsersService UsersService
 @inject ChatState State
+@inject NavigationManager NavigationManager
 
 <div class="fixed inset-0 flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
     <div class="mt-14 flex flex-1 min-h-0">
@@ -66,17 +68,165 @@
     private ChatMessageDto? _replyToMessage;
     private IReadOnlyList<ApplicationUser> _allUsers = [];
 
+    // SignalR Hub Connection
+    private HubConnection? _hubConnection;
+    private bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+
     protected override async Task OnInitializedAsync()
     {
         State.Changed += (_, _) => StateHasChanged();
         var user = (await Auth.GetAuthenticationStateAsync()).User;
         var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
         if (userId is null) return;
-
+        
         State.InitUser(userId);
         var conversations = await ConversationService.GetConversationsAsync(userId);
         State.SetConversations(conversations);
+
+        // Load all users except the current user
         _allUsers = await UsersService.GetUsers();
+        _allUsers = _allUsers.Where(u => u.Id != userId).ToList();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/chat"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<ChatMessageDto>("MessageCreated", message =>
+        {
+            Console.WriteLine($"Received message via SignalR: {message.Content}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(() =>
+            {
+                State.UpsertMessage(message);
+            });
+        });
+        
+        _hubConnection.On<ChatMessageDto>("MessageUpdated", message =>
+        {
+            Console.WriteLine($"Updated message via SignalR: {message.Content}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(() =>
+            {
+                State.UpsertMessage(message);
+            });
+        });
+        
+        _hubConnection.On<ConversationDto, string>("MessageDeleted",( conversation, chatMessageId) =>
+        {
+            Console.WriteLine($"Deleted message via SignalR: {chatMessageId}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(() =>
+            {
+                State.RemoveMessage(conversation, chatMessageId);
+            });
+        });
+        
+        _hubConnection.On<ConversationDto>("ConversationCreated", conversation =>
+        {
+            Console.WriteLine($"Received conversation via SignalR: {conversation.Title}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(async () =>
+            {
+                State.Conversations.Add(conversation);
+                await OnConversationSelected(conversation);
+            });
+        });
+        
+        _hubConnection.On<ConversationDto>("ConversationUpdated", conversation =>
+        {
+            Console.WriteLine($"Updated conversation via SignalR: {conversation.Title}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(() =>
+            {
+                State.UpdateConversation(conversation);
+            });
+        });
+        
+        _hubConnection.On<string>("ConversationDeleted", conversationId =>
+        {
+            Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(() =>
+            {
+                State.RemoveConversation(conversationId);
+            });
+        });
+        
+        _hubConnection.On<ConversationDto>("ConversationLeft", conversation =>
+        {
+            Console.WriteLine($"Leave conversation via SignalR: {conversation}");
+            
+            //to run in UI thread, so it can update the state
+            InvokeAsync(() =>
+            {
+                if(conversation.Participants.All(p => p.Id != State.UserId))
+                {
+                    State.RemoveConversation(conversation.Id);
+                }
+                else
+                {
+                    State.UpdateConversation(conversation);
+                }
+            });
+        });
+        
+        _hubConnection.Closed += error =>
+        {
+            Console.WriteLine($"Connection closed: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnecting += error =>
+        {
+            Console.WriteLine($"Connection reconnecting: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnected += async connectionId =>
+        {
+            Console.WriteLine($"Connection reconnected: {connectionId}");
+            await JoinAllConversations();
+        };
+
+        try
+        {
+            await _hubConnection.StartAsync();
+            Console.WriteLine($"SignalR Connected: {IsConnected}");
+            
+            await _hubConnection.InvokeAsync("Register", State.UserId);
+        
+            await JoinAllConversations();
+            Console.WriteLine($"Joined all conversations");
+        
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
+        }
+    }
+    
+    
+    private async Task JoinAllConversations()
+    {
+        if (!IsConnected || _hubConnection is null) return;
+
+        var tasks = State.Conversations.Select(conv => _hubConnection.InvokeAsync("JoinConversation", conv.Id)).ToList();
+
+        if (tasks.Count > 0)
+            await Task.WhenAll(tasks);
     }
 
     private Task ShowOffcanvas() => _offcanvas.Show();
@@ -94,33 +244,32 @@
             ConversationId = State.Selected.Id,
             ReplyToMessageId = _replyToMessage?.Id
         };
-        
 
-        var newMsg = await ChatMessageService.CreateChatMessageAsync(createChatMessageDto);
-
-        if (newMsg is not null)
+        if (_hubConnection is not null)
         {
-            State.UpsertMessage(newMsg);
-            _messageText = null;
-            _replyToMessage = null;
+            await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
         }
+        
+        _messageText = null;
+        _replyToMessage = null;
 
-        Console.WriteLine($"Message sent successfully: {newMsg?.Id}");
+        Console.WriteLine($"Message sent successfully: {createChatMessageDto.Content}");
     }
 
     private async Task OnEditMessage(UpdateChatMessageDto msg)
     {
-        var updated = await ChatMessageService.UpdateChatMessageAsync(msg);
-        if (updated is not null)
+        if (_hubConnection is not null)
         {
-            State.UpsertMessage(updated);
+            await _hubConnection.SendAsync("UpdateMessage", msg);
         }
     }
 
     private async Task OnDeleteMessage(ChatMessageDto msg)
     {
-        await ChatMessageService.DeleteChatMessageAsync(msg.Id, State.UserId!);
-        State.RemoveMessage(msg.ConversationId, msg.Id);
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("DeleteMessage", msg.Id);
+        }
     }
 
     private Task OnReplyToMessage(ChatMessageDto msg)
@@ -141,17 +290,15 @@
         {
             CreatorUserId = State.UserId!,
             ConversationType = ConversationType.Private,
-            ParticipantIds = [otherUserId, State.UserId!],
+            ParticipantIds = [otherUserId, State.UserId],
             TeamId = null,
             MatchId = null,
             Title = null
         };
         
-        var conv = await ConversationService.CreateConversationAsync(createConversationDto);
-        if (conv is not null)
+        if (_hubConnection is not null)
         {
-            State.Conversations.Add(conv);
-            await OnConversationSelected(conv);
+            await _hubConnection.SendAsync("CreateConversation", createConversationDto);
         }
     }
 
@@ -159,21 +306,26 @@
     {
         var id = State.Selected?.Id;
         if (id is null) return;
-        var ok = await ConversationService.LeaveConversationAsync(id, State.UserId!);
-        if (ok) State.RemoveConversation(id);
+        
+        if(_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("LeaveConversationAndNotify", id);
+        }
     }
 
     private async Task DeleteConversation()
     {
         var id = State.Selected?.Id;
         if (id is null) return;
-        var ok = await ConversationService.DeleteConversationAsync(id, State.UserId!);
-        if (ok) State.RemoveConversation(id);
+        if(_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("DeleteConversation", id);
+        }
     }
 
     public async Task OnConversationSelected(ConversationDto conversation)
     {
-        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId!);
+        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId);
         State.Select(conversation, messages);
     }
 
@@ -184,7 +336,24 @@
             Console.WriteLine("No conversation selected.");
             return;
         }
-        await ConversationService.UpdateConversationAsync(updateConversationDto);
+
+
+        ConversationDto? conv = await ConversationService.UpdateConversationAsync(updateConversationDto);
+        if (conv is null)
+        {
+            Console.WriteLine("Failed to update conversation.");
+            return;
+        }
+        
+        State.UpdateConversation(conv);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
     }
 
 }
