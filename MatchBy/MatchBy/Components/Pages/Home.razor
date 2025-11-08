@@ -1,6 +1,8 @@
 ﻿@page "/"
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JS
+@using System.Security.Claims
 
 <PageTitle>Home</PageTitle>
 
@@ -8,21 +10,30 @@
     <section class ="border-b-0 border-[var(--main)]">
         <div class="grid max-w-screen-xl px-4 py-8 mx-auto lg:gap-8 xl:gap-0 lg:py-16 lg:grid-cols-12 md:justify-center">
             <div class="mr-auto place-self-center lg:col-span-7">
-                <h1 class="text-[var(--text)] max-w-2xl mb-4 text-4xl font-bold leading-tight tracking-tight md:text-5xl xl:text-6xl lg:text-left text-center">Are you ready to play your favorite sports?</h1>
+                <h1 class="text-[var(--text)] max-w-2xl mb-4 text-4xl font-bold leading-tight tracking-tight md:text-5xl xl:text-6xl lg:text-left text-center">
+                    @CurrentMessage
+                </h1>
                 <p class="max-w-2xl mb-6 font-light text-[var(--main)] lg:mb-8 md:text-lg lg:text-xl lg:text-left text-center leading-relaxed">MatchBy is the best way to connect with other players and organize matches. Start playing today!</p>
                 <div class="flex lg:justify-start justify-center">
-                  <a href="/Account/Register" class="inline-flex items-center justify-center px-5 py-3 mr-3 text-base font-medium text-center text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] hover:text-[var(--text)]">
-                      Join now!
-                      <svg class="w-5 h-5 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-                  </a>
+                @if (userId is null) {
+                    <a href="/Account/Register" class="inline-flex items-center justify-center px-5 py-3 mr-3 text-base font-medium text-center text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] hover:text-[var(--text)]">
+                        Join now!
+                        <svg class="w-5 h-5 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </a>
+                  }
+                else {
+                   <a href="/Matches" class="inline-flex items-center justify-center px-5 py-3 mr-3 text-base font-medium text-center text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] hover:text-[var(--text)]">
+                        Start Playing!
+                        <svg class="w-5 h-5 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    </a> 
+                  }  
                   <a href="#" class="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-center text-[var(--text)] border border-[var(--text)] rounded-lg hover:text-[var(--main)] hover:border-[var(--main)]">
                       Learn more
                   </a>
                 </div>
             </div>
           <div class="hidden lg:mt-0 lg:col-span-5 lg:flex items-center justify-center">
-            <img src="images/carousel/football.png" alt="football"
-                class="transition-opacity duration-1000 opacity-100 max-w-full lg:h-[70vh] w-auto object-contain object-center" />
+            <img src="images/carousel/beachvolleyball.png" alt="football" class="max-w-full lg:h-[70vh] w-auto object-contain object-center" />
           </div>
         </div>
     </section>
@@ -43,5 +54,34 @@
 </section>
 
 @code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? userId;
+
+    private readonly List<string> Messages = new()
+    {
+        "Are you ready to play your favorite sports?",
+        "Find teammates near you and play!",
+        "Organize your next match in a few seconds.",
+        "When will you play your next match?"
+    };
+
+    private int messageGenerator = 0;
+    private string CurrentMessage => Messages[messageGenerator];
+    
+    protected override async Task OnInitializedAsync() {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true) {
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+            Messages.Add("Hey " + user.Identity?.Name + ", are you ready for your next match?");
+            Messages.Add("Welcome back, " + user.Identity?.Name + "! Ready for another game?");
+        }
+
+        var startIndex = System.Security.Cryptography.RandomNumberGenerator.GetInt32(Messages.Count);
+        messageGenerator = startIndex;
+    }
+
     private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
 }
