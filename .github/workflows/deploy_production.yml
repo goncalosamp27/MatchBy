@@ -3,7 +3,7 @@ name: Build and Deploy (Production) - MatchBy
 on:
   push:
     branches:
-      - main
+      - production
   workflow_dispatch:
 
 jobs:
