@@ -20,12 +20,13 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
             .ToListAsync();
         return matches;
     }
-    public async Task<List<Match>> GetCompletedMatches()
+    public async Task<List<Match>> GetCompletedMatches(string? userId)
     {
         List<Match> matches = await applicationDbContext
             .Matches
             .Include(m => m.Participants)
             .Include(m => m.Creator)
+            .Where(m => userId == null || m.CreatorId == userId || m.Participants.Any(p => p.Id == userId))
             .Where(m =>
                 m.Status == MatchStatus.Completed)
             .ToListAsync();
