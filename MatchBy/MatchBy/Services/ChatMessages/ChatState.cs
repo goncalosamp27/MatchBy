@@ -10,6 +10,9 @@ public sealed class ChatState
     public List<ConversationDto> Conversations { get; } = [];
     public ConversationDto? Selected { get; set; }
     public List<ChatMessageDto> MessagesOfSelectedConversation { get; set; } = [];
+    
+    public string? NextChatMessagesCursor { get; private set; }
+    public string? NextConversationCursor { get; private set; }
 
     public event EventHandler? Changed;
 
@@ -20,17 +23,11 @@ public sealed class ChatState
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void SetConversations(IEnumerable<ConversationDto> items)
-    {
-        Conversations.Clear();
-        Conversations.AddRange(items);
-        NotifyStateChanged();
-    }
-
-    public void Select(ConversationDto c, List<ChatMessageDto> messages)
+    public void Select(ConversationDto c, CursorPaginationResponse<List<ChatMessageDto>> messages)
     {
         Selected = c;
-        MessagesOfSelectedConversation = messages;
+        NextChatMessagesCursor = messages.NextCursor;
+        MessagesOfSelectedConversation = messages.Data;
         NotifyStateChanged();
     }
 
@@ -84,6 +81,20 @@ public sealed class ChatState
             Conversations[idxSel] = updatedConversationDto;
         }
         
+        NotifyStateChanged();
+    }
+    
+    public void AddMessages(CursorPaginationResponse<List<ChatMessageDto>> messages)
+    {
+        MessagesOfSelectedConversation.InsertRange(0, messages.Data);
+        NextChatMessagesCursor = messages.NextCursor;
+        NotifyStateChanged();
+    }
+    
+    public void AddConversations(CursorPaginationResponse<List<ConversationDto>> conversations)
+    {
+        Conversations.AddRange(conversations.Data);
+        NextConversationCursor = conversations.NextCursor;
         NotifyStateChanged();
     }
 

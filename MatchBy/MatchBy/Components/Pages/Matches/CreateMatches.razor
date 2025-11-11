@@ -191,7 +191,7 @@ else
                         </FieldLabel>
                         <FieldBody>
                             <Select TValue="string" @bind-SelectedValue="Match.CreatorId">
-                                @foreach (var item in Users)
+                                @foreach (var item in Users.Data)
                                 {
                                     <SelectItem Value="@item.Id">@item.UserName</SelectItem>
                                 }
@@ -232,7 +232,7 @@ else
 @code {
     Validations _fluentValidations = null!;
     private Models.Match? Match { get; set; }
-    private List<ApplicationUser> Users { get; set; } = [];
+    private PaginationResponse<List<ApplicationUser>> Users { get; set; } = new();
     private string? _tzId;
     private TimeZoneInfo? _tz;
 
@@ -300,7 +300,14 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync() => Users = (await UsersService.GetUsers("",1,10)).Items;
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await UsersService.GetUsers("", 1, 10);
+        if (response.Success)
+        {
+            Users = response.Data!;
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -310,7 +317,7 @@ else
             {
                 MatchDateTimeUtc = DateTime.UtcNow,
                 Location = new Location(0, 0, string.Empty, string.Empty),
-                CreatorId = Users.FirstOrDefault()?.Id ?? string.Empty
+                CreatorId = Users.Data.FirstOrDefault()?.Id ?? string.Empty
             };
         }
         else

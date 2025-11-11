@@ -1,5 +1,6 @@
 ﻿@using MatchBy.DTOs.Chat.Messages
 <section class="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+    <CursorPagination OnNext="OnNext" NextCursor="@NextCursor" />
     <div class="space-y-4">
         <Virtualize Items="Groups" Context="group" ItemSize="56">
             <div class="flex justify-center mb-4">
@@ -9,10 +10,11 @@
             </div>
             @foreach (var m in group.Messages)
             {
-                <ChatMessage Message="m" CurrentUserId="@CurrentUserId"
+                <ChatMessage Message="m" 
+                             CurrentUserId="@CurrentUserId"
                              OnEditClicked="OnEdit"
                              OnReplyToClicked="OnReply"
-                             OnDeleteClicked="OnDelete" />
+                             OnDeleteClicked="OnDelete"/>
             }
         </Virtualize>
     </div>
@@ -23,6 +25,9 @@
     [Parameter] public EventCallback<UpdateChatMessageDto> OnEdit { get; set; }
     [Parameter] public EventCallback<ChatMessageDto> OnReply { get; set; }
     [Parameter] public EventCallback<ChatMessageDto> OnDelete { get; set; }
+
+    [Parameter] public EventCallback<string?> OnNext { get; set; }
+    [Parameter] public string? NextCursor { get; set; }
 
     private List<MessageGroup> Groups => GroupByDay(ChatMessages);
 

@@ -30,7 +30,11 @@
         <div class="w-72 hidden md:flex flex-col border-r border-gray-200 dark:border-neutral-800">
             <ChatSidebar Conversations="State.Conversations"
                          OnConversationSelected="OnConversationSelected"
-                         OnShowModal="ShowModal"/>
+                         OnShowModal="ShowModal"
+                         OnNext="LoadMoreConversations"
+                         NextCursor="@State.NextConversationCursor"
+                         CurrentUserId="@State.UserId"
+                         />
         </div>
 
         <main class="flex-1 flex flex-col min-w-0 min-h-0">
@@ -40,12 +44,15 @@
             }
             else
             {
-                <ChatHeader Conversation="State.Selected" OnOpenInfo="ShowOffcanvas"/>
+                <ChatHeader Conversation="State.Selected" OnOpenInfo="ShowOffcanvas" CurrentUserId="@State.UserId"/>
                 <MessageList ChatMessages="@State.MessagesOfSelectedConversation"
                              CurrentUserId="@State.UserId"
                              OnEdit="OnEditMessage"
                              OnReply="OnReplyToMessage"
-                             OnDelete="OnDeleteMessage"/>
+                             OnDelete="OnDeleteMessage"
+                             OnNext="LoadMoreMessages"
+                             NextCursor="@State.NextChatMessagesCursor"
+                             />
                 <ChatFooter Text="@_messageText"
                             TextChanged="(v => _messageText = v)"
                             ReplyTo="@_replyToMessage"
@@ -62,7 +69,7 @@
                                    OnLeaveConversation="LeaveConversation"
                                    OnDeleteConversation="DeleteConversation"
                                    OnImageSubmit="OnUpdateConversation"
-                                   UserId="@State.UserId"/>
+                                   CurrentUserId="@State.UserId"/>
     }
 
     <NewConversationModal @ref="_modal"
@@ -78,7 +85,7 @@
     private NewConversationModal _modal = default!;
     private string? _messageText;
     private ChatMessageDto? _replyToMessage;
-    private PagedResult<ApplicationUser>? _allUsers;
+    private PaginationResponse<List<ApplicationUser>> _allUsers = new();
 
     // SignalR Hub Connection
     private HubConnection? _hubConnection;
@@ -92,20 +99,58 @@
         if (userId is null) return;
 
         State.InitUser(userId);
-        var conversations = await ConversationService.GetConversationsAsync(userId);
-
+        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null, CancellationToken.None);
         if (!conversations.Success)
         {
             Console.WriteLine("Failed to load conversations.");
         }
-        
-        State.SetConversations(conversations.Data!);
+
+        State.AddConversations(conversations.Data!);
 
         // Load all users except the current user
         await GetUsers(new NewConversationModal.UsersQuery("",1,4));
     }
+    
+    public async Task LoadMoreConversations(string? nextCursor)
+    {
+        if (string.IsNullOrEmpty(nextCursor)) return;
 
-    private async Task GetUsers(NewConversationModal.UsersQuery usersQuery) => _allUsers = await UsersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 10, nextCursor, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error("Failed to load more conversations.");
+            return;
+        }
+
+        State.AddConversations(conversations.Data!);
+    }
+    
+    public async Task LoadMoreMessages(string? nextCursor)
+    {
+        if (State.Selected is null || string.IsNullOrEmpty(nextCursor)) return;
+
+        var messagesResult = await ChatMessageService.GetChatMessagesAsync(State.Selected.Id, State.UserId, 1, nextCursor, CancellationToken.None);
+        if (!messagesResult.Success)
+        {
+            await ToastService.Error("Failed to load more messages.");
+            return;
+        }
+
+        State.AddMessages(messagesResult.Data!);
+    }
+
+    private async Task GetUsers(NewConversationModal.UsersQuery usersQuery)
+    {
+        var response = await UsersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
+        if (response.Success)
+        {
+            _allUsers = response.Data!;
+        }
+        else
+        {
+            await ToastService.Error("Failed to load users.");
+        }
+    }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -369,6 +414,7 @@
             MatchId = null,
             Title = null
         };
+        
         if (!CreateConversationDtoValidator.ValidateAsync(createConversationDto).Result.IsValid)
         {
             Console.WriteLine("Conversation validation failed.");
@@ -404,7 +450,7 @@
 
     public async Task OnConversationSelected(ConversationDto conversation)
     {
-        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId);
+        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId, 1, State.NextChatMessagesCursor, CancellationToken.None);
         if (!messages.Success)
         {
             await ToastService.Error("Failed to load messages for conversation.");

@@ -54,10 +54,9 @@
                 <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">
                     Private conversations
                 </div>
-                @foreach (var privateConversation in privateConversations)
+                @foreach (var privateConversation in privateConversations.OrderByDescending(c => c.LastMessageAtUtc))
                 {
-                    <ConversationSideBarItem Conversation="privateConversation"
-                                             OnConversationSelected="OnConversationSelected" ></ConversationSideBarItem>
+                    <ConversationSideBarItem Conversation="@privateConversation" OnConversationSelected="OnConversationSelected" CurrentUserId="@CurrentUserId"/>
                 }
             </div>
         }
@@ -69,10 +68,9 @@
                 <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">
                     Match conversations
                 </div>
-                @foreach(var matchConversation in matchConversations)
+                @foreach(var matchConversation in matchConversations.OrderByDescending(c => c.LastMessageAtUtc))
                 {
-                <ConversationSideBarItem Conversation="matchConversation"
-                                         OnConversationSelected="OnConversationSelected"></ConversationSideBarItem>
+                    <ConversationSideBarItem Conversation="@matchConversation" OnConversationSelected="OnConversationSelected" CurrentUserId="@CurrentUserId"/>
                 }
             </div>
         }
@@ -84,22 +82,23 @@
                 <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">Team
                     conversations
                 </div>
-                @foreach (var teamConversation in teamConversations)
+                @foreach (var teamConversation in teamConversations.OrderByDescending(c => c.LastMessageAtUtc))
                 {
-                    <ConversationSideBarItem Conversation="teamConversation"
-                                             OnConversationSelected="OnConversationSelected"></ConversationSideBarItem>
+                    <ConversationSideBarItem Conversation="@teamConversation" OnConversationSelected="OnConversationSelected" CurrentUserId="@CurrentUserId"/>
                 }
             </div>
         }
     </nav>
+    <CursorPagination NextCursor="@NextCursor" OnNext="OnNext"></CursorPagination>
 </aside>
 
 @code
 {
     private string _search = "";
-    [Parameter] public List<ConversationDto> Conversations { get; set; } = new();
+    [Parameter] public List<ConversationDto> Conversations { get; set; } = [];
     [Parameter] public EventCallback<ConversationDto> OnConversationSelected { get; set; }
     [Parameter] public required string CurrentUserId { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnShowModal { get; set; }
-
+    [Parameter] public EventCallback<string?> OnNext { get; set; }
+    [Parameter] public string? NextCursor { get; set; }
 }

@@ -1,0 +1,25 @@
+﻿@using Blazorise
+@if (!IsNextDisabled)
+{
+    <Pagination Class="flex justify-center">
+        <PaginationItem Disabled="@IsNextDisabled" @onclick="Next">
+            <PaginationLink><span aria-hidden="true">Load More</span></PaginationLink>
+        </PaginationItem>
+    </Pagination>
+}
+
+@code {
+    [Parameter] public EventCallback<string?> OnNext { get; set; }
+    [Parameter] public string? NextCursor { get; set; }
+
+    private bool IsNextDisabled => string.IsNullOrEmpty(NextCursor);
+
+    private async Task Next()
+    {
+        if (!IsNextDisabled)
+        {
+            await OnNext.InvokeAsync(NextCursor);
+        }
+    }
+
+}

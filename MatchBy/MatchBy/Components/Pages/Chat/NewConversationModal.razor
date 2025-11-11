@@ -24,13 +24,13 @@
                 <ListGroup Mode="ListGroupMode.Selectable"
                            @bind-SelectedItem="_selectedItem" Flush
                            Style="max-height:320px; overflow:auto;">
-                    @if ((Users?.Items?.Count ?? 0) == 0)
+                    @if ((Users.Data?.Count ?? 0) == 0)
                     {
                         <ListGroupItem class="py-3 text-muted">No results</ListGroupItem>
                     }
                     else
                     {
-                        @foreach (var u in (Users?.Items ?? Enumerable.Empty<ApplicationUser>()))
+                        @foreach (var u in (Users.Data ?? Enumerable.Empty<ApplicationUser>()))
                         {
                             var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
                             <ListGroupItem Name="@u.Id" class="d-flex align-items-center gap-3 py-2 contact-item">
@@ -88,9 +88,9 @@
     [Parameter] public int PageSize { get; set; } = 4;
 
     [Parameter]
-    public PagedResult<ApplicationUser> Users { get; set; } = new()
+    public PaginationResponse<List<ApplicationUser>> Users { get; set; } = new()
     {
-        Items = [],
+        Data = [],
         TotalCount = 0
     };
 

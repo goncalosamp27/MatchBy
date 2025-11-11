@@ -15,7 +15,7 @@ public class PagedResult<T>
 }
 public class UsersService(ApplicationDbContext applicationDbContext, IS3Service s3Service, IOptions<S3Settings> s3Settings) : IUsersService
 {
-    public async Task<PagedResult<ApplicationUser>> GetUsers(
+    public async Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
         string q, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
         IQueryable<ApplicationUser> query = applicationDbContext.Users
@@ -39,11 +39,14 @@ public class UsersService(ApplicationDbContext applicationDbContext, IS3Service 
             await RefreshProfileImage(u);
         }
         
-        return new PagedResult<ApplicationUser>
-        {
-            Items = users,
-            TotalCount = total
-        };
+        return Result<PaginationResponse<List<ApplicationUser>>>.Ok(
+            new PaginationResponse<List<ApplicationUser>>
+            {
+                Data = users,
+                TotalCount = total,
+                Page = page,
+                PageSize = pageSize
+            });
     }
 
 
