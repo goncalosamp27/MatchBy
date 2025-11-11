@@ -29,6 +29,9 @@ public class CreateConversationDtoValidator : AbstractValidator<CreateConversati
         {
             RuleFor(x => x.TeamId).Empty().WithMessage("Private conversations must not have a TeamId.");
             RuleFor(x => x.MatchId).Empty().WithMessage("Private conversations must not have a MatchId.");
+            RuleFor(x => x.ParticipantIds)
+                .Must(p => p.Count == 2)
+                .WithMessage("Private conversations must have exactly two participants.");
         });
 
         When(x => x.ConversationType == ConversationType.Team, () =>

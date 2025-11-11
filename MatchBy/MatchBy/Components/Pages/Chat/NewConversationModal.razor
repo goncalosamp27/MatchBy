@@ -1,4 +1,5 @@
-﻿@using Blazorise
+﻿@using MatchBy.Services.Users
+@using Blazorise
 
 <Modal @ref="ModalRef" Size="ModalSize.Small">
     <ModalContent Centered Class="rounded-3 shadow">
@@ -8,6 +9,7 @@
         </ModalHeader>
 
         <ModalBody Class="pt-2">
+
             <!-- Search -->
             <Field Class="mb-3">
                 <TextEdit @bind-Text="_search"
@@ -16,78 +18,145 @@
                           Class="form-control-lg"/>
             </Field>
 
-            <!-- Contact list -->
-            <ListGroup Mode="ListGroupMode.Selectable" @bind-SelectedItem="_selectedItem" Flush
-                       Style="max-height:320px; overflow:auto;">
-                <!--The username never is null, but i didnt have changed the default behaviour-->
-                @foreach (var u in Users.Where(u => string.IsNullOrWhiteSpace(_search) ||
-                                                    u.UserName!.Contains(_search, StringComparison.OrdinalIgnoreCase)))
+            @if (!_isLoading)
+            {
+                <!-- Contact list -->
+                <ListGroup Mode="ListGroupMode.Selectable"
+                           @bind-SelectedItem="_selectedItem" Flush
+                           Style="max-height:320px; overflow:auto;">
+                    @if ((Users?.Items?.Count ?? 0) == 0)
+                    {
+                        <ListGroupItem class="py-3 text-muted">No results</ListGroupItem>
+                    }
+                    else
+                    {
+                        @foreach (var u in (Users?.Items ?? Enumerable.Empty<ApplicationUser>()))
+                        {
+                            var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
+                            <ListGroupItem Name="@u.Id" class="d-flex align-items-center gap-3 py-2 contact-item">
+                                <Image Loading src="@photoUrl" Alt="@u.UserName" class="rounded-circle"
+                                       style="width:32px; height:32px; object-fit:cover;"/>
+                                <span class="fw-500">@u.UserName</span>
+                            </ListGroupItem>
+                        }
+                    }
+                </ListGroup>
+            }
+            else
+            {
+                <Div class="flex justify-center items-center" role="status" Style="height:320px; max-height: 320px; overflow:auto;">
+                   <Loading></Loading>
+                </Div>
+            }
+
+            <!-- Pagination -->
+            <Pagination Alignment="Alignment.Center" Class="mt-3">
+                <PaginationItem Disabled="@IsFirstPage">
+                    <PaginationLink Clicked="@GoToPreviousPage">Previous</PaginationLink>
+                </PaginationItem>
+
+                @for (var p = 1; p <= _totalPages; p++)
                 {
-                    var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
-                    <ListGroupItem Name="@u.Id" Class="d-flex align-items-center gap-3 py-2 contact-item">
-                        <Image Loading src="@photoUrl"
-                               Alt="@u.UserName"
-                               Class="rounded-circle"
-                               Style="width:32px; height:32px; object-fit:cover;"/>
-                        <span class="fw-500">@u.UserName</span>
-                    </ListGroupItem>
+                    var pageNumber = p;
+                    <PaginationItem Active="@(_currentPage == pageNumber)">
+                        <PaginationLink Clicked="@(() => GoToPage(pageNumber))">@pageNumber</PaginationLink>
+                    </PaginationItem>
                 }
-            </ListGroup>
-            <!--
-            <nav class="flex justify-center" aria-label="Navigation of Users">
-                <ul class="inline-flex -space-x-px text-sm">
-                    <li>
-                        <a href="#"
-                           class="flex items-center justify-center px-3 h-8 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Previous</a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">1</a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">2</a>
-                    </li>
-                    <li>
-                        <a href="#" aria-current="page"
-                           class="flex items-center justify-center px-3 h-8 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white">3</a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">4</a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">5</a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           class="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white">Next</a>
-                    </li>
-                </ul>
-            </nav>-->
+
+                <PaginationItem Disabled="@IsLastPage">
+                    <PaginationLink Clicked="@GoToNextPage">Next</PaginationLink>
+                </PaginationItem>
+            </Pagination>
+
         </ModalBody>
 
         <ModalFooter Class="justify-content-between">
-            <Button Color="Color.Primary" Class="px-4" Clicked="@StartChat">New chat</Button>
+            <Button Color="Color.Primary" Class="px-4" Disabled="@(_selectedItem is null)" Clicked="@StartChat">New
+                chat
+            </Button>
             <Button Color="Color.Secondary" Outline Class="px-4" Clicked="@Hide">Cancel</Button>
         </ModalFooter>
     </ModalContent>
 </Modal>
 
-@code
-{
+@code {
     private Modal ModalRef { get; set; } = new();
     private string _search = "";
     private string? _selectedItem;
+    private int _currentPage = 1;
 
-    [Parameter] public IReadOnlyList<ApplicationUser> Users { get; set; } = [];
+    [Parameter] public int PageSize { get; set; } = 4;
+
+    [Parameter]
+    public PagedResult<ApplicationUser> Users { get; set; } = new()
+    {
+        Items = [],
+        TotalCount = 0
+    };
+
     [Parameter] public EventCallback<string> OnCreate { get; set; }
+    [Parameter] public EventCallback<UsersQuery> OnGetUsers { get; set; }
+
+    private int _totalPages = 1;
+    private bool _isLoading = false;
+
+    private bool IsFirstPage => _currentPage == 1;
+    private bool IsLastPage => _currentPage >= _totalPages;
+
+    protected override void OnParametersSet()
+    {
+        var total = Users?.TotalCount ?? 0;
+        var size = PageSize <= 0 ? 4 : PageSize;
+        _totalPages = Math.Max(1, (int)Math.Ceiling((double)total / size));
+    }
+
+    private async Task Fetch()
+    {
+        if (_isLoading) return;
+        _isLoading = true;
+        try
+        {
+            var size = PageSize <= 0 ? 4 : PageSize;
+            await OnGetUsers.InvokeAsync(new UsersQuery(_search, _currentPage, size));
+            StateHasChanged();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task GoToPreviousPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            await Fetch();
+        }
+    }
+
+    private async Task GoToNextPage()
+    {
+        if (_currentPage < _totalPages)
+        {
+            _currentPage++;
+            await Fetch();
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= _totalPages && page != _currentPage)
+        {
+            _currentPage = page;
+            await Fetch();
+        }
+    }
 
     public async Task Show() => await ModalRef.Show();
     public async Task Hide() => await ModalRef.Hide();
 
-    public async Task StartChat()
+    private async Task StartChat()
     {
         if (_selectedItem is not null)
         {
@@ -95,4 +164,7 @@
             await Hide();
         }
     }
+
+    public record UsersQuery(string q, int page, int pageSize);
+
 }

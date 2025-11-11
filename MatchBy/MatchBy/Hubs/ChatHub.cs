@@ -12,6 +12,7 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
 {
     // Mapeia userId -> lista de connectionIds
     private static readonly ConcurrentDictionary<string, HashSet<string>> UserConnections = new();
+
     // Mapeia connectionId -> userId (para lookup rápido)
     private static readonly ConcurrentDictionary<string, string> ConnectionUsers = new();
 
@@ -31,13 +32,14 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
                 UserConnections.TryRemove(userId, out _);
             }
         }
+
         return base.OnDisconnectedAsync(exception);
     }
-    
+
     public async Task Register(string userId)
     {
         ConnectionUsers[Context.ConnectionId] = userId;
-        
+
         UserConnections.AddOrUpdate(
             userId,
             _ => [Context.ConnectionId],
@@ -47,16 +49,18 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
                 {
                     connections.Add(Context.ConnectionId);
                 }
+
                 return connections;
             });
-        
+
         await Clients.Caller.SendAsync("Registered", new { userId });
     }
 
     private string EnsureUser()
         => ConnectionUsers.TryGetValue(Context.ConnectionId, out string? uid)
-            ? uid : throw new HubException("Ligação não registada.");
-    
+            ? uid
+            : throw new HubException("Ligação não registada.");
+
     private IEnumerable<string> GetUserConnections(string userId)
     {
         if (!UserConnections.TryGetValue(userId, out HashSet<string>? connections))
@@ -69,14 +73,14 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
             return [.. connections];
         }
     }
-    
+
     private IEnumerable<string> GetParticipantsConnections(List<ConversationParticipantDto> participants)
     {
         return participants.SelectMany(p => GetUserConnections(p.Id)).Distinct();
     }
-    
+
     //--------------------- Conversation Methods -----------------
-    
+
     public async Task JoinConversation(string conversationId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(conversationId));
@@ -90,24 +94,33 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
         string userId = EnsureUser();
         if (createChatMessageDto.CreatorUserId != userId)
         {
-            throw new HubException("Remetente inválido.");
+            // Instead of throw, return error to caller
+            await Clients.Caller.SendAsync("MessageCreated",
+                Result<ChatMessageDto>.Fail("Invalid sender."));
+            return;
         }
-        
-        ChatMessageDto? newMsg = await chatMessageService.CreateChatMessageAsync(createChatMessageDto);
-        
-        if(newMsg is null)
+
+        Result<ChatMessageDto> newMsg = await chatMessageService.CreateChatMessageAsync(createChatMessageDto);
+
+        if (!newMsg.Success)
         {
-            throw new HubException("Não foi possível criar a mensagem.");
+            // Notify only the caller of the error
+            await Clients.Caller.SendAsync("MessageCreated", newMsg);
+            return;
         }
-        
-        ConversationDto? conv = await conversationService.GetConversationByIdAsync(newMsg.ConversationId, userId);
-        
-        if (conv is null)
+
+        Result<ConversationDto> conv =
+            await conversationService.GetConversationByIdAsync(newMsg.Data!.ConversationId, userId);
+
+        if (!conv.Success)
         {
-            throw new HubException("Conversa não encontrada.");
+            await Clients.Caller.SendAsync("MessageCreated",
+                Result<ChatMessageDto>.Fail("Conversation not found."));
+            return;
         }
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
+
+        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+
         await Clients.Clients(participantConnections)
             .SendAsync("MessageCreated", newMsg);
     }
@@ -117,170 +130,218 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
         string userId = EnsureUser();
         if (updateChatMessageDto.CreatorUserId != userId)
         {
-            throw new HubException("Remetente inválido.");
+            await Clients.Caller.SendAsync("MessageUpdated",
+                Result<ChatMessageDto>.Fail("Invalid sender."));
+            return;
         }
 
-        ChatMessageDto? newMsg = await chatMessageService.UpdateChatMessageAsync(updateChatMessageDto);
-        
-        if(newMsg is null)
+        Result<ChatMessageDto> updatedMsg = await chatMessageService.UpdateChatMessageAsync(updateChatMessageDto);
+
+        if (!updatedMsg.Success)
         {
-            throw new HubException("Não foi possível criar a mensagem.");
+            await Clients.Caller.SendAsync("MessageUpdated", updatedMsg);
+            return;
         }
 
-        ConversationDto? conv = await conversationService.GetConversationByIdAsync(newMsg.ConversationId, userId);
-        
-        if (conv is null)
+        Result<ConversationDto> conv =
+            await conversationService.GetConversationByIdAsync(updatedMsg.Data!.ConversationId, userId);
+
+        if (!conv.Success)
         {
-            throw new HubException("Conversa não encontrada.");
+            await Clients.Caller.SendAsync("MessageUpdated",
+                Result<ChatMessageDto>.Fail("Conversation not found."));
+            return;
         }
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
+
+        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+
         await Clients.Clients(participantConnections)
-            .SendAsync("MessageUpdated", newMsg);
+            .SendAsync("MessageUpdated", updatedMsg);
     }
+
+    public record MessageDeletedDto(ConversationDto Conversation, string MessageId);
 
     public async Task DeleteMessage(string chatMessageId)
     {
         string userId = EnsureUser();
-        
-        ChatMessageDto? msg = await chatMessageService.GetChatMessageByIdAsync(chatMessageId, userId);
 
-        if (msg is null)
+        Result<ChatMessageDto> msg = await chatMessageService.GetChatMessageByIdAsync(chatMessageId, userId);
+        if (!msg.Success)
         {
-            throw new HubException("Mensagem não encontrada.");
+            await Clients.Caller.SendAsync("MessageDeleted",
+                Result<object>.Fail("Message not found."));
+            return;
         }
-        
-        bool ok = await chatMessageService.DeleteChatMessageAsync(chatMessageId, userId);
-        if (!ok)
+
+        Result<bool> deleteResult = await chatMessageService.DeleteChatMessageAsync(chatMessageId, userId);
+        if (!deleteResult.Success)
         {
-            throw new HubException("Não foi possível apagar.");
+            await Clients.Caller.SendAsync("MessageDeleted",
+                Result<object>.Fail([.. deleteResult.ErrorMessages]));
+            return;
         }
-        
-        ConversationDto? conv = await conversationService.GetConversationByIdAsync(msg.ConversationId, userId);
-        
-        if (conv is null)
+
+        Result<ConversationDto> conv =
+            await conversationService.GetConversationByIdAsync(msg.Data!.ConversationId, userId);
+        if (!conv.Success)
         {
-            throw new HubException("Conversa não encontrada.");
+            await Clients.Caller.SendAsync("MessageDeleted",
+                Result<object>.Fail("Conversation not found."));
+            return;
         }
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
+
+        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+
+        // Send success to all participants
         await Clients.Clients(participantConnections)
-            .SendAsync("MessageDeleted", conv, chatMessageId);
+            .SendAsync("MessageDeleted", Result<MessageDeletedDto>.Ok(new MessageDeletedDto(
+                conv.Data!,
+                chatMessageId
+            )));
     }
 
     private static string Group(string conversationId) => conversationId;
-    
+
     public async Task CreateConversation(CreateConversationDto dto)
     {
         string userId = EnsureUser();
         if (dto.CreatorUserId != userId)
         {
-            throw new HubException("Criador inválido.");
+            await Clients.Caller.SendAsync("ConversationCreated",
+                Result<ConversationDto>.Fail("Invalid creator."));
+            return;
         }
 
-        ConversationDto? conv = await conversationService.CreateConversationAsync(dto);
-        if (conv is null)
+        Result<ConversationDto> conv = await conversationService.CreateConversationAsync(dto);
+        if (!conv.Success)
         {
-            throw new HubException("Não foi possível criar a conversa.");
+            await Clients.Caller.SendAsync("ConversationCreated", conv);
+            return;
         }
 
-        // Adiciona o criador ao grupo
-        await Groups.AddToGroupAsync(Context.ConnectionId, Group(conv.Id));
-        
-        // Notifica todos os participantes conectados
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
+        // Add creator to the group
+        await Groups.AddToGroupAsync(Context.ConnectionId, Group(conv.Data!.Id));
+
+        // Notify all connected participants
+        var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
+
         foreach (string participant in participantConnections)
         {
-            ConversationDto? conversation = await conversationService.GetConversationByIdAsync(conv.Id, ConnectionUsers[participant]);
+            Result<ConversationDto> conversation =
+                await conversationService.GetConversationByIdAsync(conv.Data.Id, ConnectionUsers[participant]);
             await Clients.Client(participant)
                 .SendAsync("ConversationCreated", conversation);
         }
     }
-    
+
     public async Task UpdateConversation(UpdateConversationDto dto)
     {
         string userId = EnsureUser();
         if (dto.CreatorUserId != userId)
         {
-            throw new HubException("Criador inválido.");
-        }
-        
-        ConversationDto? conv = await conversationService.UpdateConversationAsync(dto);
-        if (conv is null)
-        {
-            throw new HubException("Não foi possível atualizar a conversa.");
+            await Clients.Caller.SendAsync("ConversationUpdated",
+                Result<ConversationDto>.Fail("Invalid creator."));
+            return;
         }
 
-        // Notifica todos os participantes conectados
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
+        Result<ConversationDto> conv = await conversationService.UpdateConversationAsync(dto);
+        if (!conv.Success)
+        {
+            await Clients.Caller.SendAsync("ConversationUpdated", conv);
+            return;
+        }
+
+        // Notify all connected participants
+        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+
         foreach (string participant in participantConnections)
         {
-            ConversationDto? conversation = await conversationService.GetConversationByIdAsync(conv.Id, ConnectionUsers[participant]);
+            Result<ConversationDto> conversation =
+                await conversationService.GetConversationByIdAsync(conv.Data.Id, ConnectionUsers[participant]);
             await Clients.Client(participant)
                 .SendAsync("ConversationCreated", conversation);
         }
     }
-    
+
     public async Task DeleteConversation(string conversationId)
     {
         string userId = EnsureUser();
-        
-        // Obtém a conversa antes de apagar para ter acesso aos participantes
-        ConversationDto? conv = await conversationService.GetConversationByIdAsync(conversationId, userId);
-        if (conv is null)
+
+        // Get conversation before deleting to access participants
+        Result<ConversationDto> conv = await conversationService.GetConversationByIdAsync(conversationId, userId);
+        if (!conv.Success)
         {
-            throw new HubException("Conversa não encontrada.");
-        }
-        
-        if (!await conversationService.DeleteConversationAsync(conversationId, userId))
-        {
-            throw new HubException("Não foi possível apagar.");
+            await Clients.Caller.SendAsync("ConversationDeleted",
+                Result<object>.Fail("Conversation not found."));
+            return;
         }
 
-        // Notifica todos os participantes conectados
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
+        Result<bool> deleteResult = await conversationService.DeleteConversationAsync(conversationId, userId);
+        if (!deleteResult.Success)
+        {
+            await Clients.Caller.SendAsync("ConversationDeleted",
+                Result<object>.Fail(deleteResult.ErrorMessages.ToArray()));
+            return;
+        }
+
+        // Notify all connected participants
+        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+
         await Clients.Clients(participantConnections)
-            .SendAsync("ConversationDeleted", conversationId);
+            .SendAsync("ConversationDeleted", Result<object>.Ok(new
+            {
+                ConversationId = conversationId
+            }));
     }
-    
+
     public async Task LeaveConversationAndNotify(string conversationId)
     {
         string userId = EnsureUser();
-        
-        // Obtém a conversa antes de sair para ter acesso aos participantes
-        ConversationDto? conv = await conversationService.GetConversationByIdAsync(conversationId, userId);
-        if (conv is null)
+
+        // Get conversation before leaving to access participants
+        Result<ConversationDto> conv = await conversationService.GetConversationByIdAsync(conversationId, userId);
+        if (!conv.Success)
         {
-            throw new HubException("Conversa não encontrada.");
+            await Clients.Caller.SendAsync("ConversationLeft",
+                Result<object>.Fail("Conversation not found."));
+            return;
         }
 
-        var participantConnections = GetParticipantsConnections(conv.Participants).ToList();
-        
-        int result = await conversationService.LeaveConversationAsync(conversationId, userId);
-        switch (result)
+        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+
+        Result<int> leaveResult = await conversationService.LeaveConversationAsync(conversationId, userId);
+
+        if (!leaveResult.Success)
         {
-            case 0:
-                throw new HubException("Não foi possível sair.");
+            await Clients.Caller.SendAsync("ConversationLeft",
+                Result<object>.Fail(leaveResult.ErrorMessages.ToArray()));
+            return;
+        }
+
+        switch (leaveResult.Data)
+        {
             case 1:
                 {
+                    // Conversation was deleted (last participant left)
                     await Clients.Clients(participantConnections)
-                        .SendAsync("ConversationDeleted", conversationId);
+                        .SendAsync("ConversationDeleted", Result<object>.Ok(new
+                        {
+                            ConversationId = conversationId
+                        }));
                     break;
                 }
             case 2:
-                // Remove todas as conexões do utilizador do grupo
+                // User left but conversation still exists
+                // Remove all user connections from the group
                 IEnumerable<string> userConnections = GetUserConnections(userId);
                 foreach (string connectionId in userConnections)
                 {
                     await Groups.RemoveFromGroupAsync(connectionId, Group(conversationId));
                 }
+
                 await Clients.Clients(participantConnections)
-                    .SendAsync("ConversationLeft", conv);
+                    .SendAsync("ConversationLeft", Result<ConversationDto>.Ok(conv.Data!));
                 break;
-                
         }
     }
 }

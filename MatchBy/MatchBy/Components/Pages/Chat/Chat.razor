@@ -1,5 +1,7 @@
 ﻿@page "/chat"
 
+@using System.Text.Json
+@using FluentValidation
 @using MatchBy.DTOs.Chat.Conversations
 @using MatchBy.DTOs.Chat.Messages
 @using MatchBy.Services.ChatMessages
@@ -7,6 +9,8 @@
 @using MatchBy.Services.Users
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
+@using MatchBy.Hubs
+@using Blazorise
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider Auth
@@ -15,6 +19,11 @@
 @inject IUsersService UsersService
 @inject ChatState State
 @inject NavigationManager NavigationManager
+@inject IValidator<CreateChatMessageDto> CreateChatMessageDtoValidator
+@inject IValidator<UpdateChatMessageDto> UpdateChatMessageDtoValidator
+@inject IValidator<CreateConversationDto> CreateConversationDtoValidator
+@inject IValidator<UpdateConversationDto> UpdateConversationDtoValidator
+@inject IToastService ToastService 
 
 <div class="fixed inset-0 flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
     <div class="mt-14 flex flex-1 min-h-0">
@@ -58,7 +67,10 @@
 
     <NewConversationModal @ref="_modal"
                           OnCreate="StartChat"
+                          OnGetUsers="GetUsers"
                           Users="@_allUsers"/>
+    
+    <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 </div>
 
 @code{
@@ -66,7 +78,7 @@
     private NewConversationModal _modal = default!;
     private string? _messageText;
     private ChatMessageDto? _replyToMessage;
-    private IReadOnlyList<ApplicationUser> _allUsers = [];
+    private PagedResult<ApplicationUser>? _allUsers;
 
     // SignalR Hub Connection
     private HubConnection? _hubConnection;
@@ -78,15 +90,22 @@
         var user = (await Auth.GetAuthenticationStateAsync()).User;
         var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
         if (userId is null) return;
-        
+
         State.InitUser(userId);
         var conversations = await ConversationService.GetConversationsAsync(userId);
-        State.SetConversations(conversations);
+
+        if (!conversations.Success)
+        {
+            Console.WriteLine("Failed to load conversations.");
+        }
+        
+        State.SetConversations(conversations.Data!);
 
         // Load all users except the current user
-        _allUsers = await UsersService.GetUsers();
-        _allUsers = _allUsers.Where(u => u.Id != userId).ToList();
+        await GetUsers(new NewConversationModal.UsersQuery("",1,4));
     }
+
+    private async Task GetUsers(NewConversationModal.UsersQuery usersQuery) => _allUsers = await UsersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -97,91 +116,135 @@
             .WithAutomaticReconnect()
             .Build();
 
-        _hubConnection.On<ChatMessageDto>("MessageCreated", message =>
+        _hubConnection.On<Result<ChatMessageDto>>("MessageCreated", result =>
         {
-            Console.WriteLine($"Received message via SignalR: {message.Content}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(() =>
+            return InvokeAsync(async () =>
             {
-                State.UpsertMessage(message);
-            });
-        });
-        
-        _hubConnection.On<ChatMessageDto>("MessageUpdated", message =>
-        {
-            Console.WriteLine($"Updated message via SignalR: {message.Content}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(() =>
-            {
-                State.UpsertMessage(message);
-            });
-        });
-        
-        _hubConnection.On<ConversationDto, string>("MessageDeleted",( conversation, chatMessageId) =>
-        {
-            Console.WriteLine($"Deleted message via SignalR: {chatMessageId}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(() =>
-            {
-                State.RemoveMessage(conversation, chatMessageId);
-            });
-        });
-        
-        _hubConnection.On<ConversationDto>("ConversationCreated", conversation =>
-        {
-            Console.WriteLine($"Received conversation via SignalR: {conversation.Title}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(async () =>
-            {
-                State.Conversations.Add(conversation);
-                await OnConversationSelected(conversation);
-            });
-        });
-        
-        _hubConnection.On<ConversationDto>("ConversationUpdated", conversation =>
-        {
-            Console.WriteLine($"Updated conversation via SignalR: {conversation.Title}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(() =>
-            {
-                State.UpdateConversation(conversation);
-            });
-        });
-        
-        _hubConnection.On<string>("ConversationDeleted", conversationId =>
-        {
-            Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(() =>
-            {
-                State.RemoveConversation(conversationId);
-            });
-        });
-        
-        _hubConnection.On<ConversationDto>("ConversationLeft", conversation =>
-        {
-            Console.WriteLine($"Leave conversation via SignalR: {conversation}");
-            
-            //to run in UI thread, so it can update the state
-            InvokeAsync(() =>
-            {
-                if(conversation.Participants.All(p => p.Id != State.UserId))
+                if (result.Success)
                 {
-                    State.RemoveConversation(conversation.Id);
+                    State.UpsertMessage(result.Data!);
                 }
                 else
                 {
-                    State.UpdateConversation(conversation);
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
                 }
             });
         });
-        
+
+        _hubConnection.On<Result<ChatMessageDto>>("MessageUpdated", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Updated message via SignalR: {result.Data!.Content}");
+                    State.UpsertMessage(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to update message: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ChatHub.MessageDeletedDto>>("MessageDeleted", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Deleted message via SignalR: {result.Data!.MessageId}");
+                    State.RemoveMessage(result.Data!.Conversation, result.Data!.MessageId);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to delete message: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationCreated", result =>
+        {
+            InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Received conversation via SignalR: {result.Data!.Title}");
+                    State.Conversations.Add(result.Data!);
+                    await OnConversationSelected(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to create conversation: {string.Join(", ", result.ErrorMessages)}");
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationUpdated", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Updated conversation via SignalR: {result.Data!.Title}");
+                    State.UpdateConversation(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to update conversation: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<object>>("ConversationDeleted", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    var data = (JsonElement)result.Data!;
+                    var conversationId = data.GetProperty("ConversationId").GetString()!;
+
+                    Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
+                    State.RemoveConversation(conversationId);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to delete conversation: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationLeft", result =>
+        {
+            InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Left conversation via SignalR: {result.Data!.Id}");
+
+                    if (result.Data!.Participants.All(p => p.Id != State.UserId))
+                    {
+                        State.RemoveConversation(result.Data!.Id);
+                    }
+                    else
+                    {
+                        State.UpdateConversation(result.Data!);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to leave conversation: {string.Join(", ", result.ErrorMessages)}");
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
         _hubConnection.Closed += error =>
         {
             Console.WriteLine($"Connection closed: {error?.Message}");
@@ -204,12 +267,12 @@
         {
             await _hubConnection.StartAsync();
             Console.WriteLine($"SignalR Connected: {IsConnected}");
-            
+
             await _hubConnection.InvokeAsync("Register", State.UserId);
-        
+
             await JoinAllConversations();
             Console.WriteLine($"Joined all conversations");
-        
+
             StateHasChanged();
         }
         catch (Exception ex)
@@ -217,8 +280,7 @@
             Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
         }
     }
-    
-    
+
     private async Task JoinAllConversations()
     {
         if (!IsConnected || _hubConnection is null) return;
@@ -245,11 +307,17 @@
             ReplyToMessageId = _replyToMessage?.Id
         };
 
+        if (!CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto).Result.IsValid)
+        {
+            Console.WriteLine("Message validation failed.");
+            return;
+        }
+
         if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
         }
-        
+
         _messageText = null;
         _replyToMessage = null;
 
@@ -258,6 +326,12 @@
 
     private async Task OnEditMessage(UpdateChatMessageDto msg)
     {
+        if (!UpdateChatMessageDtoValidator.ValidateAsync(msg).Result.IsValid)
+        {
+            Console.WriteLine("Message validation failed.");
+            return;
+        }
+
         if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("UpdateMessage", msg);
@@ -288,14 +362,19 @@
     {
         var createConversationDto = new CreateConversationDto
         {
-            CreatorUserId = State.UserId!,
+            CreatorUserId = State.UserId,
             ConversationType = ConversationType.Private,
             ParticipantIds = [otherUserId, State.UserId],
             TeamId = null,
             MatchId = null,
             Title = null
         };
-        
+        if (!CreateConversationDtoValidator.ValidateAsync(createConversationDto).Result.IsValid)
+        {
+            Console.WriteLine("Conversation validation failed.");
+            return;
+        }
+
         if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("CreateConversation", createConversationDto);
@@ -306,8 +385,8 @@
     {
         var id = State.Selected?.Id;
         if (id is null) return;
-        
-        if(_hubConnection is not null)
+
+        if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("LeaveConversationAndNotify", id);
         }
@@ -317,7 +396,7 @@
     {
         var id = State.Selected?.Id;
         if (id is null) return;
-        if(_hubConnection is not null)
+        if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("DeleteConversation", id);
         }
@@ -326,26 +405,36 @@
     public async Task OnConversationSelected(ConversationDto conversation)
     {
         var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId);
-        State.Select(conversation, messages);
+        if (!messages.Success)
+        {
+            await ToastService.Error("Failed to load messages for conversation.");
+            return;
+        }
+        State.Select(conversation, messages.Data!);
     }
 
     public async Task OnUpdateConversation(UpdateConversationDto updateConversationDto)
     {
         if (State.Selected is null)
         {
-            Console.WriteLine("No conversation selected.");
+            await ToastService.Error("No conversation selected.");
             return;
         }
 
+        if (!UpdateConversationDtoValidator.ValidateAsync(updateConversationDto).Result.IsValid)
+        {
+            Console.WriteLine("Conversation validation failed.");
+            return;
+        }
 
-        ConversationDto? conv = await ConversationService.UpdateConversationAsync(updateConversationDto);
-        if (conv is null)
+        var conv = await ConversationService.UpdateConversationAsync(updateConversationDto);
+        if (!conv.Success)
         {
             Console.WriteLine("Failed to update conversation.");
             return;
         }
-        
-        State.UpdateConversation(conv);
+
+        State.UpdateConversation(conv.Data!);
     }
 
     public async ValueTask DisposeAsync()

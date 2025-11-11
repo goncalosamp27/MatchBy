@@ -300,7 +300,7 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync() => Users = await UsersService.GetUsers();
+    protected override async Task OnInitializedAsync() => Users = (await UsersService.GetUsers("",1,10)).Items;
 
     protected override async Task OnParametersSetAsync()
     {

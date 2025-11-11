@@ -8,20 +8,44 @@ using Microsoft.Extensions.Options;
 
 namespace MatchBy.Services.Users;
 
+public class PagedResult<T>
+{
+    public List<T> Items { get; set; }
+    public int TotalCount { get; set; }
+}
 public class UsersService(ApplicationDbContext applicationDbContext, IS3Service s3Service, IOptions<S3Settings> s3Settings) : IUsersService
 {
-    public async Task<List<ApplicationUser>> GetUsers()
+    public async Task<PagedResult<ApplicationUser>> GetUsers(
+        string q, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        List<ApplicationUser> users = await applicationDbContext.Users.ToListAsync();
-        await Task.WhenAll(users.Select(RefreshProfileImage));
+        IQueryable<ApplicationUser> query = applicationDbContext.Users
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Where(u =>
+                u.UserName!.Contains(q) ||
+                 u.DisplayName.Contains(q)
+            );
 
-        if (users.Any())
+        int total = await query.CountAsync(ct);
+
+        List<ApplicationUser> users = await query
+            .OrderBy(u => u.UserName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        
+        foreach (ApplicationUser u in users)
         {
-            await applicationDbContext.SaveChangesAsync();   
+            await RefreshProfileImage(u);
         }
         
-        return users;
+        return new PagedResult<ApplicationUser>
+        {
+            Items = users,
+            TotalCount = total
+        };
     }
+
 
     public async Task<ApplicationUser?> GetUser(string userId, CancellationToken cancellationToken)
     {
