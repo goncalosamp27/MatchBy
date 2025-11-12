@@ -22,7 +22,5 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-        builder.ApplyConfiguration(new ApplicationUserConfiguration());
-        builder.ApplyConfiguration(new MatchConfiguration());
     }
 }

@@ -53,15 +53,7 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
 
         builder.HasMany(m => m.Participants)
             .WithMany(u => u.JoinedMatches)
-            .UsingEntity<Dictionary<string, object>>(
-            "MatchParticipants",
-            j => j.HasOne<ApplicationUser>().WithMany().HasForeignKey("UserId"),
-            j => j.HasOne<Match>().WithMany().HasForeignKey("MatchId"),
-            j =>
-            {
-                j.HasKey("MatchId", "UserId");
-                j.Property<DateTime>("JoinedAtUtc").HasDefaultValueSql("NOW()");
-            });
+            .UsingEntity("MatchParticipants");
 
     }
 }

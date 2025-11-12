@@ -56,14 +56,12 @@ else
                     <TableRowCell>@(tz is null || match.DeletedAtUtc is null ? "Null" : Tz.ToLocal(match.DeletedAtUtc.Value, tz))</TableRowCell>
                     <TableRowCell>
                         <Div class="flex flex-row gap-2">
-                            @if (!match.Participants.Any(p => p.Id == currentUserId) && match.Participants.Count < match.maxPlayers)
+                            @if (currentUserId != null && match.Participants.All(p => p.Id != currentUserId) && match.Participants.Count < match.maxPlayers)
                             {
                                 <Button Color="Color.Success"
                                         Clicked="@(() => JoinMatch(match.Id))">Join
                                 </Button>
                             }
-
-
                             <Button Color="Color.Secondary" Clicked="@(() => GoToEditMatch(match.Id))">Edit</Button>
                             <Button Color="Color.Danger" Clicked="@(() => DeleteMatch(match.Id))">Delete</Button>
                         </Div>
