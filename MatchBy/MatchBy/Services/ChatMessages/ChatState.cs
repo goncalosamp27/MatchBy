@@ -98,6 +98,11 @@ public sealed class ChatState
         NotifyStateChanged();
     }
 
+    public void ClearConversations()
+    {
+        Conversations.Clear();
+    }
+
     public void RemoveConversation(string conversationId)
     {
         Conversations.RemoveAll(c => c.Id == conversationId);

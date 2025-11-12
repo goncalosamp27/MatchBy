@@ -3,7 +3,7 @@
 
 <!-- Sidebar -->
 <aside
-    class="hidden md:flex md:flex-col bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800">
+    class="h-full hidden md:flex md:flex-col bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800">
 
     <!-- header -->
     <div class="px-4 pt-3 pb-2">
@@ -27,6 +27,7 @@
             <TextEdit @bind-Text="_search"
                       Placeholder="Search for contacts"
                       Role="TextRole.Search"
+                      KeyDown="OnSearchKeyDown"
                       Class="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 pl-9 pr-3 py-2 text-sm placeholder-gray-400 dark:placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500/30"/>
             <svg class="size-5 absolute left-2.5 top-2 text-gray-400 dark:text-neutral-500"
                  viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -40,12 +41,9 @@
     <nav class="flex-1 overflow-y-auto thin-scroll px-2 pb-3 space-y-4">
 
         @{
-            var privateConversations = Conversations.Where(u => string.IsNullOrWhiteSpace(_search) ||
-                                                                u.Title!.Contains(_search, StringComparison.OrdinalIgnoreCase)).Where(c => c.Type == ConversationType.Private).ToList();
-            var matchConversations = Conversations.Where(u => string.IsNullOrWhiteSpace(_search) ||
-                                                              u.Title!.Contains(_search, StringComparison.OrdinalIgnoreCase)).Where(c => c.Type == ConversationType.Match).ToList();
-            var teamConversations = Conversations.Where(u => string.IsNullOrWhiteSpace(_search) ||
-                                                             u.Title!.Contains(_search, StringComparison.OrdinalIgnoreCase)).Where(c => c.Type == ConversationType.Team).ToList();
+            var privateConversations = Conversations.Where(c => c.Type == ConversationType.Private).ToList();
+            var matchConversations = Conversations.Where(c => c.Type == ConversationType.Match).ToList();
+            var teamConversations = Conversations.Where(c => c.Type == ConversationType.Team).ToList();
         }
         @if (privateConversations.Any())
         {
@@ -56,7 +54,9 @@
                 </div>
                 @foreach (var privateConversation in privateConversations.OrderByDescending(c => c.LastMessageAtUtc))
                 {
-                    <ConversationSideBarItem Conversation="@privateConversation" OnConversationSelected="OnConversationSelected" CurrentUserId="@CurrentUserId"/>
+                    <ConversationSideBarItem Conversation="@privateConversation"
+                                             OnConversationSelected="OnConversationSelected"
+                                             CurrentUserId="@CurrentUserId"/>
                 }
             </div>
         }
@@ -68,9 +68,11 @@
                 <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">
                     Match conversations
                 </div>
-                @foreach(var matchConversation in matchConversations.OrderByDescending(c => c.LastMessageAtUtc))
+                @foreach (var matchConversation in matchConversations.OrderByDescending(c => c.LastMessageAtUtc))
                 {
-                    <ConversationSideBarItem Conversation="@matchConversation" OnConversationSelected="OnConversationSelected" CurrentUserId="@CurrentUserId"/>
+                    <ConversationSideBarItem Conversation="@matchConversation"
+                                             OnConversationSelected="OnConversationSelected"
+                                             CurrentUserId="@CurrentUserId"/>
                 }
             </div>
         }
@@ -84,12 +86,14 @@
                 </div>
                 @foreach (var teamConversation in teamConversations.OrderByDescending(c => c.LastMessageAtUtc))
                 {
-                    <ConversationSideBarItem Conversation="@teamConversation" OnConversationSelected="OnConversationSelected" CurrentUserId="@CurrentUserId"/>
+                    <ConversationSideBarItem Conversation="@teamConversation"
+                                             OnConversationSelected="OnConversationSelected"
+                                             CurrentUserId="@CurrentUserId"/>
                 }
             </div>
         }
     </nav>
-    <CursorPagination NextCursor="@NextCursor" OnNext="OnNext"></CursorPagination>
+    <CursorPagination NextCursor="@NextCursor" OnNext="OnNextPagination"></CursorPagination>
 </aside>
 
 @code
@@ -99,6 +103,18 @@
     [Parameter] public EventCallback<ConversationDto> OnConversationSelected { get; set; }
     [Parameter] public required string CurrentUserId { get; set; }
     [Parameter] public EventCallback<MouseEventArgs> OnShowModal { get; set; }
-    [Parameter] public EventCallback<string?> OnNext { get; set; }
+    [Parameter] public EventCallback<(string?, string?)> OnNext { get; set; }
+    [Parameter] public EventCallback<string?> OnSearch { get; set; }
     [Parameter] public string? NextCursor { get; set; }
+    
+    public void OnNextPagination(string? cursor) => OnNext.InvokeAsync((cursor, _search));
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await OnSearch.InvokeAsync(_search);
+        }
+    }
+
 }

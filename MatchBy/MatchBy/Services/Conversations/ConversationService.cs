@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Amazon.S3;
+﻿using Amazon.S3;
 using FluentValidation;
 using MatchBy.Data;
 using MatchBy.DTOs.Chat.Conversations;
@@ -20,55 +19,83 @@ public class ConversationService(
     IValidator<CreateConversationDto> createConversationValidator,
     IValidator<UpdateConversationDto> updateConversationValidator) : IConversationService
 {
+    private async Task<CursorPaginationResponse<List<ConversationDto>>> PaginateAsync(
+        IQueryable<Conversation> baseQuery,
+        int pageSize,
+        string? cursorReceived,
+        string? query)
+    {
+        if (!string.IsNullOrWhiteSpace(cursorReceived))
+        {
+            var cursor = ConversationCursorDto.Decode(cursorReceived);
+            if (cursor != null)
+            {
+                baseQuery = baseQuery
+                    .Where(p =>
+                        p.LastMessageAtUtc != null
+                            ? p.LastMessageAtUtc < cursor.Date ||
+                              p.LastMessageAtUtc == cursor.Date &&
+                              string.Compare(p.Id, cursor.Id) <= 0
+                            : p.CreatedAtUtc < cursor.Date ||
+                              p.CreatedAtUtc == cursor.Date &&
+                              string.Compare(p.Id, cursor.Id) <= 0);
+            }
+        }
+
+        if (query != null)
+        {
+            baseQuery = baseQuery.Where(c => c.Title != null && c.Title.Contains(query) ||
+                                             c.Participants.Any(p => p.DisplayName.Contains(query)));
+        }
+
+        List<Conversation> items = await baseQuery
+            .OrderByDescending(p => p.LastMessageAtUtc ?? p.CreatedAtUtc)
+            .ThenByDescending(p => p.Id)
+            .Take(pageSize + 1)
+            .ToListAsync();
+
+        bool hasNext = items.Count > pageSize;
+        string? nextCursor = null;
+        if (hasNext)
+        {
+            Conversation last = items[^1];
+            DateTime orderingDate = last.LastMessageAtUtc ?? last.CreatedAtUtc;
+            nextCursor = ConversationCursorDto.Encode(last.Id, orderingDate);
+            items.RemoveAt(items.Count - 1);
+        }
+
+        foreach (Conversation conv in items)
+        {
+            await RefreshConversationImagesAsync(conv);
+        }
+
+        await applicationDbContext.SaveChangesAsync();
+
+        var conversationDtos = items.Select(conversation => conversation.ToDto()).ToList();
+
+        return new CursorPaginationResponse<List<ConversationDto>>
+        {
+            Data = conversationDtos,
+            NextCursor = nextCursor
+        };
+    }
+
+
     public async Task<Result<CursorPaginationResponse<List<ConversationDto>>>> GetConversationsAsync(
         string creatorUserId,
         int pageSize,
         string? cursor,
+        string? query,
         CancellationToken ct = default)
     {
-        IQueryable<Conversation> query = applicationDbContext
-            .Conversations
+        IQueryable<Conversation> baseQuery = applicationDbContext.Conversations
             .Include(c => c.Participants)
             .Include(c => c.Creator)
             .Include(c => c.Messages)
             .Where(c => c.Participants.Any(p => p.Id == creatorUserId));
-        if (!string.IsNullOrEmpty(cursor))
-        {
-            query = query.Where(m => m.Id.CompareTo(cursor) > 0);
-        }
 
-        List<Conversation> conversations = await query
-            .OrderByDescending(c => c.Id)
-            .Take(pageSize + 1)
-            .ToListAsync(ct);
-
-        bool hasNextPage = conversations.Count > pageSize;
-
-        if (hasNextPage)
-        {
-            conversations.RemoveAt(conversations.Count - 1);
-        }
-
-        foreach (Conversation conversation in conversations.Where(c => c.Type == ConversationType.Private))
-        {
-            conversation.Title = conversation.Participants
-                .FirstOrDefault(p => !p.Id.Equals(creatorUserId))?.DisplayName;
-        }
-
-        await Task.WhenAll(conversations.Select(RefreshConversationImagesAsync));
-
-        var conversationDtos = conversations.Select(c => c.ToDto()).ToList();
-
-        string? nextCursor = hasNextPage && conversations.Any()
-            ? conversations[^1].Id
-            : null;
-
-        return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(
-            new CursorPaginationResponse<List<ConversationDto>>
-            {
-                Data = conversationDtos,
-                NextCursor = nextCursor
-            });
+        return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(await PaginateAsync(baseQuery, pageSize,
+            cursor, query));
     }
 
     public async Task<Result<ConversationDto>> GetConversationByIdAsync(string conversationId, string creatorUserId,
@@ -306,8 +333,6 @@ public class ConversationService(
         {
             await RefreshProfileImage(c.Creator);
         }
-
-        await applicationDbContext.SaveChangesAsync();
     }
 
     private async Task RefreshProfileImage(ApplicationUser user)

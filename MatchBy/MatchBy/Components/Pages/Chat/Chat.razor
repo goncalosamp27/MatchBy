@@ -25,7 +25,7 @@
 @inject IValidator<UpdateConversationDto> UpdateConversationDtoValidator
 @inject IToastService ToastService 
 
-<div class="fixed inset-0 flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
+<div class="fixed inset-0 flex flex-col bg-[var(--background)] text-[var(--text)]">
     <div class="mt-14 flex flex-1 min-h-0">
         <div class="w-72 hidden md:flex flex-col border-r border-gray-200 dark:border-neutral-800">
             <ChatSidebar Conversations="State.Conversations"
@@ -34,6 +34,7 @@
                          OnNext="LoadMoreConversations"
                          NextCursor="@State.NextConversationCursor"
                          CurrentUserId="@State.UserId"
+                         OnSearch="SearchConversations"
                          />
         </div>
 
@@ -99,7 +100,7 @@
         if (userId is null) return;
 
         State.InitUser(userId);
-        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null, CancellationToken.None);
+        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null,null, CancellationToken.None);
         if (!conversations.Success)
         {
             Console.WriteLine("Failed to load conversations.");
@@ -111,11 +112,24 @@
         await GetUsers(new NewConversationModal.UsersQuery("",1,4));
     }
     
-    public async Task LoadMoreConversations(string? nextCursor)
+    public async Task SearchConversations(string? search)
     {
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, null,search, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error("Failed to load more conversations.");
+            return;
+        }
+        State.ClearConversations();
+        State.AddConversations(conversations.Data!);
+    }
+    
+    public async Task LoadMoreConversations((string? nextCursor, string? search) args)
+    {
+        var (nextCursor, search) = args;
         if (string.IsNullOrEmpty(nextCursor)) return;
 
-        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 10, nextCursor, CancellationToken.None);
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, nextCursor,search, CancellationToken.None);
         if (!conversations.Success)
         {
             await ToastService.Error("Failed to load more conversations.");
@@ -245,14 +259,13 @@
             });
         });
 
-        _hubConnection.On<Result<object>>("ConversationDeleted", result =>
+        _hubConnection.On<Result<string>>("ConversationDeleted", result =>
         {
             InvokeAsync(() =>
             {
                 if (result.Success)
                 {
-                    var data = (JsonElement)result.Data!;
-                    var conversationId = data.GetProperty("ConversationId").GetString()!;
+                    var conversationId = result.Data!;
 
                     Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
                     State.RemoveConversation(conversationId);

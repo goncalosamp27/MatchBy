@@ -217,6 +217,14 @@ public class ChatMessageService(
         int affected = await applicationDbContext.ChatMessages
             .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
+        
+        List<ChatMessage> messages = [.. conversation.Messages.Where(m => m.ReplyToMessageId == chatMessageId)];
+        foreach (ChatMessage msg in messages)
+        {
+            msg.ReplyToMessageId = null;
+            msg.ReplyToMessage = null;
+        }
+        
         await applicationDbContext.SaveChangesAsync(ct);
 
         return affected > 0 ? Result<bool>.Ok(true) : Result<bool>.Fail("Failed to delete chat message.");

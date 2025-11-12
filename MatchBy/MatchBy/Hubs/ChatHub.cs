@@ -288,10 +288,7 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
         var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
 
         await Clients.Clients(participantConnections)
-            .SendAsync("ConversationDeleted", Result<object>.Ok(new
-            {
-                ConversationId = conversationId
-            }));
+            .SendAsync("ConversationDeleted", Result<string>.Ok(conversationId));
     }
 
     public async Task LeaveConversationAndNotify(string conversationId)

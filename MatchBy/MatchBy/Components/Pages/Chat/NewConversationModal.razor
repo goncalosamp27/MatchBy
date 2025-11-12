@@ -1,155 +1,109 @@
-﻿@using MatchBy.Services.Users
-@using Blazorise
+﻿@using Blazorise
 
-<Modal @ref="ModalRef" Size="ModalSize.Small">
-    <ModalContent Centered Class="rounded-3 shadow">
+<Modal @ref="ModalRef">
+    <ModalContent Centered Class="rounded-3 shadow" Size="ModalSize.Default">
         <ModalHeader>
             <ModalTitle>New conversation</ModalTitle>
             <CloseButton/>
         </ModalHeader>
 
-        <ModalBody Class="pt-2">
-
+        <ModalBody Class="pt-2 flex flex-col" Style="max-height: 60vh;">
             <!-- Search -->
-            <Field Class="mb-3">
+            <Field Class="mb-3 flex-shrink-0">
                 <TextEdit @bind-Text="_search"
                           Placeholder="Search for contacts"
                           Role="TextRole.Search"
+                          KeyDown="OnSearchKeyDown"
                           Class="form-control-lg"/>
             </Field>
 
             @if (!_isLoading)
             {
-                <!-- Contact list -->
-                <ListGroup Mode="ListGroupMode.Selectable"
-                           @bind-SelectedItem="_selectedItem" Flush
-                           Style="max-height:320px; overflow:auto;">
-                    @if ((Users.Data?.Count ?? 0) == 0)
-                    {
-                        <ListGroupItem class="py-3 text-muted">No results</ListGroupItem>
-                    }
-                    else
-                    {
-                        @foreach (var u in (Users.Data ?? Enumerable.Empty<ApplicationUser>()))
+                <!-- Contact list with flexible height -->
+                <div class="flex-grow overflow-auto mb-3 min-h-[200px]">
+                    <ListGroup Mode="ListGroupMode.Selectable"
+                               @bind-SelectedItem="_selectedItem" 
+                               Flush>
+                        @if ((Users.Data?.Count ?? 0) == 0)
                         {
-                            var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
-                            <ListGroupItem Name="@u.Id" class="d-flex align-items-center gap-3 py-2 contact-item">
-                                <Image Loading src="@photoUrl" Alt="@u.UserName" class="rounded-circle"
-                                       style="width:32px; height:32px; object-fit:cover;"/>
-                                <span class="fw-500">@u.UserName</span>
-                            </ListGroupItem>
+                            <ListGroupItem class="py-3 text-muted text-center">No results</ListGroupItem>
                         }
-                    }
-                </ListGroup>
+                        else
+                        {
+                            @foreach (var u in Users.Data ?? Enumerable.Empty<ApplicationUser>())
+                            {
+                                var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                <ListGroupItem Name="@u.Id" class="flex items-center gap-3 py-2 cursor-pointer transition-colors hover:bg-black/5 contact-item">
+                                    <Image Loading src="@photoUrl" Alt="@u.UserName" 
+                                           class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
+                                    <span class="fw-500 truncate">@u.UserName</span>
+                                </ListGroupItem>
+                            }
+                        }
+                    </ListGroup>
+                </div>
+                
+                <!-- Pagination fixed at bottom -->
+                <div class="flex justify-center flex-shrink-0">
+                    <OffsetPagination CurrentPage="@_currentPage" 
+                                      OnPageChanged="GoToPage" 
+                                      PageSize="@PageSize"
+                                      TotalItems="@Users.TotalCount"/>
+                </div>
             }
             else
             {
-                <Div class="flex justify-center items-center" role="status" Style="height:320px; max-height: 320px; overflow:auto;">
-                   <Loading></Loading>
-                </Div>
+                <div class="flex justify-center items-center flex-grow min-h-[200px]" 
+                     role="status">
+                    <Loading/>
+                </div>
             }
-
-            <!-- Pagination -->
-            <Pagination Alignment="Alignment.Center" Class="mt-3">
-                <PaginationItem Disabled="@IsFirstPage">
-                    <PaginationLink Clicked="@GoToPreviousPage">Previous</PaginationLink>
-                </PaginationItem>
-
-                @for (var p = 1; p <= _totalPages; p++)
-                {
-                    var pageNumber = p;
-                    <PaginationItem Active="@(_currentPage == pageNumber)">
-                        <PaginationLink Clicked="@(() => GoToPage(pageNumber))">@pageNumber</PaginationLink>
-                    </PaginationItem>
-                }
-
-                <PaginationItem Disabled="@IsLastPage">
-                    <PaginationLink Clicked="@GoToNextPage">Next</PaginationLink>
-                </PaginationItem>
-            </Pagination>
-
         </ModalBody>
 
-        <ModalFooter Class="justify-content-between">
-            <Button Color="Color.Primary" Class="px-4" Disabled="@(_selectedItem is null)" Clicked="@StartChat">New
-                chat
+        <ModalFooter Class="justify-content-between flex-shrink-0">
+            <Button Color="Color.Primary" 
+                    Class="px-4" 
+                    Disabled="@(_selectedItem is null)" 
+                    Clicked="@StartChat">
+                New chat
             </Button>
-            <Button Color="Color.Secondary" Outline Class="px-4" Clicked="@Hide">Cancel</Button>
+            <Button Color="Color.Secondary" 
+                    Outline 
+                    Class="px-4" 
+                    Clicked="@Hide">
+                Cancel
+            </Button>
         </ModalFooter>
     </ModalContent>
 </Modal>
+
 
 @code {
     private Modal ModalRef { get; set; } = new();
     private string _search = "";
     private string? _selectedItem;
     private int _currentPage = 1;
+    private bool _isLoading = false;
 
-    [Parameter] public int PageSize { get; set; } = 4;
-
-    [Parameter]
-    public PaginationResponse<List<ApplicationUser>> Users { get; set; } = new()
-    {
-        Data = [],
-        TotalCount = 0
-    };
-
+    [Parameter] public EventCallback<string?> OnSearch { get; set; }
+    [Parameter] public int PageSize { get; set; } = 5;
+    [Parameter] public required PaginationResponse<List<ApplicationUser>> Users { get; set; }
     [Parameter] public EventCallback<string> OnCreate { get; set; }
     [Parameter] public EventCallback<UsersQuery> OnGetUsers { get; set; }
 
-    private int _totalPages = 1;
-    private bool _isLoading = false;
-
-    private bool IsFirstPage => _currentPage == 1;
-    private bool IsLastPage => _currentPage >= _totalPages;
-
-    protected override void OnParametersSet()
+    private async Task GoToPage(int page)
     {
-        var total = Users?.TotalCount ?? 0;
-        var size = PageSize <= 0 ? 4 : PageSize;
-        _totalPages = Math.Max(1, (int)Math.Ceiling((double)total / size));
-    }
-
-    private async Task Fetch()
-    {
+        _currentPage = page;
         if (_isLoading) return;
         _isLoading = true;
         try
         {
-            var size = PageSize <= 0 ? 4 : PageSize;
-            await OnGetUsers.InvokeAsync(new UsersQuery(_search, _currentPage, size));
+            await OnGetUsers.InvokeAsync(new UsersQuery(_search, _currentPage, PageSize));
             StateHasChanged();
         }
         finally
         {
             _isLoading = false;
-        }
-    }
-
-    private async Task GoToPreviousPage()
-    {
-        if (_currentPage > 1)
-        {
-            _currentPage--;
-            await Fetch();
-        }
-    }
-
-    private async Task GoToNextPage()
-    {
-        if (_currentPage < _totalPages)
-        {
-            _currentPage++;
-            await Fetch();
-        }
-    }
-
-    private async Task GoToPage(int page)
-    {
-        if (page >= 1 && page <= _totalPages && page != _currentPage)
-        {
-            _currentPage = page;
-            await Fetch();
         }
     }
 
@@ -165,6 +119,24 @@
         }
     }
 
-    public record UsersQuery(string q, int page, int pageSize);
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentPage = 1;
+            if (_isLoading) return;
+            _isLoading = true;
+            try
+            {
+                await OnGetUsers.InvokeAsync(new UsersQuery(_search, _currentPage, PageSize));
+                StateHasChanged();
+            }
+            finally
+            {
+                _isLoading = false;
+            }
+        }
+    }
 
+    public record UsersQuery(string q, int page, int pageSize);
 }

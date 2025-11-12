@@ -7,7 +7,7 @@
         {
             var otherParticipant = Conversation.Participants.FirstOrDefault(p => p.Id != CurrentUserId);
             <img class="size-9 rounded-full flex-none"
-                 src="@(otherParticipant is null ? "/images/user-avatar.png" : otherParticipant.ImageUrl)"
+                 src="@(otherParticipant?.ImageUrl ?? "/images/user-avatar.png")"
                  alt="@Conversation.Title image"/>  
         }
         else
