@@ -16,7 +16,8 @@ public sealed class Match
     public ApplicationUser? Creator { get; set; }
     public string? ConversationId { get; set; }
     public Conversation? Conversation { get; set; }
-    public ICollection<ApplicationUser> Participants { get; set; }
+    public ICollection<ApplicationUser> Participants { get; set; } = new List<ApplicationUser>();
+
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public DateTime? DeletedAtUtc { get; set; }

@@ -1,3 +1,4 @@
+using MatchBy.Data.Configurations;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -21,5 +22,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+        builder.ApplyConfiguration(new ApplicationUserConfiguration());
+        builder.ApplyConfiguration(new MatchConfiguration());
     }
 }

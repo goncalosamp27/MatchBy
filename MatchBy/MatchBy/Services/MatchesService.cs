@@ -1,7 +1,6 @@
 ﻿using MatchBy.Data;
 using MatchBy.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MatchBy.Services;
 
@@ -69,6 +68,39 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
     {
         await applicationDbContext.Matches.Where(m => m.Id.Equals(matchId))
             .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.DeletedAtUtc, DateTime.UtcNow));
+        return true;
+    }
+    
+    public async Task<bool> JoinMatch(string matchId, string userId)
+    {
+        Match? match = await applicationDbContext
+            .Matches
+            .Include(m => m.Participants)
+            .FirstOrDefaultAsync(m => m.Id == matchId);
+        
+        if (match is null)
+        {
+            return false;
+        }
+        
+        if (match.Participants.Count >= match.maxPlayers)
+        {
+            return false;
+        }  
+        
+        if (match.Participants.Any(u => u.Id == userId))
+        {
+            return false;
+        }
+        ApplicationUser? user = await applicationDbContext
+            .Users
+            .FirstOrDefaultAsync(u => u.Id == userId);
+        if (user is null) 
+        {
+            return false;
+        }
+        match.Participants.Add(user);
+        await applicationDbContext.SaveChangesAsync();
         return true;
     }
 }

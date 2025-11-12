@@ -9,13 +9,13 @@
 <h3 class="text-4xl font-extrabold dark:text-white my-4">Matches</h3>
 <Button Color="Color.Primary" @onclick="GoToCreateMatch">Create Match</Button>
 
-@if(matches is null)
+@if (matches is null)
 {
-    <SkeletonTable Rows="5" Columns="15" Class="mt-2" />
+    <SkeletonTable Rows="5" Columns="15" Class="mt-2"/>
 }
 else
 {
-    
+
     <Table class="mt-2">
         <TableHeader ThemeContrast="ThemeContrast.Light">
             <TableRow>
@@ -37,7 +37,7 @@ else
             </TableRow>
         </TableHeader>
         <TableBody>
-            @foreach(var match in matches)
+            @foreach (var match in matches)
             {
                 <TableRow>
                     <TableRowHeader>@match.Id</TableRowHeader>
@@ -53,9 +53,17 @@ else
                     <TableRowCell>@string.Join(", ", match.Participants.Select(p => p.Id))</TableRowCell>
                     <TableRowCell>@(tz is null ? "Null" : Tz.ToLocal(match.CreatedAtUtc, tz))</TableRowCell>
                     <TableRowCell>@(tz is null || match.UpdatedAtUtc is null ? "Null" : Tz.ToLocal(match.UpdatedAtUtc.Value, tz))</TableRowCell>
-                    <TableRowCell>@(tz is null || match.DeletedAtUtc is null? "Null" : Tz.ToLocal(match.DeletedAtUtc.Value, tz))</TableRowCell>
+                    <TableRowCell>@(tz is null || match.DeletedAtUtc is null ? "Null" : Tz.ToLocal(match.DeletedAtUtc.Value, tz))</TableRowCell>
                     <TableRowCell>
                         <Div class="flex flex-row gap-2">
+                            @if (!match.Participants.Any(p => p.Id == currentUserId) && match.Participants.Count < match.maxPlayers)
+                            {
+                                <Button Color="Color.Success"
+                                        Clicked="@(() => JoinMatch(match.Id))">Join
+                                </Button>
+                            }
+
+
                             <Button Color="Color.Secondary" Clicked="@(() => GoToEditMatch(match.Id))">Edit</Button>
                             <Button Color="Color.Danger" Clicked="@(() => DeleteMatch(match.Id))">Delete</Button>
                         </Div>
@@ -71,8 +79,30 @@ else
     private List<Models.Match>? matches { get; set; }
     private string? tzId;
     private TimeZoneInfo? tz;
+    private string? currentUserId;
 
-    protected override async Task OnInitializedAsync() => matches = await MatchesService.GetMatches();
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask is not null)
+        {
+            var authState = await AuthenticationStateTask;
+            var user = authState.User;
+            currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        matches = await MatchesService.GetMatches();
+    }
+    
+    private async Task JoinMatch(string matchId)
+    {
+        if (currentUserId is not null)
+        {
+            await MatchesService.JoinMatch(matchId, currentUserId);
+        }
+    }
 
     private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
     private void GoToEditMatch(string matchId) => NavigationManager.NavigateTo($"/EditMatch/{matchId}");
@@ -81,12 +111,12 @@ else
     {
         await MatchesService.DeleteMatch(matchId);
         var matchToDelete = matches?.FirstOrDefault(m => m.Id == matchId);
-        if(matchToDelete != null)
+        if (matchToDelete != null)
         {
             matches?.Remove(matchToDelete);
         }
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
