@@ -4,13 +4,14 @@
 @using System.Security.Claims
 @inject NavigationManager Nav
 @inject IJSRuntime JS
-
+@using Blazorise
+@rendermode @(new InteractiveServerRenderMode(false))
 
 <PageTitle>Home</PageTitle>
 
 <section class="bg-[var(--background)]">
     <section class ="border-b-0 border-[var(--main)]">
-        <div class="grid max-w-screen-xl px-4 py-8 mx-auto lg:gap-8 xl:gap-0 lg:py-16 lg:grid-cols-12 md:justify-center">
+        <div class="grid max-w-screen-xl lg:h-[90vh] px-4 py-8 mx-auto lg:gap-8 xl:gap-0 lg:py-16 lg:grid-cols-12 md:justify-center">
             <div class="mr-auto place-self-center lg:col-span-7">
                 <h1 class="text-[var(--text)] max-w-2xl mb-4 text-4xl font-bold leading-tight tracking-tight md:text-5xl xl:text-6xl lg:text-left text-center">@CurrentMessage</h1>
                 <p class="max-w-2xl mb-6 font-light text-[var(--main)] lg:mb-8 md:text-lg lg:text-xl lg:text-left text-center leading-relaxed">MatchBy is the best way to connect with other players and organize matches. Start playing today!</p>
@@ -32,13 +33,29 @@
                     </a>
                 </div>
             </div>
-
-            @*
-            <div class="hidden lg:mt-0 lg:col-span-5 lg:flex items-center justify-center">
-                <img src="images/carousel/beachvolleyball.png" alt="football" class="max-w-full lg:h-[70vh] w-auto object-contain object-center" />
+            <div class="border-l-3 border-[var(--main)] lg:mt-0 lg:col-span-5 lg:flex items-center hidden justify-center relative overflow-hidden">
+                <Carousel @bind-SelectedSlide="@selectedSlide" Width="Width.Is50" AutoRepeat="true" Autoplay="true" Crossfade="true" ShowControls="false" ShowIndicators="false">
+                    <CarouselSlide Name="1">
+                        <Image Source="images/carousel/football.png" Text="Football" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="2"  Height="Height.Auto">
+                        <Image Source="images/carousel/volleyball.png" Text="Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="3" Height="Height.Auto">
+                        <Image Source="images/carousel/tennis.png" Text="Tennis" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="4" Height="Height.Auto">
+                        <Image Source="images/carousel/futsal.png" Text="Futsal" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="5" Height="Height.Auto">
+                        <Image Source="images/carousel/beachvolleyball.png" Text="Beach Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="6" Height="Height.Auto">
+                        <Image Source="images/carousel/paddle.png" Text="Paddle" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                </Carousel>
             </div>
-            *@
-        
+            @*
             <div id="myCarousel"
                 data-carousel="slide"
                 data-carousel-interval="2000"
@@ -68,6 +85,7 @@
                     <img src="images/carousel/paddle.png" class="w-full h-full object-contain" />
                 </div>
             </div>
+            *@
         </div>
     </section>
 
@@ -76,7 +94,7 @@
         <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage matches.</p>
         <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes the setup quick, simple and collaborative!</p>
         <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
-            <a @onclick="GoToCreateMatch" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]">
+            <a @onclick="GoToCreateMatch" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] hover:cursor-pointer">
                 Let's go!
                 <svg class="w-3.5 h-3.5 ms-2 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
@@ -89,6 +107,10 @@
 @code {    
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? userId = null;
+
+    @code{
+        private string selectedSlide = "1";
+    }
 
     private readonly List<string> Messages = new() {
         "Are you ready to play your favorite sports?",
@@ -117,6 +139,9 @@
 
         var startIndex = System.Security.Cryptography.RandomNumberGenerator.GetInt32(Messages.Count);
         messageGenerator = startIndex;
+
+        var randomSlideIndex = System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, 7); 
+        selectedSlide = randomSlideIndex.ToString();
     }
 
     private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
