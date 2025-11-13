@@ -1,7 +1,8 @@
 ﻿@using Blazorise
 
 <Modal @ref="ModalRef">
-    <ModalContent Centered Class="rounded-3 shadow" Size="ModalSize.Default">
+    <ModalContent Centered Style="background-color: var(--background);" Class="rounded-3 shadow"
+                  Size="ModalSize.Default">
         <ModalHeader>
             <ModalTitle>New conversation</ModalTitle>
             <CloseButton/>
@@ -14,7 +15,8 @@
                           Placeholder="Search for contacts"
                           Role="TextRole.Search"
                           KeyDown="OnSearchKeyDown"
-                          Class="form-control-lg"/>
+                          Class="form-control-lg"
+                          Style="background-color: var(--section-secondary); color: var(--text);"/>
             </Field>
 
             @if (!_isLoading)
@@ -22,8 +24,9 @@
                 <!-- Contact list with flexible height -->
                 <div class="flex-grow overflow-auto mb-3 min-h-[200px]">
                     <ListGroup Mode="ListGroupMode.Selectable"
-                               @bind-SelectedItem="_selectedItem" 
-                               Flush>
+                               @bind-SelectedItem="_selectedItem"
+                               Flush
+                               Style="background-color: var(--background);">
                         @if ((Users.Data?.Count ?? 0) == 0)
                         {
                             <ListGroupItem class="py-3 text-muted text-center">No results</ListGroupItem>
@@ -33,8 +36,9 @@
                             @foreach (var u in Users.Data ?? Enumerable.Empty<ApplicationUser>())
                             {
                                 var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                <ListGroupItem Name="@u.Id" class="flex items-center gap-3 py-2 cursor-pointer transition-colors hover:bg-black/5 contact-item">
-                                    <Image Loading src="@photoUrl" Alt="@u.UserName" 
+                                <ListGroupItem Name="@u.Id"
+                                               class="flex items-center gap-3 py-2 cursor-pointer transition-colors hover:bg-black/5 contact-item">
+                                    <Image Loading src="@photoUrl" Alt="@u.UserName"
                                            class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
                                     <span class="fw-500 truncate">@u.UserName</span>
                                 </ListGroupItem>
@@ -42,18 +46,18 @@
                         }
                     </ListGroup>
                 </div>
-                
+
                 <!-- Pagination fixed at bottom -->
                 <div class="flex justify-center flex-shrink-0">
-                    <OffsetPagination CurrentPage="@_currentPage" 
-                                      OnPageChanged="GoToPage" 
+                    <OffsetPagination CurrentPage="@_currentPage"
+                                      OnPageChanged="GoToPage"
                                       PageSize="@PageSize"
                                       TotalItems="@Users.TotalCount"/>
                 </div>
             }
             else
             {
-                <div class="flex justify-center items-center flex-grow min-h-[200px]" 
+                <div class="flex justify-center items-center flex-grow min-h-[200px]"
                      role="status">
                     <Loading/>
                 </div>
@@ -61,15 +65,14 @@
         </ModalBody>
 
         <ModalFooter Class="justify-content-between flex-shrink-0">
-            <Button Color="Color.Primary" 
-                    Class="px-4" 
-                    Disabled="@(_selectedItem is null)" 
+            <Button Class="px-4 text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)]"
+                    Disabled="@(_selectedItem is null)"
                     Clicked="@StartChat">
                 New chat
             </Button>
-            <Button Color="Color.Secondary" 
-                    Outline 
-                    Class="px-4" 
+            <Button Color="Color.Secondary"
+                    Outline
+                    Class="px-4"
                     Clicked="@Hide">
                 Cancel
             </Button>
@@ -139,4 +142,5 @@
     }
 
     public record UsersQuery(string q, int page, int pageSize);
+
 }

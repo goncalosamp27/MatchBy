@@ -9,6 +9,12 @@ public class UpdateConversationDtoValidator : AbstractValidator<UpdateConversati
     {
         double maxMb = fileValidator.GetMaxFileBytes() / (1024d * 1024d);
         
+        When(x => x.Title is not null, () =>
+        {
+            RuleFor(x => x.Title!)
+                .MaximumLength(200).WithMessage("Title cannot exceed 200 characters.");
+        });
+        
         RuleFor(x => x.ConversationId)
             .NotEmpty().WithMessage("ConversationId is required.");
         

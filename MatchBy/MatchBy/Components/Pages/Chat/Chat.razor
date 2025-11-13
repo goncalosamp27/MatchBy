@@ -1,6 +1,5 @@
 ﻿@page "/chat"
 
-@using System.Text.Json
 @using FluentValidation
 @using MatchBy.DTOs.Chat.Conversations
 @using MatchBy.DTOs.Chat.Messages
@@ -27,16 +26,43 @@
 
 <div class="fixed inset-0 flex flex-col bg-[var(--background)] text-[var(--text)]">
     <div class="mt-14 flex flex-1 min-h-0">
-        <div class="w-72 hidden md:flex flex-col border-r border-gray-200 dark:border-neutral-800">
-            <ChatSidebar Conversations="State.Conversations"
+        <Button Clicked="@ShowSidebarOffcanvas"
+                Class="md:hidden fixed bottom-3 left-3 z-50 rounded-full !p-3.5 bg-[var(--main)] text-[var(--text-contrast)] shadow-lg">
+            <Icon Name="IconName.List"/>
+        </Button>
+        
+        <div class="w-72 hidden md:flex flex-col border-r border-[var(--main)]">
+            <ChatSidebar Class="hidden md:flex md:flex-col" 
+                         Conversations="State.Conversations"
                          OnConversationSelected="OnConversationSelected"
                          OnShowModal="ShowModal"
                          OnNext="LoadMoreConversations"
                          NextCursor="@State.NextConversationCursor"
                          CurrentUserId="@State.UserId"
-                         OnSearch="SearchConversations"
-                         />
+                         OnSearch="SearchConversations"/>
         </div>
+
+        <!-- Offcanvas mobile (< md) -->
+        <Offcanvas @ref="_sidebarOffcanvas"
+                   Placement="Placement.Start"
+                   ShowBackdrop
+                   Style="border-right: 1px solid var(--main); background-color: var(--background);">
+            <OffcanvasHeader>
+                <div class="flex items-center justify-between w-full">
+                    <h2 class="text-lg font-semibold">Chats</h2>
+                    <CloseButton Clicked="@HideSidebarOffcanvas"/>
+                </div>
+            </OffcanvasHeader>
+            <OffcanvasBody Class="!p-0">
+                <ChatSidebar Class="w-full" Conversations="State.Conversations"
+                             OnConversationSelected="OnConversationSelectedMobile"
+                             OnShowModal="ShowModal"
+                             OnNext="LoadMoreConversations"
+                             NextCursor="@State.NextConversationCursor"
+                             CurrentUserId="@State.UserId"
+                             OnSearch="SearchConversations"/>
+            </OffcanvasBody>
+        </Offcanvas>
 
         <main class="flex-1 flex flex-col min-w-0 min-h-0">
             @if (State.Selected is null)
@@ -52,8 +78,7 @@
                              OnReply="OnReplyToMessage"
                              OnDelete="OnDeleteMessage"
                              OnNext="LoadMoreMessages"
-                             NextCursor="@State.NextChatMessagesCursor"
-                             />
+                             NextCursor="@State.NextChatMessagesCursor"/>
                 <ChatFooter Text="@_messageText"
                             TextChanged="(v => _messageText = v)"
                             ReplyTo="@_replyToMessage"
@@ -82,6 +107,16 @@
 </div>
 
 @code{
+    private async Task ShowSidebarOffcanvas() => await _sidebarOffcanvas.Show();
+    private async Task HideSidebarOffcanvas() => await _sidebarOffcanvas.Hide();
+
+    private async Task OnConversationSelectedMobile(ConversationDto conversation)
+    {
+        await OnConversationSelected(conversation);
+        await HideSidebarOffcanvas();
+    }
+    
+    private Offcanvas _sidebarOffcanvas = default!;
     private ConversationInfoOffcanvas _offcanvas = default!;
     private NewConversationModal _modal = default!;
     private string? _messageText;
@@ -103,7 +138,7 @@
         var conversations = await ConversationService.GetConversationsAsync(userId, 3, null,null, CancellationToken.None);
         if (!conversations.Success)
         {
-            Console.WriteLine("Failed to load conversations.");
+            await ToastService.Error(conversations.ErrorMessages.ToString());
         }
 
         State.AddConversations(conversations.Data!);
@@ -117,7 +152,7 @@
         var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, null,search, CancellationToken.None);
         if (!conversations.Success)
         {
-            await ToastService.Error("Failed to load more conversations.");
+            await ToastService.Error(conversations.ErrorMessages.ToString());
             return;
         }
         State.ClearConversations();
@@ -132,7 +167,7 @@
         var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, nextCursor,search, CancellationToken.None);
         if (!conversations.Success)
         {
-            await ToastService.Error("Failed to load more conversations.");
+            await ToastService.Error(conversations.ErrorMessages.ToString());
             return;
         }
 
@@ -146,7 +181,7 @@
         var messagesResult = await ChatMessageService.GetChatMessagesAsync(State.Selected.Id, State.UserId, 1, nextCursor, CancellationToken.None);
         if (!messagesResult.Success)
         {
-            await ToastService.Error("Failed to load more messages.");
+            await ToastService.Error(messagesResult.ErrorMessages.ToString());
             return;
         }
 
@@ -162,7 +197,7 @@
         }
         else
         {
-            await ToastService.Error("Failed to load users.");
+            await ToastService.Error(response.ErrorMessages.ToString());
         }
     }
     
@@ -324,13 +359,8 @@
         try
         {
             await _hubConnection.StartAsync();
-            Console.WriteLine($"SignalR Connected: {IsConnected}");
-
             await _hubConnection.InvokeAsync("Register", State.UserId);
-
             await JoinAllConversations();
-            Console.WriteLine($"Joined all conversations");
-
             StateHasChanged();
         }
         catch (Exception ex)
@@ -354,7 +384,6 @@
 
     private async Task HandleSubmit()
     {
-        Console.WriteLine($"Sending message: {_messageText}");
         if (string.IsNullOrWhiteSpace(_messageText) || State.Selected is null) return;
 
         CreateChatMessageDto createChatMessageDto = new()
@@ -365,9 +394,10 @@
             ReplyToMessageId = _replyToMessage?.Id
         };
 
-        if (!CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto).Result.IsValid)
+        var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);
+        if (!result.IsValid)
         {
-            Console.WriteLine("Message validation failed.");
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
             return;
         }
 
@@ -378,15 +408,14 @@
 
         _messageText = null;
         _replyToMessage = null;
-
-        Console.WriteLine($"Message sent successfully: {createChatMessageDto.Content}");
     }
 
     private async Task OnEditMessage(UpdateChatMessageDto msg)
     {
-        if (!UpdateChatMessageDtoValidator.ValidateAsync(msg).Result.IsValid)
+        var result = await UpdateChatMessageDtoValidator.ValidateAsync(msg);
+        if (!result.IsValid)
         {
-            Console.WriteLine("Message validation failed.");
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
             return;
         }
 
@@ -428,9 +457,10 @@
             Title = null
         };
         
-        if (!CreateConversationDtoValidator.ValidateAsync(createConversationDto).Result.IsValid)
+        var result = await CreateConversationDtoValidator.ValidateAsync(createConversationDto);
+        if (!result.IsValid)
         {
-            Console.WriteLine("Conversation validation failed.");
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Conversation validation failed.");
             return;
         }
 
@@ -466,7 +496,7 @@
         var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId, 1, State.NextChatMessagesCursor, CancellationToken.None);
         if (!messages.Success)
         {
-            await ToastService.Error("Failed to load messages for conversation.");
+            await ToastService.Error(messages.ErrorMessages.FirstOrDefault() ?? "Failed to load messages for the selected conversation.");
             return;
         }
         State.Select(conversation, messages.Data!);
@@ -480,17 +510,23 @@
             return;
         }
 
-        if (!UpdateConversationDtoValidator.ValidateAsync(updateConversationDto).Result.IsValid)
+        var result = await UpdateConversationDtoValidator.ValidateAsync(updateConversationDto);
+        if (!result.IsValid)
         {
-            Console.WriteLine("Conversation validation failed.");
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Conversation validation failed.");
             return;
         }
 
         var conv = await ConversationService.UpdateConversationAsync(updateConversationDto);
         if (!conv.Success)
         {
-            Console.WriteLine("Failed to update conversation.");
+            Console.WriteLine(conv.ErrorMessages.ToString());
             return;
+        }
+        
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("UpdateConversation", updateConversationDto.ConversationId, updateConversationDto.CreatorUserId);
         }
 
         State.UpdateConversation(conv.Data!);

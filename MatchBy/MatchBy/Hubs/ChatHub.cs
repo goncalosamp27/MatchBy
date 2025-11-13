@@ -234,17 +234,9 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
         }
     }
 
-    public async Task UpdateConversation(UpdateConversationDto dto)
+    public async Task UpdateConversation(string conversationId, string userId)
     {
-        string userId = EnsureUser();
-        if (dto.CreatorUserId != userId)
-        {
-            await Clients.Caller.SendAsync("ConversationUpdated",
-                Result<ConversationDto>.Fail("Invalid creator."));
-            return;
-        }
-
-        Result<ConversationDto> conv = await conversationService.UpdateConversationAsync(dto);
+        Result<ConversationDto> conv = await conversationService.GetConversationByIdAsync(conversationId, userId);
         if (!conv.Success)
         {
             await Clients.Caller.SendAsync("ConversationUpdated", conv);
@@ -259,7 +251,7 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
             Result<ConversationDto> conversation =
                 await conversationService.GetConversationByIdAsync(conv.Data.Id, ConnectionUsers[participant]);
             await Clients.Client(participant)
-                .SendAsync("ConversationCreated", conversation);
+                .SendAsync("ConversationUpdated", conversation);
         }
     }
 

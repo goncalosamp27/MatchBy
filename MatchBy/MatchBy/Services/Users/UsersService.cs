@@ -22,8 +22,8 @@ public class UsersService(ApplicationDbContext applicationDbContext, IS3Service 
             .AsNoTracking()
             .AsSplitQuery()
             .Where(u =>
-                u.UserName!.Contains(q) ||
-                 u.DisplayName.Contains(q)
+                u.UserName!.ToLower().Contains(q.ToLower()) ||
+                 u.DisplayName.ToLower().Contains(q.ToLower())
             );
 
         int total = await query.CountAsync(ct);

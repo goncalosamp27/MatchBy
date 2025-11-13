@@ -3,7 +3,7 @@
 {
     <Pagination Class="flex justify-center">
         <PaginationItem Disabled="@IsNextDisabled" @onclick="Next">
-            <PaginationLink><span aria-hidden="true">Load More</span></PaginationLink>
+            <PaginationLink Class="!bg-[var(--main)] !text-[var(--text-contrast)] !hover:bg-[var(--main-hover)]"><span aria-hidden="true">Load More</span></PaginationLink>
         </PaginationItem>
     </Pagination>
 }

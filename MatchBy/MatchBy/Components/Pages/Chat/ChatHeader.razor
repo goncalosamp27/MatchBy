@@ -1,24 +1,27 @@
 ﻿@using MatchBy.DTOs.Chat.Conversations
 @using Blazorise
 
-<header class="flex-none bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-4 py-3">
+<header class="flex-none bg-white dark:bg-neutral-900 border-b border-[var(--main)] px-4 py-3">
     <div class="flex items-center gap-3">
-        @if(Conversation.Type == ConversationType.Private)
+        @if (Conversation.Type == ConversationType.Private)
         {
             var otherParticipant = Conversation.Participants.FirstOrDefault(p => p.Id != CurrentUserId);
             <img class="size-9 rounded-full flex-none"
                  src="@(otherParticipant?.ImageUrl ?? "/images/user-avatar.png")"
-                 alt="@Conversation.Title image"/>  
+                 alt="@Conversation.Title image"/>
+            <div class="min-w-0 flex-1">
+                <div class="font-semibold truncate">@otherParticipant?.DisplayName</div>
+            </div>
         }
         else
         {
             <img class="size-10 rounded-full"
                  src="@(Conversation.ImageUrl ?? "/images/user-avatar.png")"
                  alt="">
+            <div class="min-w-0 flex-1">
+                <div class="font-semibold truncate">@Conversation.Title</div>
+            </div>
         }
-        <div class="min-w-0 flex-1">
-            <div class="font-semibold truncate">@Conversation.Title</div>
-        </div>
         <Button Clicked="OnOpenInfo" class="flex-none px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">
             <Icon Name="IconName.InfoCircle"/>
         </Button>

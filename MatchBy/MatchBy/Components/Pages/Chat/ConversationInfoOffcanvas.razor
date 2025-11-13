@@ -5,11 +5,12 @@
 <Offcanvas @ref="OffcanvasRef"
            ShowBackdrop
            Placement="Placement.End"
-           Class="h-full flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
+           Style="border-left: 1px solid var(--main); background-color: var(--background);"
+           Class="h-full flex flex-col text-neutral-900 dark:text-neutral-100">
 
     <!-- Header fixo -->
     <OffcanvasHeader
-        Class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-neutral-800">
+        Class="flex items-center justify-between px-4 py-3 border-b border-[var(--main)]">
         <div class="flex items-center gap-2">
             <Icon Name="IconName.InfoCircle"/>
             <span class="font-medium">Conversation Info</span>
@@ -20,7 +21,7 @@
     <!-- Body: flex col, zona central com scroll -->
     <OffcanvasBody Class="flex flex-col flex-1 p-0 overflow-hidden">
         <!-- Hero (fixo) -->
-        <div class="px-4 py-5 text-center border-b border-gray-200 dark:border-neutral-800">
+        <div class="px-4 py-5 text-center border-b border-[var(--main)]">
             @if(SelectedConversation.Type == ConversationType.Private)
             {
                 var otherParticipant = SelectedConversation.Participants.FirstOrDefault(p => p.Id != CurrentUserId);
@@ -29,6 +30,7 @@
                     Alt="@SelectedConversation.Title"
                     Class="rounded-full mx-auto mb-3"
                     Style="width:72px;height:72px;object-fit:cover;"/>
+                <div class="font-semibold">@otherParticipant?.DisplayName</div>
             }
             else
             {
@@ -37,8 +39,40 @@
                     Alt="@SelectedConversation.Title"
                     Class="rounded-full mx-auto mb-3"
                     Style="width:72px;height:72px;object-fit:cover;"/>
+                
+                if (SelectedConversation.CreatorId == CurrentUserId && _isEditingTitle)
+                {
+                    <div class="flex items-center gap-2 justify-center">
+                        <input type="text"
+                               @bind="_newTitle"
+                               @bind:event="oninput"
+                               class="px-2 py-1 border rounded text-sm bg-[var(--background)] border-[var(--main)]"
+                               placeholder="Conversation title"
+                               style="max-width: 200px;" />
+                        <button @onclick="SaveTitle"
+                                class="p-1 text-green-600 hover:text-green-700">
+                            <Icon Name="IconName.Check"/>
+                        </button>
+                        <button @onclick="CancelEditTitle"
+                                class="p-1 text-red-600 hover:text-red-700">
+                            <Icon Name="IconName.Times"/>
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="flex items-center gap-2 justify-center">
+                        <div class="font-semibold">@SelectedConversation.Title</div>
+                        @if (SelectedConversation.CreatorId == CurrentUserId)
+                        {
+                            <button @onclick="StartEditTitle"
+                                    class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <Icon Name="IconName.Edit"/>
+                            </button>
+                        }
+                    </div>
+                }
             }
-            <div class="font-semibold">@SelectedConversation.Title</div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Updated @SelectedConversation.LastMessageAtUtc.ToString()
             </div>
@@ -65,7 +99,7 @@
         <!-- Conteúdo scrollável -->
         <div class="flex-1 overflow-y-auto">
             <!-- Stats -->
-            <div class="px-4 py-4 border-b border-gray-200 dark:border-neutral-800">
+            <div class="px-4 py-4 border-b border-[var(--main)]">
                 <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-500 dark:text-gray-400">Messages</span>
                     <span class="font-semibold">@SelectedConversation.MessagesCount</span>
@@ -77,9 +111,9 @@
             </div>
 
             <!-- Members -->
-            <div class="px-4 py-4 border-b border-gray-200 dark:border-neutral-800">
+            <div class="px-4 py-4 border-b border-[var(--main)]">
                 <div class="font-semibold mb-2">Members</div>
-                <ListGroup Flush Class="divide-y divide-gray-200 dark:divide-neutral-800">
+                <ListGroup Flush Style="background-color: var(--background);border-width: 0;" >
                     @foreach (var p in SelectedConversation.Participants)
                     {
                         var photo = p.ImageUrl ?? "/images/user-avatar.png";
@@ -108,7 +142,7 @@
         </div>
 
         <!-- Ações (fixas em baixo) -->
-        <div class="px-4 py-4 border-t border-gray-200 dark:border-neutral-800">
+        <div class="px-4 py-4 border-t border-[var(--main)]">
             <div class="grid gap-2">
                 @if (SelectedConversation.Type != ConversationType.Private)
                 {
@@ -138,11 +172,15 @@
 
 @code
 {
+    private bool _isEditingTitle;
+    private string _newTitle = string.Empty;
     private Offcanvas OffcanvasRef { get; set; } = new();
     [Parameter] public required ConversationDto SelectedConversation { get; set; }
     [Parameter] public EventCallback OnLeaveConversation { get; set; }
     [Parameter] public EventCallback OnDeleteConversation { get; set; }
     [Parameter] public EventCallback<UpdateConversationDto> OnImageSubmit { get; set; }
+    [Parameter] public EventCallback<UpdateConversationDto> OnTitleUpdate { get; set; }
+    [Parameter] public EventCallback<string> OnSearchUsers { get; set; }
     [Parameter] public required string CurrentUserId { get; set; }
 
     public async Task Hide() => await OffcanvasRef.Hide();
@@ -152,11 +190,46 @@
     {
         UpdateConversationDto dto = new()
         {
+            Title = SelectedConversation.Title,
             ConversationId = SelectedConversation.Id,
             File = e.File,
             CreatorUserId = CurrentUserId,
             ParticipantIds = SelectedConversation.Participants.Select(p => p.Id).ToList()
         };
-        await OnImageSubmit.InvokeAsync(dto);
+        await UpdateConversation(dto);
+    } 
+    
+    private void StartEditTitle()
+    {
+        _newTitle = SelectedConversation.Title ?? string.Empty;
+        _isEditingTitle = true;
     }
+
+    private void CancelEditTitle()
+    {
+        _isEditingTitle = false;
+        _newTitle = string.Empty;
+    }
+    
+    private async Task SaveTitle()
+    {
+        if (string.IsNullOrWhiteSpace(_newTitle))
+        {
+            CancelEditTitle();
+            return;
+        }
+
+        UpdateConversationDto dto = new()
+        {
+            ConversationId = SelectedConversation.Id,
+            Title = _newTitle.Trim(),
+            CreatorUserId = CurrentUserId,
+            ParticipantIds = SelectedConversation.Participants.Select(p => p.Id).ToList()
+        };
+
+        await UpdateConversation(dto);
+        _isEditingTitle = false;
+    }
+
+    private async Task UpdateConversation(UpdateConversationDto dto) => await OnImageSubmit.InvokeAsync(dto);
 }

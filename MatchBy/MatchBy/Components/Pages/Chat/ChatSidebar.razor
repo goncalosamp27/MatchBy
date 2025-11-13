@@ -3,8 +3,7 @@
 
 <!-- Sidebar -->
 <aside
-    class="h-full hidden md:flex md:flex-col bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800">
-
+    class="h-full @Class bg-[var(--background)]">
     <!-- header -->
     <div class="px-4 pt-3 pb-2">
         <div class="flex items-center justify-between">
@@ -28,7 +27,7 @@
                       Placeholder="Search for contacts"
                       Role="TextRole.Search"
                       KeyDown="OnSearchKeyDown"
-                      Class="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 pl-9 pr-3 py-2 text-sm placeholder-gray-400 dark:placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500/30"/>
+                      Class="w-full rounded-lg border border-[var(--main)] bg-white dark:bg-neutral-900 pl-9 pr-3 py-2 text-sm placeholder-gray-400 dark:placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500/30"/>
             <svg class="size-5 absolute left-2.5 top-2 text-gray-400 dark:text-neutral-500"
                  viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -106,6 +105,7 @@
     [Parameter] public EventCallback<(string?, string?)> OnNext { get; set; }
     [Parameter] public EventCallback<string?> OnSearch { get; set; }
     [Parameter] public string? NextCursor { get; set; }
+    [Parameter] public string? Class { get; set; }
     
     public void OnNextPagination(string? cursor) => OnNext.InvokeAsync((cursor, _search));
 

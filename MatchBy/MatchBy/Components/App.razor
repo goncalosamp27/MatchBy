@@ -80,6 +80,24 @@
 <script src="darkModeToggle.js"></script>
 <script src="_framework/blazor.web.js"></script>
 <script>
+    // Função para inicializar Flowbite
+    function initFlowbite() {
+        if (typeof Flowbite !== 'undefined') {
+            Flowbite.init();  // Inicializa todos os componentes Flowbite no DOM
+        }
+    }
+
+    // Inicialização manual do Flowbite após a navegação SPA
+    window.addEventListener('popstate', function () {
+        initFlowbite();  // Chama a função para inicializar novamente
+    });
+
+    // Usando Blazor para chamar Flowbite após navegação SPA
+    Blazor.addEventListener('enhancedload', function () {
+        initFlowbite();
+    });
+</script>
+<script>
     window.timeZone = () => {
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         return timezone;

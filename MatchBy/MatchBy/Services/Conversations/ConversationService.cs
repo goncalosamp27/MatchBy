@@ -44,12 +44,12 @@ public class ConversationService(
 
         if (query != null)
         {
-            baseQuery = baseQuery.Where(c => c.Title != null && c.Title.Contains(query) ||
-                                             c.Participants.Any(p => p.DisplayName.Contains(query)));
+            baseQuery = baseQuery.Where(c => c.Title != null && c.Title.ToLower().Contains(query.ToLower()) ||
+                                             c.Participants.Any(p => p.DisplayName.ToLower().Contains(query.ToLower())));
         }
 
         List<Conversation> items = await baseQuery
-            .OrderByDescending(p => p.LastMessageAtUtc ?? p.CreatedAtUtc)
+            .OrderByDescending(p => p.LastMessageAtUtc)
             .ThenByDescending(p => p.Id)
             .Take(pageSize + 1)
             .ToListAsync();
@@ -113,10 +113,15 @@ public class ConversationService(
         {
             return Result<ConversationDto>.Fail("No conversation found");
         }
-
-        conversation.Title = conversation.Participants.FirstOrDefault(p => !p.Id.Equals(creatorUserId))?.DisplayName;
+        
         await RefreshConversationImagesAsync(conversation);
 
+        // For private conversations, set the title to the other participant's name
+        if (conversation.Type == ConversationType.Private)
+        {
+            conversation.Title = conversation.Participants.FirstOrDefault(p => !p.Id.Equals(creatorUserId))?.DisplayName;
+        }
+        
         return Result<ConversationDto>.Ok(conversation.ToDto());
     }
 
@@ -175,6 +180,8 @@ public class ConversationService(
         List<ApplicationUser> participants = await applicationDbContext.Users
             .Where(u => updateConversationDto.ParticipantIds.Contains(u.Id))
             .ToListAsync(ct);
+        
+        convo.Title = updateConversationDto.Title;
         convo.Participants = participants;
         convo.UpdatedAtUtc = DateTime.UtcNow;
 
