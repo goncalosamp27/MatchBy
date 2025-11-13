@@ -1,8 +1,7 @@
 ﻿@page "/"
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthStateProvider
+@inject AuthenticationStateProvider Auth
 @using System.Security.Claims
-@using Blazorise
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
@@ -89,7 +88,7 @@
 
 @code {    
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-    private string? userId;
+    private string? userId = null;
 
     private readonly List<string> Messages = new() {
         "Are you ready to play your favorite sports?",
@@ -102,11 +101,15 @@
     private string CurrentMessage => Messages[messageGenerator];
     
     protected override async Task OnInitializedAsync() {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var authState = await Auth.GetAuthenticationStateAsync();
         var user = authState.User;
 
         if (user?.Identity?.IsAuthenticated == true) {
+            userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+            if (userId is null) return;
+
             userId = user.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
 
             Messages.Add("Hey " + user.Identity?.Name + ", are you ready for your next match?");
             Messages.Add("Welcome back, " + user.Identity?.Name + "! Ready for another game?");
