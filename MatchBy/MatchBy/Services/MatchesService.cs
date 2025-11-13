@@ -23,13 +23,14 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
     public async Task<Match?> GetMatchById(string matchId)
     {
-        Match? match = await applicationDbContext
+        return await applicationDbContext
             .Matches
             .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Include(m => m.Conversation)
             .FirstOrDefaultAsync(m => m.Id == matchId);
-
-        return match;
     }
+
 
     public async Task<bool> CreateMatch(Match match)
     {

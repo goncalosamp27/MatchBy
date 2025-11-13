@@ -6,6 +6,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
+
 <PageTitle>Home</PageTitle>
 
 <section class="bg-[var(--background)]">
@@ -52,12 +53,20 @@
                     <img src="images/carousel/volleyball.png" class="w-full h-full object-contain" />
                 </div>
 
+                <div class="absolute inset-0  hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/tennis.png" class="w-full h-full object-contain" />
+                </div>
+
                 <div class="absolute inset-0 hidden  duration-700 ease-in-out" data-carousel-item>
                     <img src="images/carousel/futsal.png" class="w-full h-full object-contain" />
                 </div>
 
                 <div class="absolute inset-0 hidden  duration-700 ease-in-out" data-carousel-item>
                     <img src="images/carousel/beachvolleyball.png" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="absolute inset-0  hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/paddle.png" class="w-full h-full object-contain" />
                 </div>
             </div>
         </div>
@@ -106,7 +115,6 @@
         var startIndex = System.Security.Cryptography.RandomNumberGenerator.GetInt32(Messages.Count);
         messageGenerator = startIndex;
     }
-
 
     private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
 }
