@@ -1,209 +1,544 @@
 ﻿@page "/chat"
+
+@using FluentValidation
+@using MatchBy.DTOs.Chat.Conversations
+@using MatchBy.DTOs.Chat.Messages
+@using MatchBy.Services.ChatMessages
+@using MatchBy.Services.Conversations
+@using MatchBy.Services.Users
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using MatchBy.Hubs
+@using Blazorise
+@attribute [Authorize]
 @rendermode InteractiveServer
+@inject AuthenticationStateProvider Auth
+@inject IConversationService ConversationService
+@inject IChatMessageService ChatMessageService
+@inject IUsersService UsersService
+@inject ChatState State
+@inject NavigationManager NavigationManager
+@inject IValidator<CreateChatMessageDto> CreateChatMessageDtoValidator
+@inject IValidator<UpdateChatMessageDto> UpdateChatMessageDtoValidator
+@inject IValidator<CreateConversationDto> CreateConversationDtoValidator
+@inject IValidator<UpdateConversationDto> UpdateConversationDtoValidator
+@inject IToastService ToastService 
 
-<div class="h-[100dvh] md:h-[100svh] bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100">
-    <!-- Layout em 2 colunas (sidebar + conteúdo). Colapsa a sidebar em ecrãs pequenos -->
-    <div class="grid grid-cols-1 md:grid-cols-[18rem_1fr] h-full">
+<div class="fixed inset-0 flex flex-col bg-[var(--background)] text-[var(--text)]">
+    <div class="mt-14 flex flex-1 min-h-0">
+        <Button Clicked="@ShowSidebarOffcanvas"
+                Class="md:hidden fixed bottom-3 left-3 z-50 rounded-full !p-3.5 bg-[var(--main)] text-[var(--text-contrast)] shadow-lg">
+            <Icon Name="IconName.List"/>
+        </Button>
+        
+        <div class="w-72 hidden md:flex flex-col border-r border-[var(--main)]">
+            <ChatSidebar Class="hidden md:flex md:flex-col" 
+                         Conversations="State.Conversations"
+                         OnConversationSelected="OnConversationSelected"
+                         OnShowModal="ShowModal"
+                         OnNext="LoadMoreConversations"
+                         NextCursor="@State.NextConversationCursor"
+                         CurrentUserId="@State.UserId"
+                         OnSearch="SearchConversations"/>
+        </div>
 
-        <!-- Sidebar -->
-        <aside
-            class="hidden md:flex md:flex-col bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800">
-
-            <!-- header -->
-            <div class="px-4 pt-3 pb-2">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Chats</h2>
-                    <button class="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">
-                        <svg class="size-4 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path
-                                d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
-                    </button>
+        <!-- Offcanvas mobile (< md) -->
+        <Offcanvas @ref="_sidebarOffcanvas"
+                   Placement="Placement.Start"
+                   ShowBackdrop
+                   Style="border-right: 1px solid var(--main); background-color: var(--background);">
+            <OffcanvasHeader>
+                <div class="flex items-center justify-between w-full">
+                    <h2 class="text-lg font-semibold">Chats</h2>
+                    <CloseButton Clicked="@HideSidebarOffcanvas"/>
                 </div>
+            </OffcanvasHeader>
+            <OffcanvasBody Class="!p-0">
+                <ChatSidebar Class="w-full" Conversations="State.Conversations"
+                             OnConversationSelected="OnConversationSelectedMobile"
+                             OnShowModal="ShowModal"
+                             OnNext="LoadMoreConversations"
+                             NextCursor="@State.NextConversationCursor"
+                             CurrentUserId="@State.UserId"
+                             OnSearch="SearchConversations"/>
+            </OffcanvasBody>
+        </Offcanvas>
 
-                <!-- search -->
-                <label class="relative mt-2 block">
-                    <input type="search"
-                           class="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 pl-9 pr-3 py-2 text-sm placeholder-gray-400 dark:placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500/30"
-                           placeholder="Search for messages or contacts"/>
-                    <svg class="size-5 absolute left-2.5 top-2.5 text-gray-400 dark:text-neutral-500"
-                         viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                              d="m21 21-4.3-4.3m0-6.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/>
-                    </svg>
-                </label>
-            </div>
-
-            <!-- list -->
-            <nav class="flex-1 overflow-y-auto thin-scroll px-2 pb-3 space-y-4">
-
-                <!-- PRIVATE CONVERSATIONS -->
-                <div>
-                    <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">
-                        Private conversations
-                    </div>
-
-                    <button
-                        class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
-        <span class="relative">
-          <img class="size-10 rounded-full" src="https://i.pravatar.cc/40?img=15" alt="">
-          <span
-              class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900"></span>
-        </span>
-                        <span class="min-w-0 flex-1 text-left">
-          <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">Lana Byrd</span>
-            <span class="text-[11px] text-gray-500">16h</span>
-          </span>
-          <span class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">🎉 Awesome, let’s go!</span>
-        </span>
-                    </button>
-
-                    <button
-                        class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
-        <span class="relative">
-          <img class="size-10 rounded-full" src="https://i.pravatar.cc/40?img=32" alt="">
-          <span
-              class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-neutral-900"></span>
-        </span>
-                        <span class="min-w-0 flex-1 text-left">
-          <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">Helene Engels</span>
-            <span class="text-[11px] text-gray-500">18h</span>
-          </span>
-          <span class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">Yes, we can do this! 🔥</span>
-        </span>
-                    </button>
-                </div>
-
-                <!-- MATCH CONVERSATIONS -->
-                <div>
-                    <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">
-                        Match conversations
-                    </div>
-
-                    <button
-                        class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
-        <span class="relative">
-          <img class="size-10 rounded-full" src="https://i.pravatar.cc/40?img=8" alt="">
-          <span
-              class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-neutral-900"></span>
-        </span>
-                        <span class="min-w-0 flex-1 text-left">
-          <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">Joseph McFall</span>
-            <span class="text-[11px] text-gray-500">04.03.2025</span>
-          </span>
-          <span class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">Let's do it next month</span>
-        </span>
-                    </button>
-
-                    <button
-                        class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
-                        <img class="size-10 rounded-full" src="https://i.pravatar.cc/40?img=70" alt="">
-                        <span class="min-w-0 flex-1 text-left">
-          <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">Jese Leos</span>
-            <span class="text-[11px] text-gray-500">04.03.2025</span>
-          </span>
-          <span class="mt-0.5 text-xs text-gray-500 dark:text-neutral-400 truncate">You hear about Flowbite? 👀</span>
-        </span>
-                    </button>
-                </div>
-
-                <!-- TEAM CONVERSATIONS -->
-                <div>
-                    <div class="px-2 pt-1 pb-2 text-xs uppercase tracking-wide text-gray-500 dark:text-neutral-400">Team
-                        conversations
-                    </div>
-
-                    <button
-                        class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
-                        <div class="size-10 rounded-full bg-gray-200 dark:bg-neutral-700 grid place-content-center">👥
-                        </div>
-                        <span class="min-w-0 flex-1 text-left">
-          <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">Business group</span>
-            <span class="text-[11px] text-gray-500">18:05</span>
-          </span>
-          <span class="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400 truncate">
-            Bonnie: Wait! What test? 🤔
-          </span>
-        </span>
-                    </button>
-
-                    <button
-                        class="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800">
-                        <div class="size-10 rounded-full bg-gray-200 dark:bg-neutral-700 grid place-content-center">👪
-                        </div>
-                        <span class="min-w-0 flex-1 text-left">
-          <span class="flex items-center justify-between">
-            <span class="text-[15px] font-medium truncate">Family group</span>
-            <span class="text-[11px] text-gray-500">18:05</span>
-          </span>
-          <span class="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400 truncate">
-            Jese: Pizza is here! 🍕
-          </span>
-        </span>
-                    </button>
-                </div>
-
-            </nav>
-        </aside>
-
-
-        <!-- Conteúdo (chat) -->
-        <main class="flex flex-col h-full">
-            <!-- Header sticky -->
-            <header
-                class="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur border-b border-gray-200/80 dark:border-neutral-800 px-4 py-3">
-                <div class="flex items-center gap-3">
-                    <img class="size-9 rounded-full"
-                         src="https://flowbite.com/application-ui/demo/images/users/roberta-casas.png"
-                         alt="Jese image">
-                    <div class="min-w-0">
-                        <div class="font-semibold truncate">Joseph McFall</div>
-                        <div class="text-xs text-emerald-600 dark:text-emerald-400">Online</div>
-                    </div>
-                    <div class="ml-auto flex items-center gap-2">
-                        <button class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">🔍</button>
-                        <button class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">⋯</button>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Corpo das mensagens (única área com scroll) -->
-            <section class="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-                <ChatMessage></ChatMessage>
-                <ChatMessage></ChatMessage>
-                <ChatMessage></ChatMessage>
-                <ChatMessage></ChatMessage>
-                <ChatMessage></ChatMessage>
-            </section>
-
-            <!-- Footer sticky -->
-            <footer
-                class="sticky bottom-0 bg-white dark:bg-neutral-900 border-t border-gray-200/80 dark:border-neutral-800 px-3 py-2">
-                <form class="flex flex-col gap-2">
-                    <div class="flex flex-row gap-2">
-                <textarea rows="1" placeholder="Escreve uma mensagem…"
-                          class="w-full resize-none rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 outline-none focus:ring focus:ring-indigo-500/30"></textarea>
-                        <button type="submit"
-                                class="shrink-0 rounded-lg px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-                            Enviar
-                        </button>
-                    </div>
-                    <!-- barra de ações -->
-                    <div class="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                        <button type="button" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">B
-                        </button>
-                        <button type="button" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">I
-                        </button>
-                        <button type="button" class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800">🙂
-                        </button>
-                    </div>
-                </form>
-            </footer>
+        <main class="flex-1 flex flex-col min-w-0 min-h-0">
+            @if (State.Selected is null)
+            {
+                <ChatEmptyState/>
+            }
+            else
+            {
+                <ChatHeader Conversation="State.Selected" OnOpenInfo="ShowOffcanvas" CurrentUserId="@State.UserId"/>
+                <MessageList ChatMessages="@State.MessagesOfSelectedConversation"
+                             CurrentUserId="@State.UserId"
+                             OnEdit="OnEditMessage"
+                             OnReply="OnReplyToMessage"
+                             OnDelete="OnDeleteMessage"
+                             OnNext="LoadMoreMessages"
+                             NextCursor="@State.NextChatMessagesCursor"/>
+                <ChatFooter Text="@_messageText"
+                            TextChanged="(v => _messageText = v)"
+                            ReplyTo="@_replyToMessage"
+                            OnCancelReply="CancelReply"
+                            OnSend="HandleSubmit"/>
+            }
         </main>
     </div>
+
+    @if (State.Selected is not null)
+    {
+        <ConversationInfoOffcanvas @ref="_offcanvas"
+                                   SelectedConversation="@State.Selected"
+                                   OnLeaveConversation="LeaveConversation"
+                                   OnDeleteConversation="DeleteConversation"
+                                   OnImageSubmit="OnUpdateConversation"
+                                   CurrentUserId="@State.UserId"/>
+    }
+
+    <NewConversationModal @ref="_modal"
+                          OnCreate="StartChat"
+                          OnGetUsers="GetUsers"
+                          Users="@_allUsers"/>
+    
+    <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 </div>
+
+@code{
+    private async Task ShowSidebarOffcanvas() => await _sidebarOffcanvas.Show();
+    private async Task HideSidebarOffcanvas() => await _sidebarOffcanvas.Hide();
+
+    private async Task OnConversationSelectedMobile(ConversationDto conversation)
+    {
+        await OnConversationSelected(conversation);
+        await HideSidebarOffcanvas();
+    }
+    
+    private Offcanvas _sidebarOffcanvas = default!;
+    private ConversationInfoOffcanvas _offcanvas = default!;
+    private NewConversationModal _modal = default!;
+    private string? _messageText;
+    private ChatMessageDto? _replyToMessage;
+    private PaginationResponse<List<ApplicationUser>> _allUsers = new();
+
+    // SignalR Hub Connection
+    private HubConnection? _hubConnection;
+    private bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += (_, _) => StateHasChanged();
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+        if (userId is null) return;
+
+        State.InitUser(userId);
+        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null,null, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error(conversations.ErrorMessages.ToString());
+        }
+
+        State.AddConversations(conversations.Data!);
+
+        // Load all users except the current user
+        await GetUsers(new NewConversationModal.UsersQuery("",1,4));
+    }
+    
+    public async Task SearchConversations(string? search)
+    {
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, null,search, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error(conversations.ErrorMessages.ToString());
+            return;
+        }
+        State.ClearConversations();
+        State.AddConversations(conversations.Data!);
+    }
+    
+    public async Task LoadMoreConversations((string? nextCursor, string? search) args)
+    {
+        var (nextCursor, search) = args;
+        if (string.IsNullOrEmpty(nextCursor)) return;
+
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, nextCursor,search, CancellationToken.None);
+        if (!conversations.Success)
+        {
+            await ToastService.Error(conversations.ErrorMessages.ToString());
+            return;
+        }
+
+        State.AddConversations(conversations.Data!);
+    }
+    
+    public async Task LoadMoreMessages(string? nextCursor)
+    {
+        if (State.Selected is null || string.IsNullOrEmpty(nextCursor)) return;
+
+        var messagesResult = await ChatMessageService.GetChatMessagesAsync(State.Selected.Id, State.UserId, 1, nextCursor, CancellationToken.None);
+        if (!messagesResult.Success)
+        {
+            await ToastService.Error(messagesResult.ErrorMessages.ToString());
+            return;
+        }
+
+        State.AddMessages(messagesResult.Data!);
+    }
+
+    private async Task GetUsers(NewConversationModal.UsersQuery usersQuery)
+    {
+        var response = await UsersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
+        if (response.Success)
+        {
+            _allUsers = response.Data!;
+        }
+        else
+        {
+            await ToastService.Error(response.ErrorMessages.ToString());
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/chat"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<Result<ChatMessageDto>>("MessageCreated", result =>
+        {
+            return InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    State.UpsertMessage(result.Data!);
+                }
+                else
+                {
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ChatMessageDto>>("MessageUpdated", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Updated message via SignalR: {result.Data!.Content}");
+                    State.UpsertMessage(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to update message: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ChatHub.MessageDeletedDto>>("MessageDeleted", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Deleted message via SignalR: {result.Data!.MessageId}");
+                    State.RemoveMessage(result.Data!.Conversation, result.Data!.MessageId);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to delete message: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationCreated", result =>
+        {
+            InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Received conversation via SignalR: {result.Data!.Title}");
+                    State.Conversations.Add(result.Data!);
+                    await OnConversationSelected(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to create conversation: {string.Join(", ", result.ErrorMessages)}");
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationUpdated", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Updated conversation via SignalR: {result.Data!.Title}");
+                    State.UpdateConversation(result.Data!);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to update conversation: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<string>>("ConversationDeleted", result =>
+        {
+            InvokeAsync(() =>
+            {
+                if (result.Success)
+                {
+                    var conversationId = result.Data!;
+
+                    Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
+                    State.RemoveConversation(conversationId);
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to delete conversation: {string.Join(", ", result.ErrorMessages)}");
+                    ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.On<Result<ConversationDto>>("ConversationLeft", result =>
+        {
+            InvokeAsync(async () =>
+            {
+                if (result.Success)
+                {
+                    Console.WriteLine($"Left conversation via SignalR: {result.Data!.Id}");
+
+                    if (result.Data!.Participants.All(p => p.Id != State.UserId))
+                    {
+                        State.RemoveConversation(result.Data!.Id);
+                    }
+                    else
+                    {
+                        State.UpdateConversation(result.Data!);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to leave conversation: {string.Join(", ", result.ErrorMessages)}");
+                    await ToastService.Error(string.Join(", ", result.ErrorMessages));
+                }
+            });
+        });
+
+        _hubConnection.Closed += error =>
+        {
+            Console.WriteLine($"Connection closed: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnecting += error =>
+        {
+            Console.WriteLine($"Connection reconnecting: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _hubConnection.Reconnected += async connectionId =>
+        {
+            Console.WriteLine($"Connection reconnected: {connectionId}");
+            await JoinAllConversations();
+        };
+
+        try
+        {
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("Register", State.UserId);
+            await JoinAllConversations();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
+        }
+    }
+
+    private async Task JoinAllConversations()
+    {
+        if (!IsConnected || _hubConnection is null) return;
+
+        var tasks = State.Conversations.Select(conv => _hubConnection.InvokeAsync("JoinConversation", conv.Id)).ToList();
+
+        if (tasks.Count > 0)
+            await Task.WhenAll(tasks);
+    }
+
+    private Task ShowOffcanvas() => _offcanvas.Show();
+    private Task ShowModal() => _modal.Show();
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(_messageText) || State.Selected is null) return;
+
+        CreateChatMessageDto createChatMessageDto = new()
+        {
+            Content = _messageText,
+            CreatorUserId = State.UserId!,
+            ConversationId = State.Selected.Id,
+            ReplyToMessageId = _replyToMessage?.Id,
+            Location = null
+        };
+
+        var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
+        }
+
+        _messageText = null;
+        _replyToMessage = null;
+    }
+
+    private async Task OnEditMessage(UpdateChatMessageDto msg)
+    {
+        var result = await UpdateChatMessageDtoValidator.ValidateAsync(msg);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("UpdateMessage", msg);
+        }
+    }
+
+    private async Task OnDeleteMessage(ChatMessageDto msg)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("DeleteMessage", msg.Id);
+        }
+    }
+
+    private Task OnReplyToMessage(ChatMessageDto msg)
+    {
+        _replyToMessage = msg;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelReply()
+    {
+        _replyToMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task StartChat(string otherUserId)
+    {
+        var createConversationDto = new CreateConversationDto
+        {
+            CreatorUserId = State.UserId,
+            ConversationType = ConversationType.Private,
+            ParticipantIds = [otherUserId, State.UserId],
+            TeamId = null,
+            MatchId = null,
+            Title = null
+        };
+        
+        var result = await CreateConversationDtoValidator.ValidateAsync(createConversationDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Conversation validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("CreateConversation", createConversationDto);
+        }
+    }
+
+    private async Task LeaveConversation()
+    {
+        var id = State.Selected?.Id;
+        if (id is null) return;
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("LeaveConversationAndNotify", id);
+        }
+    }
+
+    private async Task DeleteConversation()
+    {
+        var id = State.Selected?.Id;
+        if (id is null) return;
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("DeleteConversation", id);
+        }
+    }
+
+    public async Task OnConversationSelected(ConversationDto conversation)
+    {
+        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId, 1, State.NextChatMessagesCursor, CancellationToken.None);
+        if (!messages.Success)
+        {
+            await ToastService.Error(messages.ErrorMessages.FirstOrDefault() ?? "Failed to load messages for the selected conversation.");
+            return;
+        }
+        State.Select(conversation, messages.Data!);
+    }
+
+    public async Task OnUpdateConversation(UpdateConversationDto updateConversationDto)
+    {
+        if (State.Selected is null)
+        {
+            await ToastService.Error("No conversation selected.");
+            return;
+        }
+
+        var result = await UpdateConversationDtoValidator.ValidateAsync(updateConversationDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Conversation validation failed.");
+            return;
+        }
+
+        var conv = await ConversationService.UpdateConversationAsync(updateConversationDto);
+        if (!conv.Success)
+        {
+            Console.WriteLine(conv.ErrorMessages.ToString());
+            return;
+        }
+        
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("UpdateConversation", updateConversationDto.ConversationId, updateConversationDto.CreatorUserId);
+        }
+
+        State.UpdateConversation(conv.Data!);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+}

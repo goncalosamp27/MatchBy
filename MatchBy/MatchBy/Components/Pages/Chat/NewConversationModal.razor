@@ -1,0 +1,146 @@
+﻿@using Blazorise
+
+<Modal @ref="ModalRef">
+    <ModalContent Centered Style="background-color: var(--background);" Class="rounded-3 shadow"
+                  Size="ModalSize.Default">
+        <ModalHeader>
+            <ModalTitle>New conversation</ModalTitle>
+            <CloseButton/>
+        </ModalHeader>
+
+        <ModalBody Class="pt-2 flex flex-col" Style="max-height: 60vh;">
+            <!-- Search -->
+            <Field Class="mb-3 flex-shrink-0">
+                <TextEdit @bind-Text="_search"
+                          Placeholder="Search for contacts"
+                          Role="TextRole.Search"
+                          KeyDown="OnSearchKeyDown"
+                          Class="form-control-lg"
+                          Style="background-color: var(--section-secondary); color: var(--text);"/>
+            </Field>
+
+            @if (!_isLoading)
+            {
+                <!-- Contact list with flexible height -->
+                <div class="flex-grow overflow-auto mb-3 min-h-[200px]">
+                    <ListGroup Mode="ListGroupMode.Selectable"
+                               @bind-SelectedItem="_selectedItem"
+                               Flush
+                               Style="background-color: var(--background);">
+                        @if ((Users.Data?.Count ?? 0) == 0)
+                        {
+                            <ListGroupItem class="py-3 text-muted text-center">No results</ListGroupItem>
+                        }
+                        else
+                        {
+                            @foreach (var u in Users.Data ?? Enumerable.Empty<ApplicationUser>())
+                            {
+                                var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                <ListGroupItem Name="@u.Id"
+                                               class="flex items-center gap-3 py-2 cursor-pointer transition-colors hover:bg-black/5 contact-item">
+                                    <Image Loading src="@photoUrl" Alt="@u.UserName"
+                                           class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
+                                    <span class="fw-500 truncate">@u.UserName</span>
+                                </ListGroupItem>
+                            }
+                        }
+                    </ListGroup>
+                </div>
+
+                <!-- Pagination fixed at bottom -->
+                <div class="flex justify-center flex-shrink-0">
+                    <OffsetPagination CurrentPage="@_currentPage"
+                                      OnPageChanged="GoToPage"
+                                      PageSize="@PageSize"
+                                      TotalItems="@Users.TotalCount"/>
+                </div>
+            }
+            else
+            {
+                <div class="flex justify-center items-center flex-grow min-h-[200px]"
+                     role="status">
+                    <Loading/>
+                </div>
+            }
+        </ModalBody>
+
+        <ModalFooter Class="justify-content-between flex-shrink-0">
+            <Button Class="px-4 text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)]"
+                    Disabled="@(_selectedItem is null)"
+                    Clicked="@StartChat">
+                New chat
+            </Button>
+            <Button Color="Color.Secondary"
+                    Outline
+                    Class="px-4"
+                    Clicked="@Hide">
+                Cancel
+            </Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+
+@code {
+    private Modal ModalRef { get; set; } = new();
+    private string _search = "";
+    private string? _selectedItem;
+    private int _currentPage = 1;
+    private bool _isLoading = false;
+
+    [Parameter] public EventCallback<string?> OnSearch { get; set; }
+    [Parameter] public int PageSize { get; set; } = 5;
+    [Parameter] public required PaginationResponse<List<ApplicationUser>> Users { get; set; }
+    [Parameter] public EventCallback<string> OnCreate { get; set; }
+    [Parameter] public EventCallback<UsersQuery> OnGetUsers { get; set; }
+
+    private async Task GoToPage(int page)
+    {
+        _currentPage = page;
+        if (_isLoading) return;
+        _isLoading = true;
+        try
+        {
+            await OnGetUsers.InvokeAsync(new UsersQuery(_search, _currentPage, PageSize));
+            StateHasChanged();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    public async Task Show() => await ModalRef.Show();
+    public async Task Hide() => await ModalRef.Hide();
+
+    private async Task StartChat()
+    {
+        if (_selectedItem is not null)
+        {
+            await OnCreate.InvokeAsync(_selectedItem);
+            await Hide();
+        }
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentPage = 1;
+            if (_isLoading) return;
+            _isLoading = true;
+            try
+            {
+                await OnGetUsers.InvokeAsync(new UsersQuery(_search, _currentPage, PageSize));
+                StateHasChanged();
+            }
+            finally
+            {
+                _isLoading = false;
+            }
+        }
+    }
+
+    public record UsersQuery(string q, int page, int pageSize);
+
+}

@@ -51,6 +51,7 @@ public class ChatMessageSeeder: ISeeder
         foreach (Conversation conversation in conversations)
         {
             conversation.LastMessageAtUtc = DateTime.UtcNow;
+            conversation.LastMessageContent = "Hello! Excited for the match.";
         }
             
         db.ChatMessages.AddRange(messages);

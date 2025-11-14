@@ -3,6 +3,9 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Authorization
 @using MatchBy.Components.Pages.Matches
+@using MatchBy.DTOs.Match
+@using MatchBy.Services.Matches
+@using MatchBy.Services.Users
 @inject IUsersService UsersService
 @inject IMatchesService MatchesService
 @inject UserManager<ApplicationUser> UserManager
@@ -176,7 +179,7 @@
     [Parameter] public string? Id { get; set; }
 
     private ApplicationUser? _profile;
-    private List<Match>? _matches;
+    private List<MatchDto>? _matches;
     private bool _isOwner;
     private string? _ownEmail;
     private bool _loading = true;
@@ -219,7 +222,11 @@
 
             if (_profile is not null)
             {
-                _matches = await MatchesService.GetCompletedMatches(_profile.Id);
+                var result = await MatchesService.GetMatchesForUser(_profile.Id, null, 1, 5, CancellationToken.None);
+                if (!result.Success)
+                {
+                    _matches = result.Data!.Data;
+                }
             }
         }
         catch (Exception ex)
