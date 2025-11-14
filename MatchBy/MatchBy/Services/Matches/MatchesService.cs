@@ -62,6 +62,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         Match? match = await applicationDbContext
             .Matches
             .Include(m => m.Participants)
+            .Include(m => m.Creator)
             .FirstOrDefaultAsync(m => m.Id == matchId);
         
         return match == null ? Result<MatchDto>.Fail($"Match with id {matchId} not found.") : Result<MatchDto>.Ok(match.ToDto());

@@ -60,10 +60,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="wwwroot\lib\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <_ContentIncludedByDefault Remove="Pages\Shared\_Layout.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\Shared\_LoginPartial.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\Shared\_ValidationScriptsPartial.cshtml" />
