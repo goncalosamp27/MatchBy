@@ -1,8 +1,8 @@
 @page "/Account/Manage"
 @using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
 @using Amazon.S3
-@using MatchBy.Services.FileValidator
-@using MatchBy.Services.S3
+@using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -10,6 +10,7 @@
 @inject IdentityRedirectManager RedirectManager
 @inject IFileValidator FileValidator
 @inject IS3Service S3Service
+
 
 <PageTitle>Profile</PageTitle>
 
@@ -22,6 +23,17 @@
         <DataAnnotationsValidator/>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Avatar centrado e maior -->
+            <div class="md:col-span-2 flex flex-col items-center">
+                <div class="relative w-40 h-40 md:w-64 md:h-64 rounded-full overflow-hidden border-2 border-[var(--main)] shadow-md">
+                    <img src="@(_user?.ProfileImage?.Url ?? "/images/user-avatar.png")"
+                        alt="Profile picture"
+                        class="absolute inset-0 w-full h-full object-cover" />
+                </div>
+            </div>
+
+
             <!-- Username (read-only) -->
             <div class="md:col-span-2">
                 <label for="username" class="block mb-2 text-sm font-medium text-[var(--text)]">
@@ -60,8 +72,11 @@
 
                 <div class="flex items-center gap-3">
                     <InputFile
-                        class="block w-full text-sm text-[var(--text)] border rounded-lg cursor-pointer bg-[var(--section-secondary)] focus:outline-none focus:border-[var(--main)]"
-                        id="ProfilePicture" name="Input.ProfilePicture" type="file" accept="image/*"/>
+                        class="block w-full text-sm text-[var(--text)] border-0 focus:border-2 rounded-lg cursor-pointer bg-[var(--section-secondary)] focus:outline-none focus:border-[var(--main)]"
+                        id="ProfilePicture" 
+                        name="Input.ProfilePicture" 
+                        type="file" 
+                        ccept="image/*"/>
 
                     @if (_user?.ProfileImage is not null)
                     {
@@ -112,7 +127,7 @@
                                        name="Input.PreferredSports"
                                        value="@sport"
                                        checked="@isChecked"
-                                       class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-2"/>
+                                       class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
                                 <span
                                     class="ms-2 text-sm font-medium text-[var(--text)] hover:text-[var(--text-contrast)]">@sport</span>
                             </label>
@@ -132,7 +147,7 @@
         </div>
     </EditForm>
 
-    <form id="removeImageForm" method="post" action="/api/profile-image/delete" class="hidden">
+    <form id="removeImageForm" method="post" action="/api/profile-image/remove" class="hidden">
         <AntiforgeryToken/>
     </form>
 </section>
@@ -183,7 +198,7 @@
                 return;
             }
 
-            var imageKey = await S3Service.UploadFormFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
+            var imageKey = await S3Service.UploadFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
             if (imageKey is null)
             {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to upload profile picture.", HttpContext);
@@ -192,7 +207,7 @@
 
             if (_user.ProfileImage is not null)
             {
-                await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-pictures/{_user.ProfileImage.Key}");
+                await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-picture/{_user.ProfileImage.Key}");
             }
 
             var imageUrl = await S3Service.GetPresignedUrlAsync($"users/{_user.Id}/profile-pictures/{imageKey}", HttpVerb.GET);
@@ -215,16 +230,11 @@
         }
 
 
-        if (Input.PreferredSports != null && !_user.PreferredSports.SequenceEqual(Input.PreferredSports))
-        {
-            _user.PreferredSports = Input.PreferredSports;
+        if (!(_user.PreferredSports ?? new List<Sports>()).SequenceEqual(Input.PreferredSports ?? new List<Sports>())) {
+            _user.PreferredSports = Input.PreferredSports ?? new List<Sports>();
             changed = true;
         }
-        else if(_currentSports.Count > 0 && (Input.PreferredSports == null || Input.PreferredSports.Count == 0))
-        {
-            _user.PreferredSports = new List<Sports>();
-            changed = true;
-        }
+
 
         if (changed)
         {
@@ -251,5 +261,4 @@
 
         public IFormFile? ProfilePicture { get; set; } = null;
     }
-
 }

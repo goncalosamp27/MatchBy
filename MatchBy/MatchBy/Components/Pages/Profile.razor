@@ -1,0 +1,236 @@
+@page "/profile"
+@page "/profile/{id}"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using MatchBy.Components.Pages.Matches
+@inject IUsersService UsersService
+@inject IMatchesService MatchesService
+@inject UserManager<ApplicationUser> UserManager
+@inject ILogger<Profile> Logger
+
+@attribute [Authorize]
+
+<PageTitle>Profile</PageTitle>
+
+<section class="bg-[var(--background)] min-h-screen">
+    <div class="max-w-6xl mx-auto p-6">
+        <h1 class="text-xl font-semibold mb-6 text-[var(--text)]">Profile Page</h1>
+
+        @if (_profile is null && _loading)
+        {
+            <p class="text-[var(--text)]">Loading profile...</p>
+        }
+        else if (_profile is null)
+        {
+            <p class="text-[var(--text)]">Profile not found.</p>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Left Column -->
+                <div class="bg-[var(--section)] shadow rounded-2xl p-6 border-2 border-[var(--main)] transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
+                    <div class="flex items-center gap-4">
+                        <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                            @if (_profile.ProfileImage is not null)
+                            {
+                                <img src="@_profile.ProfileImage.Url" alt="Profile" class="w-full h-full object-cover" />
+                            }
+                            else
+                            {
+                                <svg class="w-10 h-10 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 12c2.67 0 8 1.34 8 4v4H4v-4c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+                                </svg>
+                            }
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-lg text-[var(--text)]">@_profile.DisplayName</h2>
+                            <p class="text-sm text-gray-500">@_profile.UserName</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-4 items-center">
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">@_profile.Status</span>
+
+                        @if (_profile.BaseLocation is not null)
+                        {
+                            <span class="text-gray-600 flex items-center text-sm">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 7 7 13 7 13s7-6 7-13c0-3.87-3.13-7-7-7z" />
+                                </svg>
+                                @_profile.BaseLocation.City, @_profile.BaseLocation.Country
+                            </span>
+                        }
+
+                        <div class="flex items-center">
+                            <span class="text-sm font-medium mr-1 text-[var(--text)]">@_profile.Rating.ToString("0.0")</span>
+                            <div class="flex text-yellow-400">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    <span class="@(i <= Math.Round(_profile.Rating) ? "" : "text-gray-500 dark:text-gray-600")">★</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Public Bio -->
+                    @if (!string.IsNullOrWhiteSpace(_profile.Bio))
+                    {
+                        <div class="mt-6">
+                            <label class="block text-sm font-medium mb-1 text-[var(--text)]">Bio</label>
+                            <div class="w-full border-2 border-[var(--main)] rounded-lg p-2 text-sm
+                                           bg-[var(--section-secondary)] text-[var(--text)]
+                                           shadow-sm transition duration-200 ease-out
+                                           focus:outline-none focus:ring-0
+                                           hover:shadow-[0_0px_10px_-4px_var(--main)]"
+                                      rows="2" readonly
+                                      style="cursor: default; user-select: text;">@_profile.Bio</div>
+                        </div>
+                    }
+
+                    <!-- Email: only for the owner -->
+                    @if (_isOwner && !string.IsNullOrWhiteSpace(_ownEmail))
+                    {
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium mb-1 text-[var(--text)]">Email</label>
+                            <div class="w-full border-2 border-[var(--main)] rounded-lg p-2 text-sm
+                                    bg-[var(--section-secondary)] text-[var(--text)]
+                                    shadow-sm transition duration-200 ease-out
+                                    hover:shadow-[0_0px_10px_-4px_var(--main)]"
+                                 style="cursor: default; user-select: text;">
+                                @_ownEmail
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Right Column -->
+                <div class="bg-[var(--section)] shadow-sm rounded-2xl p-6 border-2 border-[var(--main)]
+                            transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
+                    <h3 class="font-semibold mb-4 text-[var(--text)]">Preferred Sports</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        @if (_profile.PreferredSports.Any())
+                        {
+                            @foreach (var sport in _profile.PreferredSports)
+                            {
+                                <div class="flex items-center justify-center border-2 border-[var(--main)]
+                                            rounded-xl p-3 text-[var(--text)] bg-[var(--section-secondary)]
+                                            transition duration-200 ease-out
+                                            hover:shadow-[0_0px_10px_-4px_var(--main)]">
+                                    @sport
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-sm text-gray-500 col-span-2">No preferred sports.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matches -->
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="font-semibold mb-4 text-[var(--text)]">Previous Matches</h3>
+                    <div class="bg-[var(--section)] shadow rounded-xl p-6 border-2 border-[var(--main)]">
+                        @if (_matches?.Any() == true)
+                        {
+                            <div class="flex flex-col gap-6">
+                                @foreach (var match in _matches)
+                                {
+                                    <div class="rounded-xl border-2 border-[var(--main)] bg-[var(--section-secondary)]
+                                                shadow-sm overflow-hidden transition duration-200 ease-out
+                                                hover:shadow-[0_0px_10px_-4px_var(--main)]">
+                                        <MatchCard Match="@match" />
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-gray-500">No previous matches.</p>
+                        }
+                    </div>
+                </div>
+
+                @if (_isOwner)
+                {
+                    <div>
+                        <h3 class="font-semibold mb-4 text-[var(--text)]">Create Matches</h3>
+                        <NavLink href="/CreateMatch"
+                                 class="border-2 border-dashed border-[var(--main)] rounded-xl flex flex-col items-center justify-center p-10 bg-[var(--section)]
+                                    hover:bg-[var(--section-secondary)] hover:shadow-[0_0px_10px_-4px_var(--main)] cursor-pointer transition">
+                            <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M12 4v16m8-8H4" />
+                            </svg>
+                            <p class="text-gray-500 text-sm font-medium">Create New Match</p>
+                        </NavLink>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private ApplicationUser? _profile;
+    private List<Match>? _matches;
+    private bool _isOwner;
+    private string? _ownEmail;
+    private bool _loading = true;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+
+        try
+        {
+            string targetId;
+
+            if (Id is null)
+            {
+                var current = await UserManager.GetUserAsync(HttpContext.User);
+                if (current is null)
+                {
+                    _profile = null;
+                    _matches = null;
+                    _loading = false;
+                    return;
+                }
+
+                targetId = current.Id;
+                _isOwner = true;
+                _ownEmail = current.Email;
+            }
+            else
+            {
+                targetId = Id;
+                var currentIdStr = UserManager.GetUserId(HttpContext.User);
+                _isOwner = currentIdStr == targetId;
+                _ownEmail = null;
+            }
+
+            // Fetch public profile via service (does not expose everything)
+            _profile = await UsersService.GetUser(targetId, CancellationToken.None);
+
+            if (_profile is not null)
+            {
+                _matches = await MatchesService.GetCompletedMatches(_profile.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading profile");
+            _profile = null;
+            _matches = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

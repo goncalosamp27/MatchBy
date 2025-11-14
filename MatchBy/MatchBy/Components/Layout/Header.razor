@@ -4,7 +4,7 @@
 @attribute [Authorize]
 
 <nav
-    class="bg-[var(--section)] border-b border-[var(--main)] px-4 py-2.5">
+    class="bg-[var(--section)] border-b-3 border-[var(--main)] px-4 py-2.5">
     <div class="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl">
         <div class="flex justify-start items-center">
             <button
@@ -296,8 +296,8 @@
                         data-dropdown-toggle="dropdown">
                         <span class="sr-only">Open user menu</span>
                         <img    
-                            class="w-8 h-8 rounded-full"
-                            src="/api/profile-image"
+                            class="w-8 h-8 rounded-full object-cover"
+                            src="/api/profile-image/me"
                             alt="user photo"/>
                     </button>
                     <!-- Dropdown menu -->
@@ -384,12 +384,12 @@
                 </Authorized>
                 <NotAuthorized>
                     <NavLink href="/Account/Login"
-                             class="text-gray-800 dark:text-white hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 dark:hover:bg-gray-700 focus:outline-none dark:focus:ring-gray-800">
+                             class="text-[var(--text)] hover:text-[var(--main)] font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2">
                         Log
                         in
                     </NavLink>
                     <NavLink href="/Account/Register"
-                             class="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none dark:focus:ring-primary-800">
+                             class="text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none">
                         Register
                     </NavLink>
                 </NotAuthorized>
@@ -399,34 +399,34 @@
             <ul class="flex flex-col mt-4 font-medium lg:flex-row lg:space-x-8 lg:mt-0">
                 <li>
                     <NavLink href="/" Match="NavLinkMatch.All" ActiveClass="!text-[var(--main)]"
-                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0"
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0"
                              aria-current="page">Home
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/matches" Match="NavLinkMatch.Prefix" ActiveClass="!text-[var(--main)]"
-                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0">
                         Matches
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/teams" Match="NavLinkMatch.Prefix"
                             ActiveClass="!text-[var(--main)]"
-                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0">
                         Teams
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/community" Match="NavLinkMatch.Prefix"
                              ActiveClass="!text-[var(--main)]"
-                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0">
                         Community
                     </NavLink>
                 </li>
                 <li>
                     <NavLink href="/contact" Match="NavLinkMatch.Prefix"
                              ActiveClass="!text-[var(--main)]"
-                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main-hover)] lg:p-0">
+                             class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0">
                         Contact
                     </NavLink>
                 </li>

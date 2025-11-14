@@ -1,4 +1,4 @@
-name: Build and Deploy - MatchBy
+name: Build and Deploy (Staging) - MatchBy
 'on':
   push:
     branches:
