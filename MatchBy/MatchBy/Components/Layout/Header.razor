@@ -316,8 +316,8 @@
                             <li>
                                 <NavLink
                                     href="/profile"
-                                    class="flex items-center py-2 px-4 text-sm hover:text-[var(--main)] text-[var(--text)]">
-                                    <svg class="mr-2 w-5 h-5 text-[var(--text)]" aria-hidden="true"
+                                    class="flex items-center py-2 px-4 text-sm text-[var(--text)] group">
+                                    <svg class="mr-2 w-5 h-5 text-[var(--text)] group-hover:text-[var(--main)]" aria-hidden="true"
                                          xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                                          viewBox="0 0 24 24">
                                         <path fill-rule="evenodd"
@@ -325,57 +325,55 @@
                                               clip-rule="evenodd"/>
                                     </svg>
 
-                                    My Profile
+                                    <span class="text-[var(--text)] group-hover:text-[var(--main)]">My Profile</span>
                                 </NavLink>
                             </li>
                             <li>
                                 <NavLink
                                     href="/chat"
-                                    class="flex items-center py-2 px-4 text-sm hover:text-[var(--main)] text-[var(--text)]">
-                                    <svg class="mr-2 w-5 h-5 text-[var(--text)]" aria-hidden="true"
+                                    class="flex items-center py-2 px-4 text-sm text-[var(--text)] group">
+                                    <svg class="mr-2 w-5 h-5 text-[var(--text)] group-hover:text-[var(--main)]" aria-hidden="true"
                                          xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                                          viewBox="0 0 640 640">
                                         <path fill-rule="evenodd" clip-rule="evenodd"
                                             d="M416 208C416 305.2 330 384 224 384C197.3 384 171.9 379 148.8 370L67.2 413.2C57.9 418.1 46.5 416.4 39 409C31.5 401.6 29.8 390.1 34.8 380.8L70.4 313.6C46.3 284.2 32 247.6 32 208C32 110.8 118 32 224 32C330 32 416 110.8 416 208zM416 576C321.9 576 243.6 513.9 227.2 432C347.2 430.5 451.5 345.1 463 229.3C546.3 248.5 608 317.6 608 400C608 439.6 593.7 476.2 569.6 505.6L605.2 572.8C610.1 582.1 608.4 593.5 601 601C593.6 608.5 582.1 610.2 572.8 605.2L491.2 562C468.1 571 442.7 576 416 576z"/>
                                     </svg>
 
-                                    Chat
+                                    <span class="text-[var(--text)] group-hover:text-[var(--main)]">Chat</span>
                                 </NavLink>
                             </li>
                             <li>
                                 <NavLink
                                     href="/Account/Manage"
                                     onclick="setTimeout(location.reload.bind(location), 1)"
-                                    class="flex items-center py-2 px-4 text-sm hover:text-[var(--main)] text-[var(--text)]">
-                                    <svg class="mr-2 w-5 h-5 text-[var(--text)]" aria-hidden="true"
+                                    class="flex items-center py-2 px-4 text-sm group">
+                                    <svg class="mr-2 w-5 h-5 text-[var(--text)] group-hover:text-[var(--main)]" aria-hidden="true"
                                          xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                                          viewBox="0 0 24 24">
                                         <path fill-rule="evenodd"
                                               d="M17 10v1.126c.367.095.714.24 1.032.428l.796-.797 1.415 1.415-.797.796c.188.318.333.665.428 1.032H21v2h-1.126c-.095.367-.24.714-.428 1.032l.797.796-1.415 1.415-.796-.797a3.979 3.979 0 0 1-1.032.428V20h-2v-1.126a3.977 3.977 0 0 1-1.032-.428l-.796.797-1.415-1.415.797-.796A3.975 3.975 0 0 1 12.126 16H11v-2h1.126c.095-.367.24-.714.428-1.032l-.797-.796 1.415-1.415.796.797A3.977 3.977 0 0 1 15 11.126V10h2Zm.406 3.578.016.016c.354.358.574.85.578 1.392v.028a2 2 0 0 1-3.409 1.406l-.01-.012a2 2 0 0 1 2.826-2.83ZM5 8a4 4 0 1 1 7.938.703 7.029 7.029 0 0 0-3.235 3.235A4 4 0 0 1 5 8Zm4.29 5H7a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h6.101A6.979 6.979 0 0 1 9 15c0-.695.101-1.366.29-2Z"
                                               clip-rule="evenodd"/>
                                     </svg>
-                                    Account Settings
+                                    <span class="text-[var(--text)] group-hover:text-[var(--main)]">Account Settings</span>
                                 </NavLink>
                             </li>
 
                         </ul>
-                        <ul
-                            class="py-1 text-gray-700 dark:text-gray-300"
-                            aria-labelledby="dropdown">
-                            <li>
+                        <ul aria-labelledby="dropdown">
+                            <li class="group">
                                 <form action="Account/Logout" method="post">
                                     <AntiforgeryToken/>
                                     <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
                                     <button type="submit"
-                                            class="flex items-center py-2 px-4 text-sm text-[var(--text)] hover:text-[var(--main)]">
-                                        <svg class="mr-2 w-5 h-5 text-[var(--text)] " aria-hidden="true"
+                                            class="flex items-center py-2 px-4 text-sm text-[var(--text)]">
+                                        <svg class="mr-2 w-5 h-5 text-[var(--text)] group-hover:text-[var(--main)]" aria-hidden="true"
                                              xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                                              viewBox="0 0 24 24">
                                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
                                                   stroke-width="2"
                                                   d="M20 12H8m12 0-4 4m4-4-4-4M9 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2"/>
                                         </svg>
-                                        Logout
+                                        <span class="text-[var(--text)] group-hover:text-[var(--main)]">Logout</span>
                                     </button>
                                 </form>
                             </li>
