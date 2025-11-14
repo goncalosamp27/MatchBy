@@ -17,6 +17,7 @@ public static class ChatMessageMappings
             Content = chatMessage.Content,
             SenderId = chatMessage.SenderId,
             Sender = chatMessage.Sender.ToUserSummaryDto(),
+            Location = chatMessage.Location,
             ReplyToMessageId = chatMessage.ReplyToMessageId,
             ReplyToMessage = chatMessage.ReplyToMessage?.ToDto(),
             ConversationId = chatMessage.ConversationId,

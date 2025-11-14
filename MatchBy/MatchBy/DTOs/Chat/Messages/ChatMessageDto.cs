@@ -1,4 +1,6 @@
-﻿namespace MatchBy.DTOs.Chat.Messages;
+﻿using MatchBy.Models;
+
+namespace MatchBy.DTOs.Chat.Messages;
 
 public sealed record ChatMessageDto
 {
@@ -6,6 +8,7 @@ public sealed record ChatMessageDto
     public required string Content { get; init; }
     public required string SenderId { get; init; }
     public UserSummaryDto Sender { get; init; }
+    public Location? Location { get; init; }
     public string? ReplyToMessageId { get; init; }
     public ChatMessageDto? ReplyToMessage { get; init; }
     public required string ConversationId { get; init; }

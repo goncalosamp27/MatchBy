@@ -391,7 +391,8 @@
             Content = _messageText,
             CreatorUserId = State.UserId!,
             ConversationId = State.Selected.Id,
-            ReplyToMessageId = _replyToMessage?.Id
+            ReplyToMessageId = _replyToMessage?.Id,
+            Location = null
         };
 
         var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);

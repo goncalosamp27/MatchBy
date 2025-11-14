@@ -755,7 +755,36 @@ namespace MatchBy.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.OwnsOne("MatchBy.Models.Location", "Location", b1 =>
+                        {
+                            b1.Property<string>("ChatMessageId")
+                                .HasColumnType("character varying(500)");
+
+                            b1.Property<string>("City")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Country")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision");
+
+                            b1.HasKey("ChatMessageId");
+
+                            b1.ToTable("ChatMessages");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ChatMessageId");
+                        });
+
                     b.Navigation("Conversation");
+
+                    b.Navigation("Location");
 
                     b.Navigation("ReplyToMessage");
 

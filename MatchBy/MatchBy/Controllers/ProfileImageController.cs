@@ -27,7 +27,6 @@ public class ProfileImageController(IS3Service s3, UserManager<ApplicationUser> 
             return NotFound("User not found.");
         }
 
-        // Sem imagem → devolve avatar default
         if (user.ProfileImage is null)
         {
             return Redirect("/images/user-avatar.png");
@@ -38,7 +37,6 @@ public class ProfileImageController(IS3Service s3, UserManager<ApplicationUser> 
             return Redirect(user.ProfileImage.Url);
         }
         
-        // Gera URL da imagem no S3
         string? url = await s3.GetPresignedUrlAsync(
             $"users/{user.Id}/profile-pictures/{user.ProfileImage.Key}",
             HttpVerb.GET
