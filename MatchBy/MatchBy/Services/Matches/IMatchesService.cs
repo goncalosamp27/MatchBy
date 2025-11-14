@@ -1,16 +1,17 @@
-﻿using MatchBy.Models;
+﻿using MatchBy.DTOs.Match;
+using MatchBy.Enums;
+using MatchBy.Models;
 
 namespace MatchBy.Services.Matches;
 
 public interface IMatchesService
 {
-    Task<List<Match>> GetMatches();
-    Task<List<Match>> GetCompletedMatches(string? userId);
-    Task<Match?> GetMatchById(string matchId);
-    Task<bool> CreateMatch(Match match);
-    Task<bool> UpdateMatch(string matchId, Match updatedMatch);
-    Task<bool> DeleteMatch(string matchId);
-    Task<List<Match>> GetMatchesForUser(string userId);
-    Task<List<Match>> GetMatchesExceptUser(string userId);
+    Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q, string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default);
+    Task<Result<MatchDto>> GetMatchById(string matchId);
+    Task<Result<bool>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default);
+    Task<Result<bool>> UpdateMatch(UpdateMatchDto updateMatchDto, CancellationToken ct = default);
+    Task<Result<bool>> DeleteMatch(string matchId);
+    Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default);
+    Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesExceptUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default);
 }
 

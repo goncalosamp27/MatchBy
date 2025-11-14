@@ -37,21 +37,21 @@ public class ProfileImageController(IS3Service s3, UserManager<ApplicationUser> 
             return Redirect(user.ProfileImage.Url);
         }
         
-        string? url = await s3.GetPresignedUrlAsync(
+        Result<string> url = await s3.GetPresignedUrlAsync(
             $"users/{user.Id}/profile-pictures/{user.ProfileImage.Key}",
             HttpVerb.GET
         );
 
-        if (url is null)
+        if (!url.Success)
         {
             return NotFound("Could not generate presigned URL.");
         }
 
-        user.ProfileImage = user.ProfileImage with { Url = url, ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(15) };
+        user.ProfileImage = user.ProfileImage with { Url = url.Data!, ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(15) };
         
         await userManager.UpdateAsync(user);
         
-        return Redirect(url);
+        return Redirect(url.Data!);
     }
     
     [HttpPost("delete")]

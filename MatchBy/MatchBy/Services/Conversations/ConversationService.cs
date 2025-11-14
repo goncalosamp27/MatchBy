@@ -271,32 +271,32 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         // upload
-        string? uploadedKey = await s3Service.UploadBrowserFileAsync(file, $"conversations/{conversation.Id}/image");
-        if (uploadedKey is null)
+        Result<string> uploadedKey = await s3Service.UploadBrowserFileAsync(file, $"conversations/{conversation.Id}/image");
+        if (!uploadedKey.Success)
         {
-            return null;
+            return Result<ConversationDto>.Fail(uploadedKey.ErrorMessages.ToArray());
         }
 
         // URL presign
-        string? url =
-            await s3Service.GetPresignedUrlAsync($"conversations/{conversation.Id}/image/{uploadedKey}", HttpVerb.GET);
-        if (url is null)
+        Result<string> url =
+            await s3Service.GetPresignedUrlAsync($"conversations/{conversation.Id}/image/{uploadedKey.Data}", HttpVerb.GET);
+        if (!url.Success)
         {
-            return null;
+            return Result<ConversationDto>.Fail(url.ErrorMessages.ToArray());
         }
 
         // delete previous, if it exists
         string? oldKey = conversation.Image?.Key;
-        if (!string.IsNullOrWhiteSpace(oldKey) && !oldKey.Equals(uploadedKey, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(oldKey) && !oldKey.Equals(uploadedKey.Data, StringComparison.OrdinalIgnoreCase))
         {
             await s3Service.DeleteFileAsync($"conversations/{conversation.Id}/image/{oldKey}");
         }
 
         // store the image info
         conversation.Image = new FileStore(
-            Url: url,
+            Url: url.Data!,
             ExpireDateTimeUtc: DateTime.UtcNow.AddMinutes(30),
-            Key: uploadedKey,
+            Key: uploadedKey.Data!,
             FileCategory: FileCategory.ConversationImage,
             FileType: FileType.Image,
             CreatedAtUtc: DateTime.UtcNow
@@ -318,13 +318,13 @@ public class ConversationService(
                 return;
             }
 
-            string? url = await s3Service.GetPresignedUrlAsync(
+            Result<string> url = await s3Service.GetPresignedUrlAsync(
                 $"conversations/{c.Id}/image/{c.Image.Key}", HttpVerb.GET);
-            if (!string.IsNullOrEmpty(url))
+            if (url.Success)
             {
                 c.Image = c.Image with
                 {
-                    Url = url,
+                    Url = url.Data!,
                     ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry)
                 };
             }
@@ -351,14 +351,14 @@ public class ConversationService(
 
         if (user.ProfileImage.ExpireDateTimeUtc < DateTime.UtcNow || string.IsNullOrEmpty(user.ProfileImage.Url))
         {
-            string? url = await s3Service.GetPresignedUrlAsync(
+            Result<string> url = await s3Service.GetPresignedUrlAsync(
                 $"users/{user.Id}/profile-pictures/{user.ProfileImage.Key}", HttpVerb.GET);
 
-            if (!string.IsNullOrEmpty(url))
+            if (url.Success)
             {
                 user.ProfileImage = user.ProfileImage with
                 {
-                    Url = url,
+                    Url = url.Data!,
                     ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry)
                 };
             }

@@ -1,122 +1,176 @@
 ﻿using MatchBy.Data;
+using MatchBy.DTOs.Match;
 using MatchBy.Models;
 using MatchBy.Enums; 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MatchBy.Services.Matches;
 
 public class MatchesService(ApplicationDbContext applicationDbContext) : IMatchesService
 {
-    public async Task<List<Match>> GetMatches()
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q, string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        List<Match> matches = await applicationDbContext
+        IQueryable<Match> query = applicationDbContext
             .Matches
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(m => m.Participants)
-            .Include(m => m.Creator)
-            .Where(m =>
-                m.Status == MatchStatus.Pendent &&
-                m.Participants.Count < m.maxPlayers)
-            .ToListAsync();
-        return matches;
-    }
-    public async Task<List<Match>> GetCompletedMatches(string? userId)
-    {
-        List<Match> matches = await applicationDbContext
-            .Matches
-            .Include(m => m.Participants)
-            .Include(m => m.Creator)
-            .Where(m => userId == null || m.CreatorId == userId || m.Participants.Any(p => p.Id == userId))
-            .Where(m =>
-                m.Status == MatchStatus.Completed)
-            .ToListAsync();
-        return matches;
-    }
-    
-    public async Task<Match?> GetMatchById(string matchId)
-    {
-        Match? match = await applicationDbContext
-            .Matches
-            .Include(m => m.Participants)
-            .FirstOrDefaultAsync(m => m.Id == matchId);
-
-        return match;
-    }
-
-    public async Task<bool> CreateMatch(Match match)
-    {
-        match.Id = $"match_{Guid.CreateVersion7()}";
-        match.MatchDateTimeUtc = DateTime.SpecifyKind(match.MatchDateTimeUtc, DateTimeKind.Utc);
-        match.CreatedAtUtc = DateTime.UtcNow;
-        await applicationDbContext.Matches.AddAsync(match);
-        await applicationDbContext.SaveChangesAsync();
+            .Include(m => m.Creator);
         
-        return true;
-    }
+        // Filter by userId: if provided, get matches where user is creator or participant; else get only public matches
+        query = !string.IsNullOrEmpty(userId) ? query.Where(m => m.CreatorId == userId || m.Participants.Any(p => p.Id == userId)) : query.Where(m => m.Privacy == MatchPrivacy.Public);
 
-    public async Task<bool> UpdateMatch(string matchId, Match updatedMatch)
-    {
-        Match? match = await applicationDbContext
-            .Matches
-            .FirstOrDefaultAsync(m => m.Id == matchId);
-
-        if (match is null)
+        query = matchStatus switch
         {
-            return false;
+            MatchStatus.Pendent => query.Where(m => m.Status == MatchStatus.Pendent),
+            MatchStatus.Cancelled => query.Where(m => m.Status == MatchStatus.Cancelled),
+            MatchStatus.Completed => query.Where(m => m.Status == MatchStatus.Completed),
+            MatchStatus.Confirmed => query.Where(m => m.Status == MatchStatus.Confirmed),
+            _ => query
+        };
+
+        if (!string.IsNullOrEmpty(q))
+        {
+            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
         }
 
-        //propertys mapper
-        match.Description = updatedMatch.Description;
-        match.Location = updatedMatch.Location;
-        match.MatchDateTimeUtc = DateTime.SpecifyKind(updatedMatch.MatchDateTimeUtc, DateTimeKind.Utc);
-        match.MatchDateTimeUtc = updatedMatch.MatchDateTimeUtc;
-        match.minPlayers = updatedMatch.minPlayers;
-        match.maxPlayers = updatedMatch.maxPlayers;
-        match.Sport = updatedMatch.Sport;
-        match.Status = updatedMatch.Status;
-        match.CreatorId = updatedMatch.CreatorId;
-        match.UpdatedAtUtc = DateTime.UtcNow;
-
-        await applicationDbContext.SaveChangesAsync();
-        return true;
+        int total = await query.CountAsync(ct);
+        int totalPages = (int)Math.Ceiling((double)total / pageSize);
+        
+        List<Match> matches = await query
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        
+        var matchesDto = matches.Select(m => m.ToDto()).ToList();
+        
+        return Result<PaginationResponse<List<MatchDto>>>.Ok(
+            new PaginationResponse<List<MatchDto>>
+            {
+                Data = matchesDto,
+                NextPageAvailable = page < totalPages,
+                Page = page,
+                PageSize = pageSize,
+                PreviousPageAvailable = page > 1,
+                TotalCount = total
+            });
+    }
+    
+    public async Task<Result<MatchDto>> GetMatchById(string matchId)
+    {
+        Match? match = await applicationDbContext
+            .Matches
+            .Include(m => m.Participants)
+            .FirstOrDefaultAsync(m => m.Id == matchId);
+        
+        return match == null ? Result<MatchDto>.Fail($"Match with id {matchId} not found.") : Result<MatchDto>.Ok(match.ToDto());
     }
 
-    public async Task<bool> DeleteMatch(string matchId)
+    public async Task<Result<bool>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default)
+    {
+        Match match = createMatchDto.ToEntity();
+        await applicationDbContext.Matches.AddAsync(match, ct);
+        await applicationDbContext.SaveChangesAsync(ct);
+        
+        return Result<bool>.Ok(true);
+    }
+
+    public async Task<Result<bool>> UpdateMatch(UpdateMatchDto updateMatchDto, CancellationToken ct = default)
+    {
+        Match? match = await applicationDbContext
+            .Matches
+            .FirstOrDefaultAsync(m => m.Id == updateMatchDto.MatchId, ct);
+        if (match is null)
+        {
+            return Result<bool>.Fail($"Match with id {updateMatchDto.MatchId} not found.");
+        }
+        
+        match.UpdateEntity(updateMatchDto);
+        await applicationDbContext.SaveChangesAsync(ct);
+        return Result<bool>.Ok(true);
+    }
+
+    public async Task<Result<bool>> DeleteMatch(string matchId)
     {
         await applicationDbContext.Matches.Where(m => m.Id.Equals(matchId))
             .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.DeletedAtUtc, DateTime.UtcNow));
-        return true;
+        return Result<bool>.Ok(true);
     }
 
-    public async Task<List<Match>> GetMatchesForUser(string userId)
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        return await applicationDbContext
+        IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
-            .Where(m =>
-                m.DeletedAtUtc == null &&
-                m.Status == MatchStatus.Pendent &&
-                m.CreatorId == userId &&
-                m.Participants.Count < m.maxPlayers)
-            .ToListAsync();
+            .Where(m => m.CreatorId == userId );
+
+        if (!string.IsNullOrEmpty(q))
+        {
+            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
+        }
+        
+        int total = await query.CountAsync(ct);
+        int totalPages = (int)Math.Ceiling((double)total / pageSize);
+        
+        List<Match> matches = await query
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        
+        var matchesDto = matches.Select(m => m.ToDto()).ToList();
+        
+        return Result<PaginationResponse<List<MatchDto>>>.Ok(
+            new PaginationResponse<List<MatchDto>>
+            {
+                Data = matchesDto,
+                NextPageAvailable = page < totalPages,
+                Page = page,
+                PageSize = pageSize,
+                PreviousPageAvailable = page > 1,
+                TotalCount = total
+            });
     }
 
-    public async Task<List<Match>> GetMatchesExceptUser(string userId)
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesExceptUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        return await applicationDbContext
+        IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
-            .Where(m =>
-                m.DeletedAtUtc == null &&
-                m.Status == MatchStatus.Pendent &&
-                m.CreatorId != userId &&
-                !m.Participants.Any(p => p.Id == userId) &&
-                m.Participants.Count < m.maxPlayers)
-            .ToListAsync();
+            .Where(m => m.CreatorId != userId && m.Participants.All(p => p.Id != userId));
+            
+        if (!string.IsNullOrEmpty(q))
+        {
+            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
+        }
+            
+        int total = await query.CountAsync(ct);
+        int totalPages = (int)Math.Ceiling((double)total / pageSize);
+        
+        List<Match> matches = await query
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        
+        var matchesDto = matches.Select(m => m.ToDto()).ToList();
+        
+        return Result<PaginationResponse<List<MatchDto>>>.Ok(
+            new PaginationResponse<List<MatchDto>>
+            {
+                Data = matchesDto,
+                NextPageAvailable = page < totalPages,
+                Page = page,
+                PageSize = pageSize,
+                PreviousPageAvailable = page > 1,
+                TotalCount = total
+            });
     }
-
 }

@@ -1,4 +1,5 @@
-﻿using MatchBy.Models;
+﻿using MatchBy.DTOs.User;
+using MatchBy.Models;
 
 namespace MatchBy.DTOs.Chat.Messages;
 
@@ -16,7 +17,7 @@ public static class ChatMessageMappings
             Id = chatMessage.Id,
             Content = chatMessage.Content,
             SenderId = chatMessage.SenderId,
-            Sender = chatMessage.Sender.ToUserSummaryDto(),
+            Sender = chatMessage.Sender.ToDto(),
             Location = chatMessage.Location,
             ReplyToMessageId = chatMessage.ReplyToMessageId,
             ReplyToMessage = chatMessage.ReplyToMessage?.ToDto(),
@@ -39,16 +40,6 @@ public static class ChatMessageMappings
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
             DeletedAtUtc = null
-        };
-    }
-
-    private static UserSummaryDto ToUserSummaryDto(this ApplicationUser user)
-    {
-        return new UserSummaryDto
-        {
-            Id = user.Id,
-            DisplayName = user.UserName!, // assuming UserName is non-null because it's required in the user configuration
-            AvatarUrl = user.ProfileImage?.Url
         };
     }
 }

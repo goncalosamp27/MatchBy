@@ -1,4 +1,5 @@
 ﻿using Amazon.S3;
+using MatchBy.Components;
 using MatchBy.Data;
 using MatchBy.Models;
 using MatchBy.Services.S3;
@@ -8,11 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace MatchBy.Services.Users;
 
-public class PagedResult<T>
-{
-    public List<T> Items { get; set; }
-    public int TotalCount { get; set; }
-}
 public class UsersService(ApplicationDbContext applicationDbContext, IS3Service s3Service, IOptions<S3Settings> s3Settings) : IUsersService
 {
     public async Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
@@ -73,16 +69,16 @@ public class UsersService(ApplicationDbContext applicationDbContext, IS3Service 
         }
         
         // Get profile image Url from s3Service
-        string? url = await s3Service.GetPresignedUrlAsync(
+        Result<string> url = await s3Service.GetPresignedUrlAsync(
             $"users/{user.Id}/profile-pictures/{user.ProfileImage.Key}",
             HttpVerb.GET
         );
 
-        if (url is null)
+        if (!url.Success)
         {
             return;
         }
 
-        user.ProfileImage = user.ProfileImage with { Url = url, ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry) };
+        user.ProfileImage = user.ProfileImage with { Url = url.Data!, ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry) };
     }
 }

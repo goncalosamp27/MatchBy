@@ -20,8 +20,6 @@ using MatchBy.Services.FileValidator;
 using MatchBy.Services.Matches;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.ResponseCompression;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
@@ -116,12 +114,6 @@ builder.Services
     .AddFontAwesomeIcons()
     .AddBlazoriseFluentValidation();
 
-builder.Services.AddResponseCompression(opts =>
-{
-    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
-        [ "application/octet-stream" ]);
-});
-
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
@@ -143,12 +135,9 @@ builder.Services.AddCors(options =>
 
 WebApplication app = builder.Build();
 
-app.UseResponseCompression();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
-    
     //await app.RecreateDatabase();
     //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
