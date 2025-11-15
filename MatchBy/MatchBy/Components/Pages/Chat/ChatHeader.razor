@@ -1,0 +1,38 @@
+﻿@using MatchBy.DTOs.Chat.Conversations
+@using Blazorise
+
+<header class="flex-none border-b px-4 py-3"
+        style="background-color: var(--background); border-color: var(--main);">
+    <div class="flex items-center gap-3">
+        @if (Conversation.Type == ConversationType.Private)
+        {
+            var otherParticipant = Conversation.Participants.FirstOrDefault(p => p.Id != CurrentUserId);
+            <img class="size-9 rounded-full flex-none"
+                 src="@(otherParticipant?.ImageUrl ?? "/images/user-avatar.png")"
+                 alt="@Conversation.Title image"/>
+            <div class="min-w-0 flex-1">
+                <div class="font-semibold truncate" style="color: var(--text);">@otherParticipant?.DisplayName</div>
+            </div>
+        }
+        else
+        {
+            <img class="size-10 rounded-full"
+                 src="@(Conversation.ImageUrl ?? "/images/user-avatar.png")"
+                 alt="">
+            <div class="min-w-0 flex-1">
+                <div class="font-semibold truncate" style="color: var(--text);">@Conversation.Title</div>
+            </div>
+        }
+        <Button Clicked="OnOpenInfo" 
+                class="flex-none px-2 py-1 rounded transition-colors hover:opacity-70"
+                Style="color: var(--text);">
+            <Icon Name="IconName.InfoCircle"/>
+        </Button>
+    </div>
+</header>
+
+@code{
+    [Parameter] public required ConversationDto Conversation { get; set; }
+    [Parameter] public EventCallback OnOpenInfo { get; set; }
+    [Parameter] public required string CurrentUserId { get; set; }
+}

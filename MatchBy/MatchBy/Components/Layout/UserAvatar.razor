@@ -1,4 +1,5 @@
-﻿@inject IUsersService UsersService
+﻿@using MatchBy.Services.Users
+@inject IUsersService UsersService
 
 <img
     class="w-8 h-8 rounded-full"
@@ -9,6 +10,4 @@
 {
     [Parameter] public string UserId { get; set; } = string.Empty;
     private string ProfilePictureUrl { get; set; } = "https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/michael-gough.png";
-  
-
 }

@@ -26,8 +26,11 @@ public class Conversation
     public string? MatchId { get; set; }
     public Match? Match { get; set; }
     
+    
+    public string? LastMessageContent { get; set; }
+    public DateTime? LastMessageAtUtc { get; set; }
+    
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
-    public DateTime? LastMessageAtUtc { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
 }
