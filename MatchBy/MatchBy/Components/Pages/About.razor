@@ -1,0 +1,39 @@
+@page "/About"
+@using Blazorise
+@rendermode @(new InteractiveServerRenderMode(false))
+@inject NavigationManager Nav
+
+<PageTitle>About MatchBy</PageTitle>
+<section class="bg-[var(--background)]">
+    <section class ="border-b-0 border-[var(--main)]">
+        <h1 class="text-center my-16 lg:text-6xl font-semibold text-[var(--main)] md:text-5xl text-4xl"><span class="text-[var(--text)]">About</span> MatchBy<span class="text-[var(--text)]">!</span></h1>
+        <div class="grid max-w-screen-xl mx-auto lg:grid-cols-12 md:justify-center">
+            <div class="mr-auto place-self-center lg:col-span-7">
+                <h1 class="text-[var(--main)] max-w-2xl mb-4 text-4xl font-bold leading-tight tracking-tight md:text-3xl xl:text-4xl text-center">Our mission</h1>
+                <div class="max-w-2xl mb-6 font-light text-[var(--text)] text-justify lg:mb-8 md:text-lg lg:text-xl leading-relaxed px-24">
+                    Meeting people nearby who share the same passion for sports isn't always easy...
+                    MatchBy's mission is to bring players together, helping you find teammates, organize games,
+                    and enjoy your favorite sports without the hassle. MatchBy is fast, simple, and built for everyone.
+                </div>
+            </div>
+            <div class="hidden lg:mt-0 lg:col-span-5 lg:flex items-center justify-center mr-auto">
+                <img src="images/about/mission.png" alt="football" class="max-w-full h-[500px] w-auto object-contain object-center" />
+            </div>
+        </div>
+
+        <div class="grid max-w-screen-xl mx-auto lg:grid-cols-12 md:justify-center">
+            <div class="hidden lg:mt-0 lg:col-span-5 lg:flex items-center justify-center ml-auto">
+                <img src="images/about/plan.png" alt="football" class="max-w-full h-[500px] w-auto object-contain object-center" />
+            </div>
+            <div class="mr-auto place-self-center lg:col-span-7">
+                <h1 class="text-[var(--main)] max-w-2xl mb-4 text-4xl font-bold leading-tight tracking-tight md:text-3xl xl:text-4xl text-center">How it works</h1>
+                <div class="max-w-2xl mb-6 font-light text-[var(--text)] text-justify lg:mb-8 md:text-lg lg:text-xl leading-relaxed px-24">
+                    Simply create a profile, specify your favorite sports, and start searching for games or teammates nearby. 
+                    You can also create your own matches that other users will be able to join by simply selecting a match location, time, sport, and number of players!
+                    You must confirm the match before it happens to ensure it will really take place.
+                    Our platform makes it easy to communicate with others and stay updated through chats and notifications.
+                </div>
+            </div>
+        </div>
+    </section>
+</section>
