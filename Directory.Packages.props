@@ -10,6 +10,7 @@
     <PackageVersion Include="bunit" Version="2.0.62-preview" />
     <PackageVersion Include="EFCore.NamingConventions" Version="9.0.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+    <PackageVersion Include="FluentValidation.TestHelper" Version="12.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.6" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="9.0.6" />
