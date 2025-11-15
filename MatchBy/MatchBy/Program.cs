@@ -12,13 +12,19 @@ using Blazorise.FluentValidation;
 using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
-using MatchBy.Services;
+using MatchBy.Hubs;
+using MatchBy.Services.ChatMessages;
+using MatchBy.Services.Conversations;
+using MatchBy.Services.Email;
+using MatchBy.Services.FileValidator;
+using MatchBy.Services.Matches;
+using MatchBy.Services.Users;
+using MatchBy.Settings;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents()
@@ -44,6 +50,8 @@ builder.Services.AddScoped<ISeeder, ChatMessageSeeder>();
 builder.Services.AddScoped<IFileValidator, FileValidator>();
 
 builder.Services.AddAwsS3(builder.Configuration);
+builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("UploadSettings"));
+
 
 builder.Services.AddOptions();
 builder.Services.AddHttpClient<ResendClient>();
@@ -99,6 +107,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services
     .AddBlazorise(options =>
     {
+        options.Immediate = true;
         options.ProductToken = builder.Configuration["Blazorise:ProductToken"] ?? throw new InvalidOperationException("Blazorise product token not found in configuration.");
     })
     .AddTailwindProviders()
@@ -110,6 +119,9 @@ builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<IConversationService, ConversationService>();
+builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -123,19 +135,16 @@ builder.Services.AddCors(options =>
 
 WebApplication app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
-    
     //await app.RecreateDatabase();
-    await app.ApplyMigrationsAsync();
+    //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -143,18 +152,15 @@ app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
 app.MapControllers();
-
 app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
-
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(MatchBy.Client._Imports).Assembly);
-
-// Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
 await app.RunAsync();

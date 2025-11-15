@@ -1,56 +1,148 @@
 ﻿@page "/"
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider Auth
+@using System.Security.Claims
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@using Blazorise
+@rendermode @(new InteractiveServerRenderMode(false))
 
 <PageTitle>Home</PageTitle>
 
-@*
-<div id="map" class="w-full h-[180px] z-10 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border border-gray-200 shadow-sm"></div>
-*@
+<section class="bg-[var(--background)]">
+    <section class ="border-b-0 border-[var(--main)]">
+        <div class="grid max-w-screen-xl h-auto lg:h-[90vh] px-4 py-8 mx-auto lg:gap-8 xl:gap-0 lg:py-16 lg:grid-cols-12 md:justify-center">
+            <div class="mr-auto place-self-center lg:col-span-7">
+                <h1 class="text-[var(--text)] max-w-2xl mb-4 text-4xl font-bold leading-tight tracking-tight md:text-5xl xl:text-6xl lg:text-left text-center">@CurrentMessage</h1>
+                <p class="max-w-2xl mb-6 font-light text-[var(--main)] lg:mb-8 md:text-lg lg:text-xl lg:text-left text-center leading-relaxed">MatchBy is the best way to connect with other players and organize matches. Start playing today!</p>
+                <div class="flex lg:justify-start justify-center">
+                    @if (userId is null) {
+                        <a href="/Account/Register" class="inline-flex items-center justify-center px-5 py-3 mr-3 text-base font-medium text-center text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] hover:text-[var(--text)]">
+                            Join now!
+                            <svg class="w-5 h-5 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </a>
+                    }
+                    else {
+                    <a href="/Matches" class="inline-flex items-center justify-center px-5 py-3 mr-3 text-base font-medium text-center text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] hover:text-[var(--text)]">
+                            Start Playing!
+                            <svg class="w-5 h-5 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </a> 
+                    }  
+                    <a href="#" class="inline-flex items-center justify-center px-5 py-3 text-base font-medium text-center text-[var(--text)] border border-[var(--text)] rounded-lg hover:text-[var(--main)] hover:border-[var(--main)]">
+                        Learn more
+                    </a>
+                </div>
+            </div>
+            <div class="border-l-3 border-[var(--main)] lg:mt-0 lg:col-span-5 lg:flex items-center hidden justify-center relative overflow-hidden">
+                <Carousel @bind-SelectedSlide="@selectedSlide" Width="Width.Is50" AutoRepeat="true" Autoplay="true" Crossfade="true" ShowControls="false" ShowIndicators="false">
+                    <CarouselSlide Name="1">
+                        <Image Source="images/carousel/football.png" Text="Football" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="2"  Height="Height.Auto">
+                        <Image Source="images/carousel/volleyball.png" Text="Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="3" Height="Height.Auto">
+                        <Image Source="images/carousel/tennis.png" Text="Tennis" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="4" Height="Height.Auto">
+                        <Image Source="images/carousel/futsal.png" Text="Futsal" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="5" Height="Height.Auto">
+                        <Image Source="images/carousel/beachvolleyball.png" Text="Beach Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="6" Height="Height.Auto">
+                        <Image Source="images/carousel/paddle.png" Text="Paddle" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                </Carousel>
+            </div>
+            @*
+            <div id="myCarousel"
+                data-carousel="slide"
+                data-carousel-interval="2000"
+                class="border-l-4 border-[var(--main)] lg:mt-0 lg:col-span-5 lg:flex items-center hidden justify-center relative lg:h-[70vh] overflow-hidden">
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div
-            class="border-2 border-dashed border-gray-300 rounded-lg dark:border-gray-600 h-32 md:h-64"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-32 md:h-64"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-32 md:h-64"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-32 md:h-64"
-        ></div>
+                <div class="absolute inset-0 hidden duration-700 ease-in-out" data-carousel-item="active">
+                    <img src="images/carousel/football.png" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="absolute inset-0  hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/volleyball.png" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="absolute inset-0  hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/tennis.png" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="absolute inset-0 hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/futsal.png" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="absolute inset-0 hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/beachvolleyball.png" class="w-full h-full object-contain" />
+                </div>
+
+                <div class="absolute inset-0  hidden  duration-700 ease-in-out" data-carousel-item>
+                    <img src="images/carousel/paddle.png" class="w-full h-full object-contain" />
+                </div>
+            </div>
+            *@
+        </div>
+    </section>
+
+    <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
+        <h1 class="mb-4 text-4xl font-bold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Create your Match!</h1>
+        <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage matches.</p>
+        <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes the setup quick, simple and collaborative!</p>
+        <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
+            <a @onclick="GoToCreateMatch" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] hover:cursor-pointer">
+                Let's go!
+                <svg class="w-3.5 h-3.5 ms-2 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+                </svg>
+            </a>
+        </div>
     </div>
-    <div
-        class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-96 mb-4"
-    ></div>
-    <div class="grid grid-cols-2 gap-4 mb-4">
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-    </div>
-    <div
-        class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-96 mb-4"
-    ></div>
-    <div class="grid grid-cols-2 gap-4">
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-        <div
-            class="border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-48 md:h-72"
-        ></div>
-    </div>
+</section>
+
+@code {    
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? userId = null;
+
+    @code{
+        private string selectedSlide = "1";
+    }
+
+    private readonly List<string> Messages = new() {
+        "Are you ready to play your favorite sports?",
+        "Find teammates near you and play!",
+        "Organize your next match in a few seconds.",
+        "When will you play your next match?"
+    };
+
+    private int messageGenerator = 0;
+    private string CurrentMessage => Messages[messageGenerator];
+    
+    protected override async Task OnInitializedAsync() {
+        var authState = await Auth.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true) {
+            userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+            if (userId is null) return;
+
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+
+            Messages.Add("Hey " + user.Identity?.Name + ", are you ready for your next match?");
+            Messages.Add("Welcome back, " + user.Identity?.Name + "! Ready for another game?");
+        }
+
+        var startIndex = System.Security.Cryptography.RandomNumberGenerator.GetInt32(Messages.Count);
+        messageGenerator = startIndex;
+
+        var randomSlideIndex = System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, 7); 
+        selectedSlide = randomSlideIndex.ToString();
+    }
+
+    private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
+}

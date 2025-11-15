@@ -1,8 +1,8 @@
 @page "/Account/Manage"
 @using System.ComponentModel.DataAnnotations
-@using System.Security.Claims
 @using Amazon.S3
-@using Microsoft.AspNetCore.Antiforgery
+@using MatchBy.Services.FileValidator
+@using MatchBy.Services.S3
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
@@ -147,7 +147,7 @@
         </div>
     </EditForm>
 
-    <form id="removeImageForm" method="post" action="/api/profile-image/remove" class="hidden">
+    <form id="removeImageForm" method="post" action="/api/profile-image/delete" class="hidden">
         <AntiforgeryToken/>
     </form>
 </section>
@@ -198,8 +198,8 @@
                 return;
             }
 
-            var imageKey = await S3Service.UploadFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
-            if (imageKey is null)
+            var imageKey = await S3Service.UploadFormFileAsync(Input.ProfilePicture, $"users/{_user.Id}/profile-pictures");
+            if (!imageKey.Success)
             {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to upload profile picture.", HttpContext);
                 return;
@@ -210,8 +210,8 @@
                 await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-picture/{_user.ProfileImage.Key}");
             }
 
-            var imageUrl = await S3Service.GetPresignedUrlAsync($"users/{_user.Id}/profile-pictures/{imageKey}", HttpVerb.GET);
-            if (imageUrl is null)
+            var imageUrl = await S3Service.GetPresignedUrlAsync($"users/{_user.Id}/profile-pictures/{imageKey.Data}", HttpVerb.GET);
+            if (!imageUrl.Success)
             {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to upload profile picture.", HttpContext);
                 await S3Service.DeleteFileAsync($"users/{_user.Id}/profile-pictures/{imageKey}");
@@ -219,9 +219,9 @@
             }
 
             _user.ProfileImage = new FileStore(
-                Url: imageUrl,
+                Url: imageUrl.Data!,
                 ExpireDateTimeUtc: DateTime.UtcNow.AddMinutes(30),
-                Key: imageKey,
+                Key: imageKey.Data!,
                 FileCategory: FileCategory.ProfileImage,
                 FileType: FileType.Image,
                 CreatedAtUtc: DateTime.UtcNow
@@ -230,8 +230,14 @@
         }
 
 
-        if (!(_user.PreferredSports ?? new List<Sports>()).SequenceEqual(Input.PreferredSports ?? new List<Sports>())) {
-            _user.PreferredSports = Input.PreferredSports ?? new List<Sports>();
+        if (Input.PreferredSports != null && !_user.PreferredSports.SequenceEqual(Input.PreferredSports))
+        {
+            _user.PreferredSports = Input.PreferredSports;
+            changed = true;
+        }
+        else if(_currentSports.Count > 0 && (Input.PreferredSports == null || Input.PreferredSports.Count == 0))
+        {
+            _user.PreferredSports = new List<Sports>();
             changed = true;
         }
 

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Resend;
 
-namespace MatchBy.Services;
+namespace MatchBy.Services.Email;
 
 public class EmailSender(IResend resend) : IEmailSender<ApplicationUser>
 {

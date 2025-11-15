@@ -1,12 +1,12 @@
 @page "/Matches"
-@using Blazorise
+@using MatchBy.Services.Matches
 @inject IMatchesService MatchesService
 @inject NavigationManager NavigationManager
 @rendermode @(new InteractiveServerRenderMode(false))
 @attribute [StreamRendering]
-@inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using System.Security.Claims
+@using MatchBy.DTOs.Match
 
 <section class="bg-[var(--background)]">
     <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
@@ -20,9 +20,6 @@
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
                 </svg>
             </a>
-            <button class="py-3 px-5 sm:ms-4 text-sm font-medium text-[var(--text)] focus:outline-none bg-[var(--section)] rounded-lg border border-[var(--text)] hover:bg-[var(--main-hover)] focus:z-10">
-                Learn more
-            </button>  
         </div>
     </div>
 </section>
@@ -58,8 +55,8 @@
 
 @code {
     private bool isAuthenticated;
-    private List<Models.Match>? yourMatches { get; set; }
-    private List<Models.Match>? matches { get; set; }
+    private List<MatchDto>? yourMatches { get; set; }
+    private List<MatchDto>? matches { get; set; }
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
@@ -71,19 +68,39 @@
 
         if (!isAuthenticated) {
             yourMatches = null;
-            matches = await MatchesService.GetMatches();
+            
+            var publicMatches = await MatchesService.GetMatches(MatchStatus.Pendent, null, null, 1, 5, CancellationToken.None);
+            if (!publicMatches.Success)
+            {
+                Console.WriteLine("Error fetching public matches: " + publicMatches.ErrorMessages);
+                return;
+            }
+            matches = publicMatches.Data!.Data;
             return;
         }
 
-        _userId = user.FindFirst("sub")?.Value?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(_userId)) {    
-            yourMatches = new();
+            yourMatches = [];
             return;
         }
-
-        yourMatches = await MatchesService.GetMatchesForUser(_userId);
-        matches = await MatchesService.GetMatchesExceptUser(_userId);
+        
+        var result = await MatchesService.GetMatchesForUser(_userId, null, 1, 5, CancellationToken.None);
+        if (!result.Success)
+        {
+            Console.WriteLine("Error fetching user matches: " + result.ErrorMessages);
+            return;
+        }
+        yourMatches = result.Data!.Data;
+        
+        var resultMatches = await MatchesService.GetMatchesExceptUser(_userId, null, 1, 5, CancellationToken.None);
+        if (!resultMatches.Success)
+        {
+            Console.WriteLine("Error fetching matches: " + resultMatches.ErrorMessages);
+            return;
+        }
+        matches = resultMatches.Data!.Data;
     }
 
     private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
