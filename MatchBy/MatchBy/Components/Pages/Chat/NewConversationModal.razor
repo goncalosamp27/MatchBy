@@ -1,9 +1,10 @@
 ﻿@using Blazorise
 
 <Modal @ref="ModalRef">
-    <ModalContent Centered Style="background-color: var(--background);" Class="rounded-3 shadow"
+    <ModalContent Centered Class="rounded-3 shadow"
+                  Style="background-color: var(--background);"
                   Size="ModalSize.Default">
-        <ModalHeader>
+        <ModalHeader Style="border-color: var(--main); color: var(--text);">
             <ModalTitle>New conversation</ModalTitle>
             <CloseButton/>
         </ModalHeader>
@@ -16,7 +17,7 @@
                           Role="TextRole.Search"
                           KeyDown="OnSearchKeyDown"
                           Class="form-control-lg"
-                          Style="background-color: var(--section-secondary); color: var(--text);"/>
+                          Style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main);"/>
             </Field>
 
             @if (!_isLoading)
@@ -29,7 +30,10 @@
                                Style="background-color: var(--background);">
                         @if ((Users.Data?.Count ?? 0) == 0)
                         {
-                            <ListGroupItem class="py-3 text-muted text-center">No results</ListGroupItem>
+                            <ListGroupItem class="py-3 text-center opacity-60"
+                                           Style="color: var(--text);">
+                                No results
+                            </ListGroupItem>
                         }
                         else
                         {
@@ -37,7 +41,8 @@
                             {
                                 var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
                                 <ListGroupItem Name="@u.Id"
-                                               class="flex items-center gap-3 py-2 cursor-pointer transition-colors hover:bg-black/5 contact-item">
+                                               class="flex items-center gap-3 py-2 cursor-pointer transition-opacity hover:opacity-70 contact-item"
+                                               Style="color: var(--text);">
                                     <Image Loading src="@photoUrl" Alt="@u.UserName"
                                            class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
                                     <span class="fw-500 truncate">@u.UserName</span>
@@ -64,8 +69,10 @@
             }
         </ModalBody>
 
-        <ModalFooter Class="justify-content-between flex-shrink-0">
-            <Button Class="px-4 text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)]"
+        <ModalFooter Class="justify-content-between flex-shrink-0"
+                     Style="border-color: var(--main);">
+            <Button Class="px-4 transition-colors"
+                    Style="background-color: var(--main); color: var(--text-contrast);"
                     Disabled="@(_selectedItem is null)"
                     Clicked="@StartChat">
                 New chat
@@ -86,10 +93,10 @@
     private string _search = "";
     private string? _selectedItem;
     private int _currentPage = 1;
-    private bool _isLoading = false;
+    private bool _isLoading;
 
     [Parameter] public EventCallback<string?> OnSearch { get; set; }
-    [Parameter] public int PageSize { get; set; } = 5;
+    [Parameter] public int PageSize { get; set; } = 10;
     [Parameter] public required PaginationResponse<List<ApplicationUser>> Users { get; set; }
     [Parameter] public EventCallback<string> OnCreate { get; set; }
     [Parameter] public EventCallback<UsersQuery> OnGetUsers { get; set; }
@@ -142,5 +149,4 @@
     }
 
     public record UsersQuery(string q, int page, int pageSize);
-
 }

@@ -22,7 +22,7 @@
 @inject IValidator<UpdateChatMessageDto> UpdateChatMessageDtoValidator
 @inject IValidator<CreateConversationDto> CreateConversationDtoValidator
 @inject IValidator<UpdateConversationDto> UpdateConversationDtoValidator
-@inject IToastService ToastService 
+@inject IToastService ToastService
 
 <div class="fixed inset-0 flex flex-col bg-[var(--background)] text-[var(--text)]">
     <div class="mt-14 flex flex-1 min-h-0">
@@ -30,9 +30,9 @@
                 Class="md:hidden fixed bottom-3 left-3 z-50 rounded-full !p-3.5 bg-[var(--main)] text-[var(--text-contrast)] shadow-lg">
             <Icon Name="IconName.List"/>
         </Button>
-        
+
         <div class="w-72 hidden md:flex flex-col border-r border-[var(--main)]">
-            <ChatSidebar Class="hidden md:flex md:flex-col" 
+            <ChatSidebar Class="hidden md:flex md:flex-col"
                          Conversations="State.Conversations"
                          OnConversationSelected="OnConversationSelected"
                          OnShowModal="ShowModal"
@@ -80,10 +80,11 @@
                              OnNext="LoadMoreMessages"
                              NextCursor="@State.NextChatMessagesCursor"/>
                 <ChatFooter Text="@_messageText"
-                            TextChanged="(v => _messageText = v)"
+                            TextChanged="v => _messageText = v"
                             ReplyTo="@_replyToMessage"
                             OnCancelReply="CancelReply"
-                            OnSend="HandleSubmit"/>
+                            OnSend="HandleSubmit"
+                            OnShareLocation="ShareLocation"/>
             }
         </main>
     </div>
@@ -102,7 +103,7 @@
                           OnCreate="StartChat"
                           OnGetUsers="GetUsers"
                           Users="@_allUsers"/>
-    
+
     <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 </div>
 
@@ -115,7 +116,7 @@
         await OnConversationSelected(conversation);
         await HideSidebarOffcanvas();
     }
-    
+
     private Offcanvas _sidebarOffcanvas = default!;
     private ConversationInfoOffcanvas _offcanvas = default!;
     private NewConversationModal _modal = default!;
@@ -135,7 +136,7 @@
         if (userId is null) return;
 
         State.InitUser(userId);
-        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null,null, CancellationToken.None);
+        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null, null, CancellationToken.None);
         if (!conversations.Success)
         {
             await ToastService.Error(conversations.ErrorMessages.ToString());
@@ -144,27 +145,28 @@
         State.AddConversations(conversations.Data!);
 
         // Load all users except the current user
-        await GetUsers(new NewConversationModal.UsersQuery("",1,4));
+        await GetUsers(new NewConversationModal.UsersQuery("", 1, 4));
     }
-    
+
     public async Task SearchConversations(string? search)
     {
-        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, null,search, CancellationToken.None);
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 10, null, search, CancellationToken.None);
         if (!conversations.Success)
         {
             await ToastService.Error(conversations.ErrorMessages.ToString());
             return;
         }
+
         State.ClearConversations();
         State.AddConversations(conversations.Data!);
     }
-    
+
     public async Task LoadMoreConversations((string? nextCursor, string? search) args)
     {
         var (nextCursor, search) = args;
         if (string.IsNullOrEmpty(nextCursor)) return;
 
-        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 3, nextCursor,search, CancellationToken.None);
+        var conversations = await ConversationService.GetConversationsAsync(State.UserId, 10, nextCursor, search, CancellationToken.None);
         if (!conversations.Success)
         {
             await ToastService.Error(conversations.ErrorMessages.ToString());
@@ -173,12 +175,12 @@
 
         State.AddConversations(conversations.Data!);
     }
-    
+
     public async Task LoadMoreMessages(string? nextCursor)
     {
         if (State.Selected is null || string.IsNullOrEmpty(nextCursor)) return;
 
-        var messagesResult = await ChatMessageService.GetChatMessagesAsync(State.Selected.Id, State.UserId, 1, nextCursor, CancellationToken.None);
+        var messagesResult = await ChatMessageService.GetChatMessagesAsync(State.Selected.Id, State.UserId, 10, nextCursor, CancellationToken.None);
         if (!messagesResult.Success)
         {
             await ToastService.Error(messagesResult.ErrorMessages.ToString());
@@ -200,7 +202,7 @@
             await ToastService.Error(response.ErrorMessages.ToString());
         }
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
@@ -389,10 +391,11 @@
         CreateChatMessageDto createChatMessageDto = new()
         {
             Content = _messageText,
-            CreatorUserId = State.UserId!,
+            CreatorUserId = State.UserId,
             ConversationId = State.Selected.Id,
             ReplyToMessageId = _replyToMessage?.Id,
-            Location = null
+            Location = null,
+            InviteUrl = null
         };
 
         var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);
@@ -408,6 +411,38 @@
         }
 
         _messageText = null;
+        _replyToMessage = null;
+    }
+
+    private async Task ShareLocation((double Latitude, double Longitude) location)
+    {
+        if (State.Selected is null) return;
+
+        CreateChatMessageDto createChatMessageDto = new()
+        {
+            CreatorUserId = State.UserId,
+            ConversationId = State.Selected.Id,
+            ReplyToMessageId = _replyToMessage?.Id,
+            Location = new Location(location.Latitude,
+                location.Longitude,
+                string.Empty,
+                string.Empty),
+            InviteUrl = null,
+            Content = null
+        };
+
+        var result = await CreateChatMessageDtoValidator.ValidateAsync(createChatMessageDto);
+        if (!result.IsValid)
+        {
+            await ToastService.Error(result.Errors.FirstOrDefault()?.ErrorMessage ?? "Message validation failed.");
+            return;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
+        }
+
         _replyToMessage = null;
     }
 
@@ -457,7 +492,7 @@
             MatchId = null,
             Title = null
         };
-        
+
         var result = await CreateConversationDtoValidator.ValidateAsync(createConversationDto);
         if (!result.IsValid)
         {
@@ -500,6 +535,7 @@
             await ToastService.Error(messages.ErrorMessages.FirstOrDefault() ?? "Failed to load messages for the selected conversation.");
             return;
         }
+
         State.Select(conversation, messages.Data!);
     }
 
@@ -524,7 +560,7 @@
             Console.WriteLine(conv.ErrorMessages.ToString());
             return;
         }
-        
+
         if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("UpdateConversation", updateConversationDto.ConversationId, updateConversationDto.CreatorUserId);

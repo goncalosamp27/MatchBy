@@ -144,7 +144,6 @@ namespace MatchBy.Data.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("Content")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
@@ -157,6 +156,10 @@ namespace MatchBy.Data.Migrations
 
                     b.Property<DateTime?>("DeletedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InviteUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ReplyToMessageId")
                         .HasColumnType("character varying(500)");
