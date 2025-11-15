@@ -6,10 +6,11 @@ namespace MatchBy.DTOs.Chat.Messages;
 public sealed record ChatMessageDto
 {
     public required string Id { get; init; }
-    public required string Content { get; init; }
+    public string? Content { get; init; }
     public required string SenderId { get; init; }
     public UserDto Sender { get; init; }
     public Location? Location { get; init; }
+    public string? InviteUrl { get; init; }
     public string? ReplyToMessageId { get; init; }
     public ChatMessageDto? ReplyToMessage { get; init; }
     public required string ConversationId { get; init; }

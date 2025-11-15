@@ -19,6 +19,7 @@ public static class ChatMessageMappings
             SenderId = chatMessage.SenderId,
             Sender = chatMessage.Sender.ToDto(),
             Location = chatMessage.Location,
+            InviteUrl = chatMessage.InviteUrl,
             ReplyToMessageId = chatMessage.ReplyToMessageId,
             ReplyToMessage = chatMessage.ReplyToMessage?.ToDto(),
             ConversationId = chatMessage.ConversationId,
@@ -37,6 +38,8 @@ public static class ChatMessageMappings
             SenderId = createChatMessageDto.CreatorUserId,
             ReplyToMessageId = createChatMessageDto.ReplyToMessageId,
             ConversationId = createChatMessageDto.ConversationId,
+            Location = createChatMessageDto.Location,
+            InviteUrl = createChatMessageDto.InviteUrl,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
             DeletedAtUtc = null

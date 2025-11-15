@@ -16,8 +16,10 @@ public class ChatMessageConfiguration: IEntityTypeConfiguration<ChatMessage>
 
         builder.OwnsOne(u => u.Location);
         builder.Property(c => c.Content)
-            .HasMaxLength(500)
-            .IsRequired();
+            .HasMaxLength(500);
+        
+        builder.Property(c => c.InviteUrl)
+            .HasMaxLength(500);
         
         builder.Property(c => c.SenderId)
             .IsRequired();

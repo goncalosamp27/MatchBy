@@ -6,11 +6,11 @@
            ShowBackdrop
            Placement="Placement.End"
            Style="border-left: 1px solid var(--main); background-color: var(--background);"
-           Class="h-full flex flex-col text-neutral-900 dark:text-neutral-100">
+           Class="h-full flex flex-col">
 
     <!-- Header fixo -->
-    <OffcanvasHeader
-        Class="flex items-center justify-between px-4 py-3 border-b border-[var(--main)]">
+    <OffcanvasHeader Class="flex items-center justify-between px-4 py-3 border-b"
+                     Style="border-color: var(--main); color: var(--text);">
         <div class="flex items-center gap-2">
             <Icon Name="IconName.InfoCircle"/>
             <span class="font-medium">Conversation Info</span>
@@ -21,7 +21,8 @@
     <!-- Body: flex col, zona central com scroll -->
     <OffcanvasBody Class="flex flex-col flex-1 p-0 overflow-hidden">
         <!-- Hero (fixo) -->
-        <div class="px-4 py-5 text-center border-b border-[var(--main)]">
+        <div class="px-4 py-5 text-center border-b"
+             style="border-color: var(--main);">
             @if(SelectedConversation.Type == ConversationType.Private)
             {
                 var otherParticipant = SelectedConversation.Participants.FirstOrDefault(p => p.Id != CurrentUserId);
@@ -30,7 +31,7 @@
                     Alt="@SelectedConversation.Title"
                     Class="rounded-full mx-auto mb-3"
                     Style="width:72px;height:72px;object-fit:cover;"/>
-                <div class="font-semibold">@otherParticipant?.DisplayName</div>
+                <div class="font-semibold" style="color: var(--text);">@otherParticipant?.DisplayName</div>
             }
             else
             {
@@ -46,15 +47,17 @@
                         <input type="text"
                                @bind="_newTitle"
                                @bind:event="oninput"
-                               class="px-2 py-1 border rounded text-sm bg-[var(--background)] border-[var(--main)]"
-                               placeholder="Conversation title"
-                               style="max-width: 200px;" />
+                               class="px-2 py-1 border rounded text-sm"
+                               style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main); max-width: 200px;"
+                               placeholder="Conversation title" />
                         <button @onclick="SaveTitle"
-                                class="p-1 text-green-600 hover:text-green-700">
+                                class="p-1 hover:opacity-70 transition-opacity"
+                                style="color: var(--success);">
                             <Icon Name="IconName.Check"/>
                         </button>
                         <button @onclick="CancelEditTitle"
-                                class="p-1 text-red-600 hover:text-red-700">
+                                class="p-1 hover:opacity-70 transition-opacity"
+                                style="color: var(--error);">
                             <Icon Name="IconName.Times"/>
                         </button>
                     </div>
@@ -62,18 +65,20 @@
                 else
                 {
                     <div class="flex items-center gap-2 justify-center">
-                        <div class="font-semibold">@SelectedConversation.Title</div>
+                        <div class="font-semibold" style="color: var(--text);">@SelectedConversation.Title</div>
                         @if (SelectedConversation.CreatorId == CurrentUserId)
                         {
                             <button @onclick="StartEditTitle"
-                                    class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                    class="p-1 hover:opacity-70 transition-opacity"
+                                    style="color: var(--text); opacity: 0.6;">
                                 <Icon Name="IconName.Edit"/>
                             </button>
                         }
                     </div>
                 }
             }
-            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div class="text-xs mt-1 opacity-60"
+                 style="color: var(--text);">
                 Updated @SelectedConversation.LastMessageAtUtc.ToString()
             </div>
         </div>
@@ -87,9 +92,8 @@
                            OnChange="OnImageSelected" />
 
                 <label for="avatarInput"
-                       class="inline-flex items-center gap-2 border rounded px-3 py-1.5 cursor-pointer
-                      text-primary-600 dark:text-primary-300 border-primary-600/40
-                      hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                       class="inline-flex items-center gap-2 border rounded px-3 py-1.5 cursor-pointer transition-colors hover:opacity-80"
+                       style="color: var(--main); border-color: var(--main);">
                     <Icon Name="IconName.Image" />
                     <span>Change Image</span>
                 </label>
@@ -99,20 +103,22 @@
         <!-- Conteúdo scrollável -->
         <div class="flex-1 overflow-y-auto">
             <!-- Stats -->
-            <div class="px-4 py-4 border-b border-[var(--main)]">
+            <div class="px-4 py-4 border-b"
+                 style="border-color: var(--main);">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Messages</span>
-                    <span class="font-semibold">@SelectedConversation.MessagesCount</span>
+                    <span class="text-sm opacity-60" style="color: var(--text);">Messages</span>
+                    <span class="font-semibold" style="color: var(--text);">@SelectedConversation.MessagesCount</span>
                 </div>
                 <div class="flex items-center justify-between mt-2">
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Participants</span>
-                    <span class="font-semibold">@SelectedConversation.Participants.Count</span>
+                    <span class="text-sm opacity-60" style="color: var(--text);">Participants</span>
+                    <span class="font-semibold" style="color: var(--text);">@SelectedConversation.Participants.Count</span>
                 </div>
             </div>
 
             <!-- Members -->
-            <div class="px-4 py-4 border-b border-[var(--main)]">
-                <div class="font-semibold mb-2">Members</div>
+            <div class="px-4 py-4 border-b"
+                 style="border-color: var(--main);">
+                <div class="font-semibold mb-2" style="color: var(--text);">Members</div>
                 <ListGroup Flush Style="background-color: var(--background);border-width: 0;" >
                     @foreach (var p in SelectedConversation.Participants)
                     {
@@ -125,14 +131,14 @@
                                        Class="rounded-full"
                                        Style="width:32px;height:32px;object-fit:cover;"/>
                                 <div class="flex flex-col">
-                                    <span class="font-medium">@p.DisplayName</span>
+                                    <span class="font-medium" style="color: var(--text);">@p.DisplayName</span>
                                 </div>
                                 @if (isOwner)
                                 {
-                                    <span
-                                        class="ml-auto inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 text-[11px]">
-                                            Owner
-                                        </span>
+                                    <span class="ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-[11px]"
+                                          style="background-color: var(--section); color: var(--main);">
+                                        Owner
+                                    </span>
                                 }
                             </div>
                         </ListGroupItem>
@@ -142,14 +148,14 @@
         </div>
 
         <!-- Ações (fixas em baixo) -->
-        <div class="px-4 py-4 border-t border-[var(--main)]">
+        <div class="px-4 py-4 border-t"
+             style="border-color: var(--main);">
             <div class="grid gap-2">
                 @if (SelectedConversation.Type != ConversationType.Private)
                 {
                     <Button Color="Color.Warning"
                             Outline
-                            Class="w-full !py-2.5"
-                            Clicked="@OnLeaveConversation">
+                            Class="w-full !py-2.5">
                         <div class="flex items-center justify-center gap-2">
                             <Icon Name="IconName.ArrowRight"/>
                             <span>Leave conversation</span>
