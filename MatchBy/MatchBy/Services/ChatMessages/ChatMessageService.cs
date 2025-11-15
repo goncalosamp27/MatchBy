@@ -55,11 +55,13 @@ public class ChatMessageService(
         {
             messages.RemoveAt(messages.Count - 1);
         }
+        
+        messages.Reverse();
 
         var chatMessages = messages.Select(m => m.ToDto()).ToList();
 
         string? nextCursor = hasNextPage && chatMessages.Any()
-            ? chatMessages[^1].Id
+            ? chatMessages[0].Id
             : null;
     
         return Result<CursorPaginationResponse<List<ChatMessageDto>>>.Ok(
