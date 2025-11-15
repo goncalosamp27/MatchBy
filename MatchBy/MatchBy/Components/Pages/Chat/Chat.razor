@@ -136,7 +136,7 @@
         if (userId is null) return;
 
         State.InitUser(userId);
-        var conversations = await ConversationService.GetConversationsAsync(userId, 3, null, null, CancellationToken.None);
+        var conversations = await ConversationService.GetConversationsAsync(userId, 10, null, null, CancellationToken.None);
         if (!conversations.Success)
         {
             await ToastService.Error(conversations.ErrorMessages.ToString());
@@ -529,7 +529,7 @@
 
     public async Task OnConversationSelected(ConversationDto conversation)
     {
-        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId, 1, State.NextChatMessagesCursor, CancellationToken.None);
+        var messages = await ChatMessageService.GetChatMessagesAsync(conversation.Id, State.UserId, 10, State.NextChatMessagesCursor, CancellationToken.None);
         if (!messages.Success)
         {
             await ToastService.Error(messages.ErrorMessages.FirstOrDefault() ?? "Failed to load messages for the selected conversation.");
