@@ -14,6 +14,7 @@ using Blazorise.Icons.FontAwesome;
 using FluentValidation;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Hangfire.Common;
 using MatchBy.Hubs;
 using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
@@ -57,6 +58,7 @@ builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("Upl
 
 
 builder.Services.AddOptions();
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<ResendClient>();
 builder.Services.Configure<ResendClientOptions>( o =>
 {
@@ -132,6 +134,7 @@ builder.Services
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
@@ -164,11 +167,16 @@ else
     app.UseHsts();
 }
 
-RecurringJob.AddOrUpdate<IJobService>(
-    "process-match-states",
-    service => service.ProcessMatchStatesAsync(),
-    Cron.Minutely
-);
+// Register recurring jobs using service-based API
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    IRecurringJobManager recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    recurringJobManager.AddOrUpdate(
+        "process-match-states",
+        Job.FromExpression<IJobService>(service => service.ProcessMatchStatesAsync()),
+        "*/1 * * * *" // Every minute
+    );
+}
 
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");

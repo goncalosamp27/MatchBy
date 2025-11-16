@@ -501,13 +501,13 @@ namespace MatchBy.Data.Migrations
 
             modelBuilder.Entity("MatchParticipants", b =>
                 {
-                    b.Property<string>("MatchId")
+                    b.Property<string>("JoinedMatchesId")
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("ParticipantsId")
                         .HasColumnType("character varying(500)");
 
-                    b.HasKey("MatchId", "ParticipantsId");
+                    b.HasKey("JoinedMatchesId", "ParticipantsId");
 
                     b.HasIndex("ParticipantsId");
 
@@ -1014,7 +1014,7 @@ namespace MatchBy.Data.Migrations
                 {
                     b.HasOne("MatchBy.Models.Match", null)
                         .WithMany()
-                        .HasForeignKey("MatchId")
+                        .HasForeignKey("JoinedMatchesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

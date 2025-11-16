@@ -4,7 +4,7 @@ using Resend;
 
 namespace MatchBy.Services.Email;
 
-public class EmailSender(IResend resend) : IEmailSender<ApplicationUser>
+public class EmailSender(IResend resend) : IEmailSender
 {
     public async Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink)
     {
@@ -71,6 +71,36 @@ public class EmailSender(IResend resend) : IEmailSender<ApplicationUser>
                 <br>
                 <p>Best regards,<br>The MatchBy Team</p>
             "
+        };
+        message.To.Add(email);
+
+        await resend.EmailSendAsync(message);
+    }
+
+    public async Task SendMatchCancelationEmail(string email, string displayName)
+    {
+        var message = new EmailMessage
+        {
+            From = "MatchBy <matchby@uniqueue.site>",
+            Subject = "Your match has been cancelled",
+            HtmlBody = """
+                       <h2>Match Cancellation Notice</h2>
+                       """
+        };
+        message.To.Add(email);
+
+        await resend.EmailSendAsync(message);
+    }
+
+    public async Task SendMatchConfirmationEmail(string email, string displayName)
+    {
+        var message = new EmailMessage
+        {
+            From = "MatchBy <matchby@uniqueue.site>",
+            Subject = "Confirm your upcoming match",
+            HtmlBody = """
+                       <h2>Match Confirmation Reminder</h2>
+                       """
         };
         message.To.Add(email);
 

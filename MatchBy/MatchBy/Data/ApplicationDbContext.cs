@@ -1,3 +1,4 @@
+using MatchBy.Data.Configurations;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;

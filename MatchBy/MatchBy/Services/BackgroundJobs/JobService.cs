@@ -1,61 +1,120 @@
 ﻿using MatchBy.Data;
 using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Services.Email;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MatchBy.Services.BackgroundJobs;
 
-public class JobService(ILogger<JobService> logger, IServiceProvider serviceProvider): IJobService
+/// <summary>
+/// Service responsible for processing background jobs related to match state management.
+/// Handles automatic match status updates, email notifications, and match completion.
+/// </summary>
+public class JobService(ILogger<JobService> logger, IServiceProvider serviceProvider, IMemoryCache memoryCache, IEmailSender emailSender): IJobService
 {
+    private const string ThreeDayWarningCacheKeyPrefix = "3day_warning_sent_";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromDays(4);
+    
+    /// <summary>
+    /// Processes match states by checking pending matches and updating their status accordingly.
+    /// Sends cancellation emails for matches within 1 day, confirmation emails for matches within 3 days,
+    /// and marks matches as completed when they have passed their scheduled date/time.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task ProcessMatchStatesAsync()
     {
-        logger.LogInformation("Iniciando processamento de estados das matches...");
+        logger.LogInformation("Starting match state processing...");
         
         using IServiceScope scope = serviceProvider.CreateScope();
         ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         
         DateTime now = DateTime.UtcNow;
+        var oneDay = TimeSpan.FromDays(1);
+        var threeDays = TimeSpan.FromDays(3);
         
-        List<Match> pendentMatchesBefore1Days = await dbContext.Matches
-            .Where(m => m.Status == MatchStatus.Pendent && m.MatchDateTimeUtc <= now.AddDays(1))
+        List<Match> pendentMatchesBefore1Day = await dbContext.Matches
+            .Include(m => m.Creator)
+            .Where(m => m.Status == MatchStatus.Pendent 
+                && m.MatchDateTimeUtc <= now.Add(oneDay))
             .ToListAsync();
         
-        foreach (Match match in pendentMatchesBefore1Days)
+        foreach (Match match in pendentMatchesBefore1Day)
         {
-            logger.LogInformation("Send email to creator to inform match is cancelled");
+            if (match.Creator?.Email != null)
+            {
+                try
+                {
+                    await emailSender.SendMatchCancelationEmail(match.Creator.Email, match.Creator.DisplayName);
+                    logger.LogInformation("Cancellation email sent to creator for match {MatchId}", match.Id);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to send cancellation email for match {MatchId}", match.Id);
+                }
+            }
+            
             match.Status = MatchStatus.Cancelled;
         }
         
         List<Match> pendentMatchesBefore3Days = await dbContext.Matches
-            .Where(m => m.Status == MatchStatus.Pendent && m.MatchDateTimeUtc <= now.AddDays(3))
-            .Except(pendentMatchesBefore1Days)
+            .Include(m => m.Creator)
+            .Where(m => m.Status == MatchStatus.Pendent 
+                && m.MatchDateTimeUtc <= now.Add(threeDays)
+                && m.MatchDateTimeUtc > now.Add(oneDay))
             .ToListAsync();
             
         foreach (Match match in pendentMatchesBefore3Days)
         {
-            logger.LogInformation("Send email to creator to confirm the match");
+            string cacheKey = $"{ThreeDayWarningCacheKeyPrefix}{match.Id}";
+            
+            // Check if email was already sent for this match
+            if (memoryCache.TryGetValue(cacheKey, out _))
+            {
+                continue;
+            }
+
+            if (match.Creator?.Email != null)
+            {
+                try
+                {
+                    await emailSender.SendMatchConfirmationEmail(match.Creator.Email, match.Creator.DisplayName);
+                    logger.LogInformation("Confirmation email sent to creator for match {MatchId}", match.Id);
+                    memoryCache.Set(cacheKey, true, CacheExpiration);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to send confirmation email for match {MatchId}", match.Id);
+                }
+            }
         }
         
         List<Match> matchesToFinish = await dbContext.Matches
-            .Where(m => m.Status != MatchStatus.Completed && m.MatchDateTimeUtc >= now)
+            .Where(m => m.Status != MatchStatus.Completed 
+                && m.Status != MatchStatus.Cancelled
+                && m.MatchDateTimeUtc < now)
             .ToListAsync();
         
         foreach (Match match in matchesToFinish)
         {
             match.Status = MatchStatus.Completed;
-            logger.LogInformation("Match {MatchId} finalizada", match.Id);
+            logger.LogInformation("Match {MatchId} completed", match.Id);
         }
         
         await dbContext.SaveChangesAsync();
         
         logger.LogInformation(
-           "Processamento de estados das matches concluído. {PendentMatchesBefore1Days} matches canceladas, {PendentMatchesBefore3Days} avisos enviados, {MatchesToFinish} matches finalizadas.",
-            pendentMatchesBefore1Days.Count,
+           "Match state processing completed. {CancelledMatches} matches cancelled, {ConfirmationEmails} confirmation emails sent, {CompletedMatches} matches completed.",
+            pendentMatchesBefore1Day.Count,
             pendentMatchesBefore3Days.Count,
             matchesToFinish.Count
         );
     }
 
+    /// <summary>
+    /// Executes a fire-and-forget background job.
+    /// This method can be used for non-critical background tasks that don't require result tracking.
+    /// </summary>
     public void FireAndForgetJob()
     {
         logger.LogInformation("FireAndForgetJob");
