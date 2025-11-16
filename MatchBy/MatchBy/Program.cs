@@ -12,7 +12,11 @@ using Blazorise.FluentValidation;
 using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Hangfire.Common;
 using MatchBy.Hubs;
+using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
 using MatchBy.Services.Email;
@@ -54,6 +58,7 @@ builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("Upl
 
 
 builder.Services.AddOptions();
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<ResendClient>();
 builder.Services.Configure<ResendClientOptions>( o =>
 {
@@ -86,9 +91,21 @@ builder.Services.AddAuthentication(options =>
 
 string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                           throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddHangfire(config =>
+    {
+        config.UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString));
+    }
+);
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
@@ -116,12 +133,13 @@ builder.Services
 
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
-builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IMatchEmailSender, EmailSender>();
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
@@ -149,6 +167,17 @@ else
     app.UseHsts();
 }
 
+// Register recurring jobs using service-based API
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    IRecurringJobManager recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    recurringJobManager.AddOrUpdate(
+        "process-match-states",
+        Job.FromExpression<IJobService>(service => service.ProcessMatchStatesAsync()),
+        "*/1 * * * *" // Every minute
+    );
+}
+
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
@@ -157,11 +186,13 @@ app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.UseHangfireDashboard();
+
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(MatchBy.Client._Imports).Assembly);
+    .AddInteractiveWebAssemblyRenderMode();
 app.MapAdditionalIdentityEndpoints();
 
 await app.RunAsync();
