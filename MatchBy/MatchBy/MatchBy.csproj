@@ -12,6 +12,7 @@
     <ItemGroup>
         <PackageReference Include="AWSSDK.S3" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
         <PackageReference Include="MinVer">
@@ -56,12 +57,6 @@
         <Link>.dockerignore</Link>
       </Content>
       <Content Remove="Areas\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Controllers\" />
-      <Folder Include="DTOs\" />
-      <Folder Include="wwwroot\lib\" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,51 +1,306 @@
-﻿@using Blazorise
-<div class="flex items-start gap-2.5">
-    <img class="w-8 h-8 rounded-full" src="https://flowbite.com/application-ui/demo/images/users/roberta-casas.png"
-         alt="Jese image">
-    <div
-        class="flex flex-col w-full max-w-[320px] leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700">
+﻿@using MatchBy.DTOs.Chat.Messages
+@using FluentValidation
+@using FluentValidation.Results
+@inject IValidator<UpdateChatMessageDto> UpdateValidator
+@using Blazorise
+@using System.Globalization
+
+@{
+    var isCurrentUser = Message.Sender.Id == CurrentUserId;
+}
+
+<div class="@(isCurrentUser ? "flex items-start gap-2.5 flex-row-reverse" : "flex items-start gap-2.5")">
+    <img class="w-8 h-8 rounded-full"
+         src="@(Message.Sender.AvatarUrl ?? "/images/user-avatar.png")"
+         alt="@Message.Sender.DisplayName image">
+
+    <div class="flex flex-col w-full max-w-[320px] leading-1.5 p-4 rounded-lg"
+         style="@(isCurrentUser ? "background-color: var(--section);" : "background-color: var(--section-secondary);") border: 1px solid var(--main);">
         <div class="flex items-center space-x-2 rtl:space-x-reverse">
-            <span class="text-sm font-semibold text-gray-900 dark:text-white">Bonnie Green</span>
-            <span class="text-sm font-normal text-gray-500 dark:text-gray-400">11:46</span>
+            <span class="text-sm font-semibold" style="color: var(--text);">@Message.Sender.DisplayName</span>
+            <span class="text-sm font-normal opacity-60"
+                  style="color: var(--text);">@Message.CreatedAtUtc.ToString("HH:mm")</span>
         </div>
-        <p class="text-sm font-normal py-2.5 text-gray-900 dark:text-white">That's awesome. I think our
-            users will really appreciate the improvements.</p>
-        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">Delivered</span>
+
+        @if (_validationResult is not null && _validationResult.Errors.Any())
+        {
+            var contentError = _validationResult.Errors
+                .Where(e => e.PropertyName == nameof(UpdateChatMessageDto.Content))
+                .Select(e => e.ErrorMessage)
+                .Distinct()
+                .FirstOrDefault();
+
+            if (contentError is not null)
+            {
+                <ul class="mt-1 text-xs" style="color: var(--error);">
+                    <li>@contentError</li>
+                </ul>
+            }
+        }
+
+        @* Reply Preview *@
+        @if (Message.ReplyToMessage != null)
+        {
+            <div class="mt-2 mb-1 px-3 py-2 border-l-2 rounded"
+                 style="background-color: var(--section-secondary); border-color: var(--main); opacity: 0.8;">
+                <div class="flex items-center gap-1 mb-1">
+                    <svg class="w-3 h-3" style="color: var(--main);" fill="none" stroke="currentColor"
+                         viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                    </svg>
+                    <span class="text-xs font-semibold" style="color: var(--main);">
+                        @Message.ReplyToMessage.Sender.DisplayName
+                    </span>
+                </div>
+                <p class="text-xs line-clamp-2" style="color: var(--text); opacity: 0.8;">
+                    @Message.ReplyToMessage.Content
+                </p>
+            </div>
+        }
+
+        @if (_isEditing)
+        {
+            <div class="py-2.5">
+                <textarea @ref="_textAreaRef"
+                          @bind="_editedContent"
+                          @bind:event="oninput"
+                          class="@TextAreaClass"
+                          rows="3"
+                          maxlength="4000"
+                          aria-invalid="@HasContentError"
+                          placeholder="Edit message..."></textarea>
+
+                <div class="mt-1 text-[11px] text-right" style="color: var(--text); opacity: 0.6;">
+                    @_editedContent.Length / 500
+                </div>
+
+                <div class="flex gap-2 mt-2">
+                    <button @onclick="SaveEdit"
+                            class="px-3 py-1 text-xs font-medium rounded-lg focus:ring-2 disabled:opacity-50 transition-colors"
+                            style="background-color: var(--main); color: var(--text-contrast);">
+                        Save
+                    </button>
+                    <button @onclick="CancelEdit"
+                            class="px-3 py-1 text-xs font-medium rounded-lg transition-colors"
+                            style="background-color: var(--section-secondary); color: var(--text); border: 1px solid var(--main);">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            if (Message.Location is not null)
+            {
+                <div class="py-2.5">
+                    <div class="flex items-start gap-2 p-3 rounded-lg border"
+                         style="background-color: var(--section-secondary); border-color: var(--main);">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: var(--error);" fill="currentColor"
+                             viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                        <div class="flex-1">
+                            <p class="text-xs font-semibold mb-1" style="color: var(--text);">Shared Location</p>
+                            <p class="text-sm font-mono" style="color: var(--text);">
+                                @Message.Location.Latitude.ToString("F6", CultureInfo.InvariantCulture),
+                                @Message.Location.Longitude.ToString("F6", CultureInfo.InvariantCulture)
+                            </p>
+                            <a href="https://www.google.com/maps/search/?api=1&query=@Message.Location.Latitude.ToString("F6", CultureInfo.InvariantCulture),@Message.Location.Longitude.ToString("F6", CultureInfo.InvariantCulture)"
+                               target="_blank"
+                               class="inline-flex items-center gap-1 mt-2 text-xs hover:underline"
+                               style="color: var(--main);">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                                View on Maps
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(Message.Content))
+            {
+                <p class="text-sm font-normal py-2.5" style="color: var(--text);">
+                    @Message.Content
+                </p>
+            }
+            else if (!string.IsNullOrWhiteSpace(Message.InviteUrl))
+            {
+                <div class="py-2.5">
+                    <a href="@Message.InviteUrl"
+                       target="_blank"
+                       class="flex items-center gap-3 p-3 rounded-lg border hover:shadow-md transition-all group"
+                       style="background-color: var(--section); border-color: var(--main);">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                             style="background-color: var(--main);">
+                            <svg class="w-5 h-5" style="color: var(--text-contrast);" fill="none" stroke="currentColor"
+                                 viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 4v16m8-8H4"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold" style="color: var(--text);">
+                                Match Invitation
+                            </p>
+                            <p class="text-xs opacity-75" style="color: var(--text);">
+                                Tap to view and accept
+                            </p>
+                        </div>
+                        <svg class="w-5 h-5 opacity-60 group-hover:translate-x-1 transition-transform"
+                             style="color: var(--text);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            }
+
+            @if (Message.UpdatedAtUtc != null)
+            {
+                <span class="text-xs italic opacity-60" style="color: var(--text);">(edited)</span>
+            }
+        }
     </div>
-    <Dropdown>
-        <DropdownToggle ToggleIconVisible="false"
-                        class="inline-flex self-center items-center p-2 text-sm font-medium text-center text-gray-900 bg-white rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none dark:text-white focus:ring-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
-            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
-                 xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 4 15">
-                <path
-                    d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/>
-            </svg>
-        </DropdownToggle>
-        <DropdownMenu
-            Class="z-10 bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-40 dark:bg-gray-700 dark:divide-gray-600">
-            <ul class="py-2 text-sm text-gray-700 dark:text-gray-200"
-                aria-labelledby="dropdownMenuIconButton">
-                <li>
-                    <a href="#"
-                       class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Reply</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Forward</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Copy</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Report</a>
-                </li>
-                <li>
-                    <a href="#"
-                       class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Delete</a>
-                </li>
-            </ul>
-        </DropdownMenu>
-    </Dropdown>
+
+    @if (!_isEditing)
+    {
+        <Dropdown>
+            <DropdownToggle ToggleIconVisible="false"
+                            class="inline-flex self-center items-center p-2 text-sm font-medium text-center rounded-lg focus:ring-4 focus:outline-none transition-colors"
+                            style="background-color: var(--background); border: 1px solid var(--main); color: var(--text);">
+                <svg class="w-4 h-4 opacity-60" aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 4 15">
+                    <path
+                        d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/>
+                </svg>
+            </DropdownToggle>
+            <DropdownMenu
+                Class="z-10 rounded-lg shadow-sm w-40"
+                Style="background-color: var(--background); border: 1px solid var(--main);">
+                <ul class="py-2 text-sm" style="color: var(--text);">
+                    @if (isCurrentUser && Message.InviteUrl == null && Message.Location == null)
+                    {
+                        <li>
+                            <Button Clicked="StartEdit"
+                                    class="block px-4 py-2 w-full text-left transition-colors hover:opacity-80"
+                                    Style="background-color: transparent; color: var(--text);">
+                                Edit
+                            </Button>
+                        </li>
+                    }
+                    <li>
+                        <Button Clicked="ReplyToMessage"
+                                class="block px-4 py-2 w-full text-left transition-colors hover:opacity-80"
+                                Style="background-color: transparent; color: var(--text);">
+                            Reply
+                        </Button>
+                    </li>
+                    @if (isCurrentUser)
+                    {
+                        <li>
+                            <Button Clicked="DeleteMessage"
+                                    class="block px-4 py-2 w-full text-left transition-colors hover:opacity-80"
+                                    Style="background-color: transparent; color: var(--text);">
+                                Delete
+                            </Button>
+                        </li>
+                    }
+                </ul>
+            </DropdownMenu>
+        </Dropdown>
+    }
 </div>
+
+@code {
+    [Parameter] public required ChatMessageDto Message { get; set; }
+    [Parameter] public required string CurrentUserId { get; set; }
+    [Parameter] public EventCallback<UpdateChatMessageDto> OnEditClicked { get; set; }
+    [Parameter] public EventCallback<ChatMessageDto> OnReplyToClicked { get; set; }
+    [Parameter] public EventCallback<ChatMessageDto> OnDeleteClicked { get; set; }
+
+    private bool _isEditing;
+    private string _editedContent = string.Empty;
+    private ValidationResult? _validationResult;
+
+    private ElementReference _textAreaRef;
+    private bool _shouldFocus;
+
+    private IEnumerable<string> ContentErrors =>
+        _validationResult?.Errors
+            .Where(e => e.PropertyName == nameof(UpdateChatMessageDto.Content))
+            .Select(e => e.ErrorMessage)
+            .Distinct() ?? [];
+
+    private bool HasContentError => ContentErrors.Any();
+
+    private string TextAreaClass =>
+        "w-full text-sm font-normal rounded-lg p-2 focus:ring-2 focus:border-transparent resize-none " +
+        (HasContentError
+            ? "border-2 focus:ring-red-500"
+            : "border focus:ring-2") +
+        " transition-all";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldFocus)
+        {
+            _shouldFocus = false;
+            await _textAreaRef.FocusAsync();
+        }
+    }
+
+    private async Task ValidateLiveAsync()
+    {
+        var dto = new UpdateChatMessageDto
+        {
+            ChatMessageId = Message.Id,
+            Content = _editedContent,
+            CreatorUserId = CurrentUserId
+        };
+        _validationResult = await UpdateValidator.ValidateAsync(dto);
+        StateHasChanged();
+    }
+
+    private void StartEdit()
+    {
+        _editedContent = Message.Content ?? string.Empty;
+        _validationResult = null;
+        _isEditing = true;
+        _shouldFocus = true;
+    }
+
+    private async Task SaveEdit()
+    {
+        await ValidateLiveAsync();
+        if (!(_validationResult?.IsValid ?? true))
+        {
+            _shouldFocus = true;
+            return;
+        }
+
+        var dto = new UpdateChatMessageDto
+        {
+            ChatMessageId = Message.Id,
+            Content = _editedContent.Trim(),
+            CreatorUserId = CurrentUserId
+        };
+
+        await OnEditClicked.InvokeAsync(dto);
+        _isEditing = false;
+        _validationResult = null;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        _editedContent = string.Empty;
+        _validationResult = null;
+    }
+
+    private async Task DeleteMessage() => await OnDeleteClicked.InvokeAsync(Message);
+    private async Task ReplyToMessage() => await OnReplyToClicked.InvokeAsync(Message);
+}

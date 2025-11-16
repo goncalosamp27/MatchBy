@@ -32,7 +32,8 @@ public class MatchSeeder : ISeeder
             Privacy = MatchPrivacy.Public,
             CreatorId = users[1].Id,
             Participants = users,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            Address = "Match Address"
         });
         
         return db.SaveChangesAsync(ct);

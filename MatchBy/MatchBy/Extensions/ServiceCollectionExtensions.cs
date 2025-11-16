@@ -2,6 +2,7 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using MatchBy.Services;
+using MatchBy.Services.S3;
 using MatchBy.Settings;
 using Microsoft.Extensions.Options;
 
