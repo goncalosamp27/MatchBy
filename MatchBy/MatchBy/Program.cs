@@ -159,8 +159,7 @@ app.UseAntiforgery();
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(MatchBy.Client._Imports).Assembly);
+    .AddInteractiveWebAssemblyRenderMode();
 app.MapAdditionalIdentityEndpoints();
 
 await app.RunAsync();

@@ -24,7 +24,6 @@
         <PackageReference Include="Sentry.AspNetCore" />
         <PackageReference Include="TimeZoneConverter" />
         <PackageReference Include="Toolbelt.Blazor.LocalTimeText.Server" />
-        <ProjectReference Include="..\MatchBy.Client\MatchBy.Client.csproj" />
         <PackageReference Include="Blazorise.FluentValidation" />
         <PackageReference Include="Blazorise.Icons.FontAwesome" />
         <PackageReference Include="Blazorise.Tailwind" />
