@@ -13,11 +13,11 @@ public class MatchValidator : AbstractValidator<Match>
         
         RuleFor(x => x.minPlayers)
             .GreaterThan(0).WithMessage("Minimum players must be greater than 0.")
-            .LessThanOrEqualTo(10).WithMessage("Minimum players must be less than or equal to 10.");
+            .LessThanOrEqualTo(30).WithMessage("Minimum players must be less than or equal to 30.");
         
         RuleFor(x => x.maxPlayers)
             .GreaterThan(0).WithMessage("Maximum players must be greater than 0.")
-            .LessThanOrEqualTo(10).WithMessage("Maximum players must be less than or equal to 10.")
+            .LessThanOrEqualTo(30).WithMessage("Maximum players must be less than or equal to 30.")
             .GreaterThanOrEqualTo(x => x.minPlayers).WithMessage("Maximum players must be greater than or equal to minimum players.");
         
         RuleFor(x => x.Location)
@@ -37,8 +37,12 @@ public class MatchValidator : AbstractValidator<Match>
         
         RuleFor(x => x.CreatorId)
             .NotNull().WithMessage("Creator is required.");
-        
+
         RuleFor(x => x.CreatedAtUtc)
             .NotNull().WithMessage("CreatedAt is required.");
+            
+        RuleFor(x => x.Address)
+            .NotEmpty().WithMessage("Address is required.")
+            .MaximumLength(200).WithMessage("Address cannot exceed 100 characters.");
     }
 }

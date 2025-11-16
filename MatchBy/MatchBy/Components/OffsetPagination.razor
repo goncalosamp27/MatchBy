@@ -1,0 +1,59 @@
+﻿@using Blazorise
+
+<Pagination>
+    <PaginationItem Disabled="@IsPageNavigationDisabled(PREVIOUS)" @onclick="Previous">
+        <PaginationLink><span aria-hidden="true">«</span></PaginationLink>
+    </PaginationItem>
+
+    @foreach (var pageNumber in Enumerable.Range(1, TotalPages))
+    {
+        <PaginationItem @key="pageNumber" Active="@(CurrentPage == pageNumber)">
+            <PaginationLink @onclick="() => SetActive(pageNumber)">
+                @pageNumber
+            </PaginationLink>
+        </PaginationItem>
+    }
+
+    <PaginationItem Disabled="@IsPageNavigationDisabled(NEXT)" @onclick="Next">
+        <PaginationLink><span aria-hidden="true">»</span></PaginationLink>
+    </PaginationItem>
+</Pagination>
+
+@code {
+    [Parameter] public required int TotalItems { get; set; }
+    [Parameter] public required int PageSize { get; set; }
+    [Parameter] public required int CurrentPage { get; set; }
+    [Parameter] public required EventCallback<int> OnPageChanged { get; set; }
+
+    private const string PREVIOUS = "previous";
+    private const string NEXT = "next";
+
+    private int TotalPages => (int)Math.Ceiling(TotalItems / (double)PageSize);
+
+    private bool IsPageNavigationDisabled(string nav) =>
+        nav == PREVIOUS ? CurrentPage == 1 : nav == NEXT && CurrentPage >= TotalPages;
+
+    private async Task Previous()
+    {
+        if (CurrentPage > 1)
+        {
+            await OnPageChanged.InvokeAsync(CurrentPage - 1);
+        }
+    }
+
+    private async Task Next()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            await OnPageChanged.InvokeAsync(CurrentPage + 1);
+        }
+    }
+
+    private async Task SetActive(int page)
+    {
+        if (page != CurrentPage)
+        {
+            await OnPageChanged.InvokeAsync(page);
+        }
+    }
+}

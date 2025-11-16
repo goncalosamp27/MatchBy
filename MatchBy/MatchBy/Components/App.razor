@@ -1,11 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
+    <title>MatchBy</title>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <base href="/"/>
-    
+
     <script>
         (function () {
             const KEY = 'color-theme';
@@ -57,34 +58,43 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="@Assets["app.css"]"/>
-    <link rel="stylesheet" href="@Assets["MatchBy.styles.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/app.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/MatchBy.styles.css"]"/>
     <ImportMap/>
     <link rel="icon" type="image/png" href="favicon.png"/>
     <HeadOutlet/>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&amp;display=swap"
-          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700;800&amp;display=swap"rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&family=Momo+Trust+Display&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/flowbite@1.5.4/dist/flowbite.min.css"/>
     <link href="_content/Blazorise.Icons.FontAwesome/v6/css/all.min.css" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="tailwind.config.js"></script>
+    <script src="js/tailwind.config.js"></script>
 
     <link href="_content/Blazorise/blazorise.css?v=1.8.5.0" rel="stylesheet"/>
     <link href="_content/Blazorise.Tailwind/blazorise.tailwind.css?v=1.8.5.0" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
 
 <body>
 <Routes/>
 <script src="https://unpkg.com/flowbite@1.5.4/dist/flowbite.js"></script>
-<script src="darkModeToggle.js"></script>
+<script src="js/darkModeToggle.js"></script>
 <script src="_framework/blazor.web.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="js/map.js"></script>
+<script src="js/clipboard.js"></script>
+<script src="js/geolocation.js"></script>
 <script>
     window.timeZone = () => {
         const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         return timezone;
     };
 </script>
+
 </body>
 
 </html>

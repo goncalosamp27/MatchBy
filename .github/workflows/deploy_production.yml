@@ -1,0 +1,64 @@
+name: Build and Deploy (Production)
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.x
+
+      - name: Restore dependencies
+        run: dotnet restore MatchBy.sln
+
+      - name: Build
+        run: dotnet build MatchBy.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test MatchBy.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Publish app
+        run: dotnet publish MatchBy/MatchBy/MatchBy.csproj -c Release -o ${{ env.DOTNET_ROOT }}/myapp --no-build
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ${{ env.DOTNET_ROOT }}/myapp
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+
+      - name: Deploy to Azure Web App using publish profile
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: MatchByProduction
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PRODUCTION }}
+          package: .

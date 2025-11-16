@@ -6,13 +6,19 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>aspnet-MatchBy-db35119d-08ef-4074-b3c3-d673bfb6010e</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="AWSSDK.S3" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
+        <PackageReference Include="MinVer">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="QRCoder" />
         <PackageReference Include="Resend" />
         <PackageReference Include="Sentry.AspNetCore" />
@@ -51,12 +57,6 @@
         <Link>.dockerignore</Link>
       </Content>
       <Content Remove="Areas\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Controllers\" />
-      <Folder Include="DTOs\" />
-      <Folder Include="wwwroot\lib\" />
     </ItemGroup>
 
     <ItemGroup>

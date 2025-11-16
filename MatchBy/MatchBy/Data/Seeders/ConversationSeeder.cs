@@ -25,7 +25,6 @@ public class ConversationSeeder : ISeeder
             {
                 Id = $"conversation_{Guid.CreateVersion7()}",
                 Type = ConversationType.Private,
-                Title = "Private Conversation",
                 CreatorId = users[0].Id,
                 CreatedAtUtc = DateTime.UtcNow,
                 Participants =
@@ -38,7 +37,7 @@ public class ConversationSeeder : ISeeder
             {
                 Id = $"conversation_{Guid.CreateVersion7()}",
                 Type = ConversationType.Team,
-                Title = "Team Conversation",
+                Title = "Team Alpha",
                 TeamId = team.Id,
                 CreatorId = users[0].Id,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -52,7 +51,7 @@ public class ConversationSeeder : ISeeder
             {
                 Id = $"conversation_{Guid.CreateVersion7()}",
                 Type = ConversationType.Match,
-                Title = "Match Conversation",
+                Title = "Match Pioledo",
                 CreatorId = users[0].Id,
                 MatchId = match.Id,
                 CreatedAtUtc = DateTime.UtcNow,
