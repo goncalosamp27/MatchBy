@@ -154,8 +154,7 @@ MatchBy/
 │   ├── Settings/              # Configuration classes
 │   └── Validators/            # FluentValidation validators
 ├── MatchBy.Client/            # Blazor WebAssembly client (optional)
-├── MatchBy.UnitTests/         # Unit tests
-└── MatchBy.wiki/              # Project documentation
+└── MatchBy.UnitTests/         # Unit tests
 ```
 
 ## 🏗️ Architecture
@@ -167,7 +166,7 @@ MatchBy follows a **layered architecture** pattern:
 3. **Data Access Layer** - Entity Framework Core with PostgreSQL
 4. **Domain Layer** - Domain models and entities
 
-For detailed architecture documentation, see [Architecture.md](MatchBy.wiki/Architecture.md).
+For detailed architecture documentation, see [Architecture](https://github.com/MESW-LES-2025/MatchBy/wiki/Architecture).
 
 ## 🧪 Testing
 
@@ -191,20 +190,20 @@ Or use Visual Studio's Test Explorer (Ctrl+R, A).
 - **Staging**: Automatic deployment on push to `main` branch
 - **Production**: Deployment triggered by version tags (e.g., `v1.2.0`) on `production` branch
 
-For more details, see [Deployment.md](MatchBy.wiki/Deployment.md).
+For more details, see [Deployment](https://github.com/MESW-LES-2025/MatchBy/wiki/Deployment).
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the [MatchBy.wiki](MatchBy.wiki/) directory:
+Comprehensive documentation is available in the [GitHub Wiki](https://github.com/MESW-LES-2025/MatchBy/wiki):
 
-- [Home](MatchBy.wiki/Home.md) - Main documentation index
-- [Product Vision](MatchBy.wiki/Product-Vision.md) - Vision, target group, and business goals
-- [User Stories](MatchBy.wiki/User-Stories.md) - Complete list of user stories
-- [Architecture](MatchBy.wiki/Architecture.md) - System architecture and design patterns
-- [Database Schema](MatchBy.wiki/Database-Schema.md) - Database structure and relationships
-- [Deployment](MatchBy.wiki/Deployment.md) - CI/CD and deployment strategy
-- [UI Mockups](MatchBy.wiki/UI‐Mockups.md) - User interface designs
-- [Iteration 1](MatchBy.wiki/Iteration-1.md) - Sprint reviews and deliverables
+- [Home](https://github.com/MESW-LES-2025/MatchBy/wiki/Home) - Main documentation index
+- [Product Vision](https://github.com/MESW-LES-2025/MatchBy/wiki/Product-Vision) - Vision, target group, and business goals
+- [User Stories](https://github.com/MESW-LES-2025/MatchBy/wiki/User-Stories) - Complete list of user stories
+- [Architecture](https://github.com/MESW-LES-2025/MatchBy/wiki/Architecture) - System architecture and design patterns
+- [Database Schema](https://github.com/MESW-LES-2025/MatchBy/wiki/Database-Schema) - Database structure and relationships
+- [Deployment](https://github.com/MESW-LES-2025/MatchBy/wiki/Deployment) - CI/CD and deployment strategy
+- [UI Mockups](https://github.com/MESW-LES-2025/MatchBy/wiki/UI‐Mockups) - User interface designs
+- [Iteration 1](https://github.com/MESW-LES-2025/MatchBy/wiki/Iteration-1) - Sprint reviews and deliverables
 
 ## 🔧 Development Guidelines
 
