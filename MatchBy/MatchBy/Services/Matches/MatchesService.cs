@@ -2,12 +2,11 @@
 using MatchBy.DTOs.Match;
 using MatchBy.Models;
 using MatchBy.Enums;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.Matches;
 
-public class MatchesService(ApplicationDbContext applicationDbContext) : IMatchesService
+public class MatchesService(ApplicationDbContext applicationDbContext, IMatchEmailSender emailSender) : IMatchesService
 {
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
         string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
@@ -194,28 +193,41 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         {
             return Result<MatchDto>.Fail($"User with id {userId} not found.");
         }
-        
+    
         Match? match = await applicationDbContext
             .Matches
             .Include(m => m.Participants)
             .Where(m => m.Participants.Any(p => p.Id == userId))
             .FirstOrDefaultAsync(m => m.Id == matchId, ct);
-
         if (match is null)
         {
             return Result<MatchDto>.Fail($"Match with id {matchId} not found.");
         }
-
         if (match.CreatorId == userId)
         {
             match.DeletedAtUtc = DateTime.UtcNow;
+            match.Status = MatchStatus.Cancelled;
+            
+            // Send cancellation emails to all participants
+            foreach (ApplicationUser participant in match.Participants.Where(p => p.Id != userId))
+            {
+                if (participant.Email != null)
+                {
+                    await emailSender.SendMatchCancelledAsync(
+                        participant,
+                        participant.Email,
+                        match,
+                        user.DisplayName ?? "Unknown"
+                    );
+                }
+            }
+            
             match.Participants.Clear();
         }
         else
         {
             match.Participants.Remove(user);
         }
-
         await applicationDbContext.SaveChangesAsync(ct);
         return await GetMatchById(matchId, userId, ct);
     }
