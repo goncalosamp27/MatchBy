@@ -314,7 +314,7 @@ else
             return;
         }
 
-        var result = await MatchesService.GetMatchById(Id);
+        var result = await MatchesService.GetMatchById(Id, _userId, CancellationToken.None);
         
         if (!result.Success || result.Data is null)
         {

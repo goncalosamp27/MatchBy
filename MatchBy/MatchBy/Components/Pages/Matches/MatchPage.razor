@@ -1,11 +1,14 @@
 @page "/matches/{matchId}"
 @inject IMatchesService MatchesService
 @inject IJSRuntime Js
+@using System.Security.Claims
 @using MatchBy.DTOs.Match
 @using MatchBy.Services.Matches
 @rendermode InteractiveServer
 @using Blazorise
 @inject IToastService ToastService 
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 @if (_match == null)
 {
@@ -101,8 +104,8 @@ else
                                 </svg>
 
                                 <span class="text-xl font-medium text-[var(--text)] line-clamp-1">
-                                        @_match.MatchDateTimeUtc.ToLocalTime().ToString("dd / MM / yyyy")
-                                    </span>
+                                    @_match.MatchDateTimeUtc.ToLocalTime().ToString("dd / MM / yyyy")
+                                </span>
                             </div>
                         </div>
 
@@ -121,15 +124,15 @@ else
                                 </svg>
 
                                 <span class="text-xl font-medium text-[var(--text)]">
-                                        @_match.MatchDateTimeUtc.ToLocalTime().ToString("HH:mm")
-                                    </span>
+                                    @_match.MatchDateTimeUtc.ToLocalTime().ToString("HH:mm")
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,60%)_minmax(0,40%)] gap-8 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,60%)_minmax(0,40%)] gap-8 items-end mt-8 lg:mt-0">
             <div class="w-full">
                 <label for="address" class="block mb-2 text-m font-medium text-[var(--main)] mt-2">
                     Address
@@ -137,9 +140,9 @@ else
                 <div id="address"
                      class="text-xl bg-[var(--section-secondary)] text-[var(--text)] rounded-lg w-full p-2.5 border-2 border-[var(--main)] flex items-center gap-3"
                      aria-readonly="true">
-                        <span class="flex-1 line-clamp-2">
-                            @_match.Address
-                        </span>
+                    <span class="flex-1 line-clamp-2">
+                        @_match.Address
+                    </span>
 
                     <Button Type="ButtonType.Button" Clicked="@(() => CopyToClipboard(_match.Address))"
                             class="inline-flex items-center justify-center px-3 py-2 rounded-md border border-[var(--main)] text-sm font-medium hover:bg-[var(--main)] hover:text-[var(--text-contrast)] transition">
@@ -151,6 +154,30 @@ else
                     </Button>
                 </div>
             </div>
+            
+            <div class="w-full mt-0 lg-mt-10">
+                @if (_userId != null && _match.Participants != null)
+                {
+                    if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers)
+                    {
+                        <Button Color="Color.Success" Class="!py-5 !w-full !justify-center" Clicked="@(() => JoinMatch(_match.Id))">
+                            <span class="text-lg">Join</span>
+                        </Button>
+                    }
+                    else if (_match.Participants.Any(p => p.Id == _userId))
+                    {
+                        <Button Color="Color.Danger" Class="!py-5 !w-full !justify-center" Clicked="@(() => LeaveMatch(_match.Id))">
+                            <span class="text-lg">Leave</span>
+                        </Button>
+                    }
+                    else
+                    {
+                        <Button Color="Color.Secondary" Class="!py-5 !w-full !justify-center" Disabled="@true">
+                            <span class="text-lg">Full</span>
+                        </Button>
+                    }
+                }
+            </div>
         </div>
     </div>
 }
@@ -161,10 +188,17 @@ else
     [Parameter] public string MatchId { get; set; } = string.Empty;
     private MatchDto? _match;
     private bool _shouldInitMap;
+    
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? _userId;
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await MatchesService.GetMatchById(MatchId);
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        var result = await MatchesService.GetMatchById(MatchId, _userId, CancellationToken.None);
         if (!result.Success)
         {
             await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error fetching match.");
@@ -178,7 +212,7 @@ else
 
     private async Task CopyToClipboard(string text)
     {
-        await ToastService.Info("Address copied to clipboard!");
+        await ToastService.Info("Address copied to clipboard!", "Copy Address");
         await Js.InvokeVoidAsync("copyToClipboard", text);
     }
 
@@ -192,6 +226,37 @@ else
                 _match.Location.Latitude,
                 _match.Location.Longitude
             );
+        }
+    }
+    
+    private async Task JoinMatch(string matchId)
+    {
+        if (_userId is not null)
+        {
+            var result = await MatchesService.JoinMatch(matchId, _userId, CancellationToken.None);
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error joining match.");
+                return;
+            }
+            await ToastService.Success("Successfully joined the match!", "Join Match");
+            _match = result.Data!;
+        }
+    }
+    
+    private async Task LeaveMatch(string matchId)
+    {
+        if (_userId is not null)
+        {
+            var result = await MatchesService.LeaveMatch(matchId, _userId, CancellationToken.None);
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error leaving match.");
+                NavigationManager.NavigateTo("/matches");
+                return;
+            }
+            await ToastService.Success("Successfully left the match!", "Leave Match");
+            _match = result.Data!;
         }
     }
 
