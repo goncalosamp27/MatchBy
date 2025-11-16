@@ -6,7 +6,7 @@ namespace MatchBy.Services.ChatMessages;
 
 public sealed class ChatState
 {
-    public string UserId { get; private set; } //this is requierd
+    public string UserId { get; private set; } //this is required
     public List<ConversationDto> Conversations { get; } = [];
     public ConversationDto? Selected { get; set; }
     public List<ChatMessageDto> MessagesOfSelectedConversation { get; set; } = [];
@@ -93,7 +93,8 @@ public sealed class ChatState
     
     public void AddConversations(CursorPaginationResponse<List<ConversationDto>> conversations)
     {
-        Conversations.AddRange(conversations.Data);
+        var newConversations = conversations.Data.Where(conv => !Conversations.Exists(c => c.Id == conv.Id)).ToList();
+        Conversations.AddRange(newConversations);
         NextConversationCursor = conversations.NextCursor;
         NotifyStateChanged();
     }

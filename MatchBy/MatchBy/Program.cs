@@ -12,7 +12,10 @@ using Blazorise.FluentValidation;
 using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
+using Hangfire;
+using Hangfire.PostgreSql;
 using MatchBy.Hubs;
+using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
 using MatchBy.Services.Email;
@@ -86,9 +89,21 @@ builder.Services.AddAuthentication(options =>
 
 string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                           throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddHangfire(config =>
+    {
+        config.UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString));
+    }
+);
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
@@ -121,6 +136,7 @@ builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
@@ -148,6 +164,12 @@ else
     app.UseHsts();
 }
 
+RecurringJob.AddOrUpdate<IJobService>(
+    "process-match-states",
+    service => service.ProcessMatchStatesAsync(),
+    Cron.Minutely
+);
+
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
@@ -156,6 +178,9 @@ app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.UseHangfireDashboard();
+
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
