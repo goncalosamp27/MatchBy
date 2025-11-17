@@ -1,12 +1,10 @@
 ﻿using MatchBy.Models;
-using Microsoft.AspNetCore.Identity;
 using Resend;
 
 namespace MatchBy.Services.Email;
 
-public class EmailSender(IResend resend) : IEmailSender<ApplicationUser>, IMatchEmailSender
+public class EmailSender(IResend resend) : IEmailSender
 {
-
     public async Task SendMatchCancelledAsync(
         ApplicationUser user,
         string email,

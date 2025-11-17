@@ -3,10 +3,11 @@ using MatchBy.DTOs.Match;
 using MatchBy.Models;
 using MatchBy.Enums;
 using Microsoft.EntityFrameworkCore;
+using IEmailSender = MatchBy.Services.Email.IEmailSender;
 
 namespace MatchBy.Services.Matches;
 
-public class MatchesService(ApplicationDbContext applicationDbContext, IMatchEmailSender emailSender) : IMatchesService
+public class MatchesService(ApplicationDbContext applicationDbContext, IEmailSender emailSender) : IMatchesService
 {
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
         string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)

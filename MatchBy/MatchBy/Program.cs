@@ -133,7 +133,6 @@ builder.Services
 
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
-builder.Services.AddScoped<IMatchEmailSender, EmailSender>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
