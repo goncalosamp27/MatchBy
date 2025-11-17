@@ -106,4 +106,27 @@ public class EmailSender(IResend resend) : IEmailSender
 
         await resend.EmailSendAsync(message);
     }
+
+    public async Task SendContactEmail(string name, string email, string subject, string message)
+    {
+        var emailMessage = new EmailMessage
+        {
+            From = "MatchBy Contact Form <matchby@uniqueue.site>",
+            Subject = $"Contact Form: {subject}",
+            HtmlBody = $@"
+                <h2>New Contact Form Submission</h2>
+                <p><strong>From:</strong> {name} ({email})</p>
+                <p><strong>Subject:</strong> {subject}</p>
+                <hr>
+                <h3>Message:</h3>
+                <p style='white-space: pre-wrap;'>{message}</p>
+                <hr>
+                <p><small>This message was sent from the MatchBy contact form.</small></p>
+            "
+        };
+        emailMessage.To.Add("matchby@uniqueue.site");
+        emailMessage.ReplyTo = email;
+
+        await resend.EmailSendAsync(emailMessage);
+    }
 }

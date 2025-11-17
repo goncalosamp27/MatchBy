@@ -1,0 +1,265 @@
+@page "/contact"
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
+@inject IEmailSender EmailSender
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IValidator<ContactFormDto> ContactFormDtoValidator
+@using Blazorise
+@using System.Security.Claims
+@using FluentValidation
+@using MatchBy.Services.Email
+@using MatchBy.DTOs.Contact
+
+<style>
+    .btn-custom:hover {
+        background-color: var(--main-hover) !important;
+        border-color: var(--main-hover) !important;
+    }
+</style>
+
+<div class="max-w-2xl mx-auto px-4 py-8 lg:py-16">
+    <div class="text-center mb-8">
+        <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Contact Us</h1>
+        <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl">
+            Have a question or feedback? We'd love to hear from you!
+        </p>
+    </div>
+
+    <div class="bg-[var(--section)] rounded-lg border-2 border-[var(--main)] p-8 shadow-sm">
+        @if (_isSubmitted)
+        {
+            <div class="text-center py-8">
+                <div class="mb-4">
+                    <svg class="mx-auto w-16 h-16" style="color: var(--success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-[var(--main)] mb-2">Thank You!</h2>
+                <p class="text-[var(--text)] mb-4">Your message has been sent successfully. We'll get back to you as soon as possible.</p>
+                <Button Style="background-color: var(--main); color: var(--text-contrast); border-color: var(--main);" 
+                        Clicked="@ResetForm"
+                        class="btn-custom transition-colors">
+                    Send Another Message
+                </Button>
+            </div>
+        }
+        else
+        {
+            <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
+                <Validation Validator="@ValidateName">
+                    <Field>
+                        <FieldLabel>Name *</FieldLabel>
+                        <FieldBody>
+                            <TextEdit Placeholder="Enter your name"
+                                    Text="@_contactForm.Name"
+                                    TextChanged="@(v => _contactForm = _contactForm with { Name = v })">
+                                <Feedback>
+                                    <ValidationError/>
+                                </Feedback>
+                            </TextEdit>
+                        </FieldBody>
+                    </Field>
+                </Validation>
+
+                <Validation Validator="@ValidateEmail">
+                    <Field>
+                        <FieldLabel>Email *</FieldLabel>
+                        <FieldBody>
+                            <TextEdit Placeholder="Enter your email"
+                                    Text="@_contactForm.Email"
+                                    TextChanged="@(v => _contactForm = _contactForm with { Email = v })">
+                                <Feedback>
+                                    <ValidationError/>
+                                </Feedback>
+                            </TextEdit>
+                        </FieldBody>
+                    </Field>
+                </Validation>
+
+                <Validation Validator="@ValidateSubject">
+                    <Field>
+                        <FieldLabel>Subject *</FieldLabel>
+                        <FieldBody>
+                            <TextEdit Placeholder="Enter the subject"
+                                    Text="@_contactForm.Subject"
+                                    TextChanged="@(v => _contactForm = _contactForm with { Subject = v })">
+                                <Feedback>
+                                    <ValidationError/>
+                                </Feedback>
+                            </TextEdit>
+                        </FieldBody>
+                    </Field>
+                </Validation>
+
+                <Validation Validator="@ValidateMessage">
+                    <Field>
+                        <FieldLabel>Message *</FieldLabel>
+                        <FieldBody>
+                            <TextEdit Placeholder="Enter your message"
+                                    Text="@_contactForm.Message"
+                                    TextChanged="@(v => _contactForm = _contactForm with { Message = v })"
+                                    Rows="6">
+                                <Feedback>
+                                    <ValidationError/>
+                                </Feedback>
+                            </TextEdit>
+                        </FieldBody>
+                    </Field>
+                </Validation>
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <Alert Style="background-color: var(--error); color: var(--text-contrast); border-color: var(--error);" 
+                           Dismissible="false">
+                        @_errorMessage
+                    </Alert>
+                }
+
+                <Field>
+                    <FieldBody>
+                        <Button Style="background-color: var(--main); color: var(--text-contrast); border-color: var(--main);" 
+                                Clicked="@HandleSubmit" 
+                                Loading="@_isSubmitting"
+                                class="btn-custom transition-colors">
+                            Send Message
+                        </Button>
+                    </FieldBody>
+                </Field>
+            </Validations>
+        }
+    </div>
+
+    <!-- Contact Information -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center p-6 bg-[var(--section)] rounded-lg border-2 border-[var(--main)]">
+            <svg class="mx-auto w-8 h-8 text-[var(--main)] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <h3 class="font-semibold text-[var(--text)] mb-1">Email</h3>
+            <p class="text-sm text-[var(--text)] opacity-75">matchby@uniqueue.site</p>
+        </div>
+        <div class="text-center p-6 bg-[var(--section)] rounded-lg border-2 border-[var(--main)]">
+            <svg class="mx-auto w-8 h-8 text-[var(--main)] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="font-semibold text-[var(--text)] mb-1">Response Time</h3>
+            <p class="text-sm text-[var(--text)] opacity-75">Within 24 hours</p>
+        </div>
+        <div class="text-center p-6 bg-[var(--section)] rounded-lg border-2 border-[var(--main)]">
+            <svg class="mx-auto w-8 h-8 text-[var(--main)] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <h3 class="font-semibold text-[var(--text)] mb-1">Support</h3>
+            <p class="text-sm text-[var(--text)] opacity-75">We're here to help</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Validations _validations = null!;
+    private ContactFormDto _contactForm = new()
+    {
+        Name = string.Empty,
+        Email = string.Empty,
+        Subject = string.Empty,
+        Message = string.Empty
+    };
+    private bool _isSubmitting = false;
+    private bool _isSubmitted = false;
+    private string _errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var email = user.FindFirst(ClaimTypes.Email)?.Value;
+            var name = user.FindFirst(ClaimTypes.Name)?.Value ?? user.Identity.Name;
+            
+            if (!string.IsNullOrEmpty(email))
+            {
+                _contactForm = _contactForm with { Email = email };
+            }
+            if (!string.IsNullOrEmpty(name))
+            {
+                _contactForm = _contactForm with { Name = name };
+            }
+        }
+    }
+
+    private void ValidateProperty(ValidatorEventArgs e, string propertyPath)
+    {
+        var errors = ContactFormDtoValidator.Validate(_contactForm).Errors
+            .Where(x => x.PropertyName == propertyPath)
+            .ToList();
+
+        if (errors.Any())
+        {
+            e.Status = ValidationStatus.Error;
+            e.ErrorText = errors[0].ErrorMessage;
+        }
+        else
+        {
+            e.Status = ValidationStatus.Success;
+        }
+    }
+
+    void ValidateName(ValidatorEventArgs e) => ValidateProperty(e, nameof(ContactFormDto.Name));
+    void ValidateEmail(ValidatorEventArgs e) => ValidateProperty(e, nameof(ContactFormDto.Email));
+    void ValidateSubject(ValidatorEventArgs e) => ValidateProperty(e, nameof(ContactFormDto.Subject));
+    void ValidateMessage(ValidatorEventArgs e) => ValidateProperty(e, nameof(ContactFormDto.Message));
+
+    private async Task HandleSubmit()
+    {
+        if (!await _validations.ValidateAll()) return;
+
+        _isSubmitting = true;
+        _errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            await EmailSender.SendContactEmail(_contactForm.Name, _contactForm.Email, _contactForm.Subject, _contactForm.Message);
+            _isSubmitted = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to send message: {ex.Message}";
+            Console.WriteLine($"Error sending contact email: {ex.Message}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResetForm()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        var email = string.Empty;
+        var name = string.Empty;
+        
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            email = user.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+            name = user.FindFirst(ClaimTypes.Name)?.Value ?? user.Identity.Name ?? string.Empty;
+        }
+        
+        _contactForm = new ContactFormDto
+        {
+            Name = name,
+            Email = email,
+            Subject = string.Empty,
+            Message = string.Empty
+        };
+        _isSubmitted = false;
+        _errorMessage = string.Empty;
+        StateHasChanged();
+    }
+}
+
