@@ -254,8 +254,7 @@ else
         showParticipantsModal = !showParticipantsModal;
     }
 
-    private void GoToLogin()
-    {
+    private void GoToLogin() {
         var currentUrl = NavigationManager.Uri;
         var returnUrl = Uri.EscapeDataString(currentUrl);
         NavigationManager.NavigateTo($"/Account/Login?returnUrl={returnUrl}", forceLoad: true);

@@ -381,15 +381,25 @@
                     </div>
                 </Authorized>
                 <NotAuthorized>
-                    <NavLink href="/Account/Login"
-                             class="text-[var(--text)] hover:text-[var(--main)] font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2">
-                        Log
-                        in
-                    </NavLink>
-                    <NavLink href="/Account/Register"
-                             class="text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none">
-                        Register
-                    </NavLink>
+                    <div class="lg:flex items-center lg:order-2 hidden">
+                        <NavLink href="/Account/Login"
+                                class="text-[var(--text)] hover:text-[var(--main)] font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2">
+                            Log
+                            in
+                        </NavLink>
+                        <NavLink href="/Account/Register"
+                                class="text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none">
+                            Register
+                        </NavLink>
+                    </div>
+                    <div class="flex lg:hidden items-center">
+                        <NavLink href="/Account/Login" class="p-2 text-[var(--text)]">
+                            <svg class="w-6 h-6 text-[var(--text)]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h11m0 0-4-4m4 4-4 4m-5 3H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h3"/>
+                            </svg>
+
+                        </NavLink>
+                    </div>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
