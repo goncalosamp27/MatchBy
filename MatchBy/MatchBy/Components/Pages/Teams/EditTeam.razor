@@ -1,0 +1,412 @@
+﻿@page "/EditTeam/{id}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ITeamService TeamService
+@inject IUsersService UsersService
+@inject NavigationManager NavigationManager
+@using Blazorise
+@using System.Security.Claims
+@using FluentValidation
+@using MatchBy.DTOs.Team
+@using MatchBy.DTOs.User
+@using MatchBy.Services.Teams
+@using MatchBy.Services.Users
+@using Microsoft.AspNetCore.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IValidator<UpdateTeamDto> UpdateTeamDtoValidator
+@inject IToastService ToastService
+
+@if (_model is null || _isLoading)
+{
+    <Loading></Loading>
+}
+else
+{
+    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-8">
+        <Heading Size="HeadingSize.Is2" Margin="Margin.Is3.FromBottom" Style="color: var(--main);">
+            Edit Team
+        </Heading>
+
+        <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
+            <Validation Validator="@ValidateName">
+                <Field>
+                    <FieldLabel>Team Name</FieldLabel>
+                    <FieldBody>
+                        <TextEdit Placeholder="Enter team name" 
+                                Text="@_model.Name"
+                                TextChanged="@(v => _model = _model with { Name = v })">
+                            <Feedback>
+                                <ValidationError/>
+                            </Feedback>
+                        </TextEdit>
+                    </FieldBody>
+                </Field>
+            </Validation>
+
+            <Validation Validator="@ValidateDescription">
+                <Field>
+                    <FieldLabel>Description</FieldLabel>
+                    <FieldBody>
+                        <TextEdit Placeholder="Type a description for your team" 
+                                Text="@_model.Description"
+                                TextChanged="@(v => _model = _model with { Description = v })">
+                            <Feedback>
+                                <ValidationError/>
+                            </Feedback>
+                        </TextEdit>
+                    </FieldBody>
+                </Field>
+            </Validation>
+
+            <Validation Validator="@ValidatePrivacy">
+                <Field>
+                    <FieldLabel>Privacy</FieldLabel>
+                    <FieldBody>
+                        <Select TValue="TeamPrivacy" 
+                                SelectedValue="@_model.Privacy"
+                                SelectedValueChanged="@(v => _model = _model with { Privacy = v })">
+                            @foreach (var item in Enum.GetValues<TeamPrivacy>())
+                            {
+                                <SelectItem Value="@item">@item.ToString()</SelectItem>
+                            }
+                        </Select>
+                    </FieldBody>
+                </Field>
+            </Validation>
+
+            <Field>
+                <FieldLabel>Invite Team Members</FieldLabel>
+                <FieldBody>
+                    <div class="mb-3">
+                        <TextEdit @bind-Text="_memberSearch"
+                                  Placeholder="Search for users to add"
+                                  Role="TextRole.Search"
+                                  KeyDown="@OnMemberSearchKeyDown"
+                                  Class="form-control-lg"
+                                  Style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main);"/>
+                    </div>
+                    
+                    @if (_isLoadingMembers)
+                    {
+                        <Loading></Loading>
+                    }
+                    else
+                    {
+                        <div class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-lg p-2" style="background-color: var(--section-secondary);">
+                            @if ((_availableUsers.Data?.Count ?? 0) == 0)
+                            {
+                                <div class="py-3 text-center opacity-60" style="color: var(--text);">
+                                    No users found
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var user in _availableUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                {
+                                    var isSelected = _selectedMemberIds.Contains(user.Id);
+                                    var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                    <div class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-opacity hover:opacity-70 @(isSelected ? "bg-[var(--main)]" : "")"
+                                         @onclick="@(() => ToggleMember(user.Id))"
+                                         style="color: var(--text);">
+                                        <img src="@photoUrl" alt="@user.UserName" class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
+                                        <span class="fw-500 truncate flex-1">@user.DisplayName</span>
+                                        @if (isSelected)
+                                        {
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        @if (_availableUsers.Data != null && _availableUsers.TotalCount > 0)
+                        {
+                            <div class="flex justify-center mt-2 mb-3">
+                                <OffsetPagination CurrentPage="@_currentMemberPage"
+                                                  OnPageChanged="OnMemberPageChanged"
+                                                  PageSize="10"
+                                                  TotalItems="@_availableUsers.TotalCount"/>
+                            </div>
+                        }
+                        
+                        @if (_selectedMemberIds.Count > 0)
+                        {
+                            <div class="mb-3">
+                                <FieldLabel>Team Members (@_selectedMemberIds.Count)</FieldLabel>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach (var memberId in _selectedMemberIds)
+                                    {
+                                        var member = _availableUsers.Data?.FirstOrDefault(u => u.Id == memberId);
+                                        var currentMember = _currentTeamMembers.FirstOrDefault(m => m.Id == memberId);
+                                        
+                                        if (member != null)
+                                        {
+                                            var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                            <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                <img src="@photoUrl" alt="@member.UserName" class="rounded-full w-6 h-6 object-cover"/>
+                                                <span class="text-sm">@member.DisplayName</span>
+                                                <button @onclick="@(() => RemoveMember(memberId))" 
+                                                        @onclick:stopPropagation="true"
+                                                        class="ml-1 hover:opacity-70">
+                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        }
+                                        else if (currentMember != null)
+                                        {
+                                            var photoUrl = currentMember.AvatarUrl ?? "/images/user-avatar.png";
+                                            <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                <img src="@photoUrl" alt="@currentMember.DisplayName" class="rounded-full w-6 h-6 object-cover"/>
+                                                <span class="text-sm">@currentMember.DisplayName</span>
+                                                <button @onclick="@(() => RemoveMember(memberId))" 
+                                                        @onclick:stopPropagation="true"
+                                                        class="ml-1 hover:opacity-70">
+                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </FieldBody>
+            </Field>
+
+            <Field>
+                <Button Color="Color.Primary" Clicked="@SubmitTeam" Loading="@_isSubmitting">
+                    Update Team
+                </Button>
+            </Field>
+
+        </Validations>
+    </Div>
+}
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
+@code {
+    Validations _validations = null!;
+    UpdateTeamDto? _model;
+    private string? _userId;
+    private bool _isLoading = true;
+    private bool _isSubmitting = false;
+    private bool _isLoadingMembers = false;
+    private string _memberSearch = "";
+    private int _currentMemberPage = 1;
+    private HashSet<string> _selectedMemberIds = new();
+    private PaginationResponse<List<ApplicationUser>> _availableUsers = new();
+    private List<UserDto> _currentTeamMembers = new();
+
+    [Parameter] public string? Id { get; set; }
+
+    private void ValidateProperty(ValidatorEventArgs e, string propertyPath)
+    {
+        if (_model is null) return;
+        
+        var errors = UpdateTeamDtoValidator.Validate(_model).Errors
+            .Where(x => x.PropertyName == propertyPath)
+            .ToList();
+
+        if (errors.Any())
+        {
+            e.Status = ValidationStatus.Error;
+            e.ErrorText = errors[0].ErrorMessage;
+        }
+        else
+        {
+            e.Status = ValidationStatus.Success;
+        }
+    }
+
+    void ValidateName(ValidatorEventArgs e) => ValidateProperty(e, nameof(UpdateTeamDto.Name));
+    void ValidateDescription(ValidatorEventArgs e) => ValidateProperty(e, nameof(UpdateTeamDto.Description));
+    void ValidatePrivacy(ValidatorEventArgs e) => ValidateProperty(e, nameof(UpdateTeamDto.Privacy));
+
+    private void ToggleMember(string userId)
+    {
+        if (!_selectedMemberIds.Add(userId))
+        {
+            _selectedMemberIds.Remove(userId);
+        }
+
+        StateHasChanged();
+    }
+
+    private void RemoveMember(string userId)
+    {
+        _selectedMemberIds.Remove(userId);
+        StateHasChanged();
+    }
+
+    private async Task LoadMembers()
+    {
+        if (_isLoadingMembers) return;
+        _isLoadingMembers = true;
+        try
+        {
+            var response = await UsersService.GetUsers(_memberSearch, _currentMemberPage, 10);
+            if (response.Success)
+            {
+                _availableUsers = response.Data!;
+                // Filter out current user
+                if (_userId != null)
+                {
+                    _availableUsers.Data = _availableUsers.Data.Where(u => u.Id != _userId).ToList();
+                }
+            }
+            else
+            {
+                await ToastService.Error(response.ErrorMessages.ToString());
+            }
+        }
+        finally
+        {
+            _isLoadingMembers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnMemberSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentMemberPage = 1;
+            await LoadMembers();
+        }
+    }
+
+    private async Task OnMemberPageChanged(int page)
+    {
+        _currentMemberPage = page;
+        await LoadMembers();
+    }
+
+    private async Task SubmitTeam()
+    {
+        if (_model is null || !await _validations.ValidateAll()) return;
+
+        _isSubmitting = true;
+        try
+        {
+            // Get current member IDs from the team
+            var currentMemberIds = _currentTeamMembers.Select(m => m.Id).ToHashSet();
+            var newMemberIds = _selectedMemberIds.ToHashSet();
+            
+            // Find new members to invite
+            var usersToInvite = newMemberIds.Except(currentMemberIds).ToList();
+            
+            // Update team with current members (including new ones that will be added)
+            var updateDto = _model with 
+            { 
+                MembersIds = _selectedMemberIds.ToList()
+            };
+
+            var result = await TeamService.UpdateTeamAsync(updateDto, CancellationToken.None);
+
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error updating team.");
+                return;
+            }
+
+            // Send invites to new members
+            int invitesSent = 0;
+            if (usersToInvite.Any() && Id != null && _userId != null)
+            {
+                foreach (var receiverId in usersToInvite)
+                {
+                    var inviteResult = await TeamService.SendTeamInviteAsync(Id, _userId, receiverId, $"You've been invited to join {_model.Name}!", CancellationToken.None);
+                    if (inviteResult.Success)
+                    {
+                        invitesSent++;
+                    }
+                }
+            }
+
+            if (invitesSent > 0)
+            {
+                await ToastService.Success($"Team updated successfully! Invites sent to {invitesSent} user(s).", "Update Team");
+            }
+            else
+            {
+                await ToastService.Success("Team updated successfully!", "Update Team");
+            }
+            
+            NavigationManager.NavigateTo($"/teams/{Id}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (_userId == null)
+        {
+            NavigationManager.NavigateTo("/Account/Login");
+            return;
+        }
+
+        await LoadMembers();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_userId is null)
+        {
+            return;
+        }
+        
+        if (Id is null)
+        {
+            NavigationManager.NavigateTo("/404", forceLoad: true);
+            return;
+        }
+
+        var result = await TeamService.GetTeamByIdAsync(Id, _userId, CancellationToken.None);
+        
+        if (!result.Success || result.Data is null)
+        {
+            NavigationManager.NavigateTo("/404", forceLoad: true);
+            return;
+        }
+
+        var team = result.Data;
+        
+        // Check if user is the owner
+        if (team.OwnerId != _userId)
+        {
+            await ToastService.Error("You don't have permission to edit this team.");
+            NavigationManager.NavigateTo($"/teams/{Id}");
+            return;
+        }
+
+        _model = new UpdateTeamDto
+        {
+            Id = Id,
+            Name = team.Name,
+            Description = team.Description,
+            OwnerId = team.OwnerId,
+            MembersIds = team.Members.Select(m => m.Id).ToList()
+        };
+
+        _selectedMemberIds = team.Members.Select(m => m.Id).ToHashSet();
+        
+        // Store current team members for display
+        _currentTeamMembers = team.Members.ToList();
+
+        _isLoading = false;
+    }
+}

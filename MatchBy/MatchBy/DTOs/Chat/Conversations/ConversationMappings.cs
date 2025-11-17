@@ -18,9 +18,9 @@ public static class ConversationMappings
             CreatedAtUtc = conversation.CreatedAtUtc,
             UpdatedAtUtc = conversation.UpdatedAtUtc,
             LastMessageContent = conversation.LastMessageContent,
-            MessagesCount = conversation.Messages.Count,
+            MessagesCount = conversation.Messages?.Count ?? 0,
             LastMessageAtUtc = conversation.LastMessageAtUtc,
-            Participants = [.. conversation.Participants.Select(p => new ConversationParticipantDto
+            Participants = [.. (conversation.Participants ?? Enumerable.Empty<ApplicationUser>()).Select(p => new ConversationParticipantDto
             {
                 Id = p.Id,
                 Username = p.UserName!, // assuming UserName is non-null because it's required in the user configuration

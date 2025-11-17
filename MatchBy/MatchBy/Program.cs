@@ -22,6 +22,7 @@ using MatchBy.Services.Conversations;
 using MatchBy.Services.Email;
 using MatchBy.Services.FileValidator;
 using MatchBy.Services.Matches;
+using MatchBy.Services.Teams;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
 using Resend;
@@ -139,6 +140,7 @@ builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<ChatState>();
 
@@ -167,7 +169,6 @@ else
     app.UseHsts();
 }
 
-// Register recurring jobs using service-based API
 using (IServiceScope scope = app.Services.CreateScope())
 {
     IRecurringJobManager recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
@@ -177,7 +178,6 @@ using (IServiceScope scope = app.Services.CreateScope())
         "*/1 * * * *" // Every minute
     );
 }
-
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();

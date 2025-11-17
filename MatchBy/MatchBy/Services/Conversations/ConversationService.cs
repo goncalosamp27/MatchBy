@@ -1,5 +1,6 @@
 ﻿using Amazon.S3;
 using FluentValidation;
+using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.Enums;
@@ -129,7 +130,11 @@ public class ConversationService(
     public async Task<Result<ConversationDto>> CreateConversationAsync(CreateConversationDto createConversationDto,
         CancellationToken ct = default)
     {
-        await createConversationValidator.ValidateAndThrowAsync(createConversationDto, cancellationToken: ct);
+        ValidationResult? validationResult = await createConversationValidator.ValidateAsync(createConversationDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ConversationDto>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToArray());
+        }
 
         Conversation conversation = createConversationDto.ToEntity();
 
@@ -162,8 +167,12 @@ public class ConversationService(
     public async Task<Result<ConversationDto>> UpdateConversationAsync(UpdateConversationDto updateConversationDto,
         CancellationToken ct = default)
     {
-        await updateConversationValidator.ValidateAndThrowAsync(updateConversationDto, cancellationToken: ct);
-
+        ValidationResult? validationResult = await updateConversationValidator.ValidateAsync(updateConversationDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ConversationDto>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToArray());
+        }
+        
         // only the creator can update participants
         Conversation? convo = await applicationDbContext.Conversations
             .Include(m => m.Participants)

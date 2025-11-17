@@ -2,10 +2,10 @@
 @using Blazorise
 
 <!-- Sidebar -->
-<aside class="h-full @Class"
+<aside class="h-full flex flex-col @Class"
        style="background-color: var(--background);">
     <!-- header -->
-    <div class="px-4 pt-3 pb-2">
+    <div class="px-3 sm:px-4 pt-3 pb-2 flex-shrink-0">
         <div class="flex items-center justify-between">
             <h2 class="text-[15px] font-semibold" style="color: var(--text);">Chats</h2>
             <Button class="p-1.5 rounded hover:opacity-70 transition-opacity" 
@@ -41,7 +41,7 @@
     </div>
 
     <!-- list -->
-    <nav class="flex-1 overflow-y-auto thin-scroll px-2 pb-3 space-y-4">
+    <nav class="flex-1 overflow-y-auto thin-scroll px-2 pb-3 space-y-4 min-h-0">
 
         @{
             var privateConversations = Conversations.Where(c => c.Type == ConversationType.Private).ToList();
@@ -99,7 +99,9 @@
             </div>
         }
     </nav>
-    <CursorPagination NextCursor="@NextCursor" OnNext="OnNextPagination"></CursorPagination>
+    <div class="flex-shrink-0 border-t border-[var(--main)] pt-2">
+        <CursorPagination NextCursor="@NextCursor" OnNext="OnNextPagination"></CursorPagination>
+    </div>
 </aside>
 
 @code

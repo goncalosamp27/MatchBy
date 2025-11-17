@@ -1,13 +1,16 @@
-﻿using MatchBy.Data;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using MatchBy.Data;
 using MatchBy.DTOs.Match;
 using MatchBy.Models;
 using MatchBy.Enums;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.Matches;
 
-public class MatchesService(ApplicationDbContext applicationDbContext) : IMatchesService
+public class MatchesService(ApplicationDbContext applicationDbContext,
+    IValidator<CreateMatchDto> createMatchValidator,
+    IValidator<UpdateMatchDto> updateMatchValidator) : IMatchesService
 {
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
         string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
@@ -104,6 +107,12 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
     public async Task<Result<bool>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default)
     {
+        ValidationResult? validationResult = await createMatchValidator.ValidateAsync(createMatchDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<bool>.Fail(validationResult.ToString());
+        }
+        
         Match match = createMatchDto.ToEntity();
         match.Participants = (List<ApplicationUser>)
             [await applicationDbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
@@ -115,6 +124,12 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
     public async Task<Result<bool>> UpdateMatch(UpdateMatchDto updateMatchDto, CancellationToken ct = default)
     {
+        ValidationResult? validationResult = await updateMatchValidator.ValidateAsync(updateMatchDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<bool>.Fail(validationResult.ToString());
+        }
+        
         Match? match = await applicationDbContext
             .Matches
             .Where(m => m.CreatorId == updateMatchDto.UserId)

@@ -1,0 +1,150 @@
+@page "/Teams"
+@using MatchBy.Services.Teams
+@inject ITeamService TeamService
+@inject NavigationManager NavigationManager
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Security.Claims
+@using MatchBy.DTOs.Team
+@using MatchBy.Components
+
+<section class="bg-[var(--background)]">
+    <div class="py-8 px-4 mx-auto  text-center lg:py-16">
+        <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Create your Team!</h1>
+        <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage teams.</p>
+        <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes team management quick, simple and collaborative!</p>
+        <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
+            <a @onclick="GoToCreateTeam" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]">
+                Get started
+                <svg class="w-3.5 h-3.5 ms-2 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+
+<div class="grid max-w-screen-xl h-auto mx-auto px-4 py-8 lg:py-16 justify-center">
+    @if (_isAuthenticated)
+    {
+        @if (YourTeams is null)
+        {
+            <Loading></Loading>
+        }
+        else
+        {   
+            if(YourTeams.Count > 0)
+            {
+            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your Teams:</h1>
+            <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+                @foreach (var team in YourTeams)
+                {
+                    <TeamCard Team="@team" />
+                }
+            </div>
+            }
+            
+        }
+    }
+
+    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Teams:</h1>
+    @if (teams is null)
+    {
+        <Loading></Loading>
+    }
+    else
+    {
+        <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+            @foreach (var team in teams)
+            {
+                <TeamCard Team="@team" />
+            }
+        </div>
+        
+        @if (_teamsPagination is { TotalCount: > 0 })
+        {
+            <div class="flex justify-center mt-4">
+                <OffsetPagination CurrentPage="@_currentPage"
+                                  OnPageChanged="OnPageChanged"
+                                  PageSize="@_pageSize"
+                                  TotalItems="@_teamsPagination.TotalCount"/>
+            </div>
+        }
+    }
+</div>
+
+
+
+@code {
+    private bool _isAuthenticated;
+    private List<TeamDto>? YourTeams { get; set; }
+    private List<TeamDto>? teams { get; set; }
+    private PaginationResponse<List<TeamDto>>? _teamsPagination;
+    private int _currentPage = 1;
+    private readonly int _pageSize = 10;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync() => await LoadTeams();
+
+    private async Task LoadTeams()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (!_isAuthenticated) {
+            YourTeams = null;
+            
+            var publicTeams = await TeamService.GetTeamsAsync("", _currentPage, _pageSize, "", CancellationToken.None);
+            if (!publicTeams.Success)
+            {
+                Console.WriteLine("Error fetching public teams: " + publicTeams.ErrorMessages);
+                return;
+            }
+            teams = publicTeams.Data!.Data;
+            _teamsPagination = publicTeams.Data;
+            return;
+        }
+
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(_userId)) {    
+            YourTeams = [];
+            return;
+        }
+        
+        var result = await TeamService.GetTeamsAsync(_userId, _currentPage, _pageSize, "", CancellationToken.None);
+        if (!result.Success)
+        {
+            Console.WriteLine("Error fetching user teams: " + result.ErrorMessages);
+            return;
+        }
+        
+        // Filter teams where user is owner or member
+        var allTeams = result.Data!.Data;
+        YourTeams = allTeams.Where(t => t.OwnerId == _userId || t.Members.Any(m => m.Id == _userId)).ToList();
+        teams = allTeams.Where(t => t.OwnerId != _userId && t.Members.All(m => m.Id != _userId)).ToList();
+        _teamsPagination = result.Data;
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        _currentPage = page;
+        await LoadTeams();
+    }
+
+    private void GoToCreateTeam() => NavigationManager.NavigateTo("/CreateTeam");
+    
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return Task.CompletedTask;
+
+        StateHasChanged();
+
+        return Task.CompletedTask;
+    }
+}

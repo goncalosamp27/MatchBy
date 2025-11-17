@@ -25,14 +25,14 @@
 @inject IToastService ToastService
 
 <div class="fixed inset-0 flex flex-col bg-[var(--background)] text-[var(--text)]">
-    <div class="mt-14 flex flex-1 min-h-0">
+    <div class="mt-14 flex flex-1 min-h-0 overflow-hidden">
         <Button Clicked="@ShowSidebarOffcanvas"
-                Class="md:hidden fixed bottom-3 left-3 z-50 rounded-full !p-3.5 bg-[var(--main)] text-[var(--text-contrast)] shadow-lg">
+                Class="md:hidden fixed bottom-4 left-4 z-50 rounded-full !p-3.5 bg-[var(--main)] text-[var(--text-contrast)] shadow-lg hover:scale-105 transition-transform">
             <Icon Name="IconName.List"/>
         </Button>
 
-        <div class="w-72 hidden md:flex flex-col border-r border-[var(--main)]">
-            <ChatSidebar Class="hidden md:flex md:flex-col"
+        <div class="w-full sm:w-64 lg:w-72 hidden md:flex flex-col border-r border-[var(--main)] min-w-0">
+            <ChatSidebar Class="hidden md:flex md:flex-col h-full"
                          Conversations="State.Conversations"
                          OnConversationSelected="OnConversationSelected"
                          OnShowModal="ShowModal"
@@ -46,15 +46,15 @@
         <Offcanvas @ref="_sidebarOffcanvas"
                    Placement="Placement.Start"
                    ShowBackdrop
-                   Style="border-right: 1px solid var(--main); background-color: var(--background);">
+                   Style="border-right: 1px solid var(--main); background-color: var(--background); width: 85vw; max-width: 320px;">
             <OffcanvasHeader>
                 <div class="flex items-center justify-between w-full">
                     <h2 class="text-lg font-semibold">Chats</h2>
                     <CloseButton Clicked="@HideSidebarOffcanvas"/>
                 </div>
             </OffcanvasHeader>
-            <OffcanvasBody Class="!p-0">
-                <ChatSidebar Class="w-full" Conversations="State.Conversations"
+            <OffcanvasBody Class="!p-0 flex flex-col h-full">
+                <ChatSidebar Class="w-full h-full flex flex-col" Conversations="State.Conversations"
                              OnConversationSelected="OnConversationSelectedMobile"
                              OnShowModal="ShowModal"
                              OnNext="LoadMoreConversations"
@@ -64,7 +64,7 @@
             </OffcanvasBody>
         </Offcanvas>
 
-        <main class="flex-1 flex flex-col min-w-0 min-h-0">
+        <main class="flex-1 flex flex-col min-w-0 min-h-0 max-h-full overflow-hidden">
             @if (State.Selected is null)
             {
                 <ChatEmptyState/>
