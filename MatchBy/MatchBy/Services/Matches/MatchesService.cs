@@ -220,16 +220,14 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         return await GetMatchById(matchId, userId, ct);
     }
 
-    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q,
-        int page = 1, int pageSize = 5, CancellationToken ct = default)
-    {
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default) {
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
             .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
-            .Where(m => m.CreatorId == userId);
+            .Where(m => m.CreatorId == userId && m.Participants.Count < m.maxPlayers && (m.Status == MatchStatus.Confirmed || m.Status == MatchStatus.Pendent));
 
         if (!string.IsNullOrEmpty(q))
         {
@@ -248,8 +246,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         var matchesDto = matches.Select(m => m.ToDto()).ToList();
 
         return Result<PaginationResponse<List<MatchDto>>>.Ok(
-            new PaginationResponse<List<MatchDto>>
-            {
+            new PaginationResponse<List<MatchDto>> {
                 Data = matchesDto,
                 NextPageAvailable = page < totalPages,
                 Page = page,
@@ -296,5 +293,116 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
                 PreviousPageAvailable = page > 1,
                 TotalCount = total
             });
+    }
+
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesUserAttending(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default) {
+        IQueryable<Match> query = applicationDbContext
+            .Matches
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Where(m => m.CreatorId != userId && m.Participants.Any(p => p.Id == userId) && (m.Status == MatchStatus.Confirmed || m.Status == MatchStatus.Pendent));
+
+        if (!string.IsNullOrEmpty(q)) {
+            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
+        }
+
+        int total = await query.CountAsync(ct);
+        int totalPages = (int)Math.Ceiling((double)total / pageSize);
+
+        List<Match> matches = await query
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var matchesDto = matches.Select(m => m.ToDto()).ToList();
+
+        return Result<PaginationResponse<List<MatchDto>>>.Ok(
+            new PaginationResponse<List<MatchDto>>
+            {
+                Data = matchesDto,
+                NextPageAvailable = page < totalPages,
+                Page = page,
+                PageSize = pageSize,
+                PreviousPageAvailable = page > 1,
+                TotalCount = total
+            });
+    }
+
+    public static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371;
+
+        double dLat = (lat2 - lat1) * Math.PI / 180;
+        double dLon = (lon2 - lon1) * Math.PI / 180;
+
+        double a =
+            Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+            Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+            Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return R * c;
+    }
+
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetRecommendedMatches(
+        string userId,
+        ICollection<Sports> preferredSports,
+        Location? baseLocation,
+        string? q,
+        int page = 1,
+        int pageSize = 5,
+        CancellationToken ct = default)
+    {
+        IQueryable<Match> query = applicationDbContext
+            .Matches
+            .AsNoTracking()
+            .Include(m => m.Participants)
+            .Include(m => m.Creator)
+            .Where(m =>
+                m.CreatorId != userId && m.Participants.Count < m.maxPlayers &&
+                (m.Status == MatchStatus.Confirmed || m.Status == MatchStatus.Pendent)
+            );
+
+        if (!string.IsNullOrEmpty(q)) { query = query.Where(m => m.Description.ToLower().Contains(q.ToLower())); }
+
+        var matches = await query.ToListAsync(ct);
+
+        var ranked = matches
+            .Select(m => new
+            {
+                Match = m,
+                HasPreferredSport = preferredSports.Contains(m.Sport),
+                Distance = baseLocation is null
+                    ? 0
+                    : HaversineDistance(
+                        baseLocation.Latitude,
+                        baseLocation.Longitude,
+                        m.Location.Latitude,
+                        m.Location.Longitude
+                    )
+            })
+            .OrderByDescending(x => x.HasPreferredSport)
+            .ThenBy(x => x.Distance)
+            .Take(pageSize)
+            .Select(x => x.Match)
+            .ToList();
+
+        var dtos = ranked.Select(m => m.ToDto()).ToList();
+
+        return Result<PaginationResponse<List<MatchDto>>>.Ok(
+            new PaginationResponse<List<MatchDto>>
+            {
+                Data = dtos,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = ranked.Count,
+                NextPageAvailable = false,
+                PreviousPageAvailable = false
+            }
+        );
     }
 }

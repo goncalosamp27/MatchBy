@@ -1,4 +1,5 @@
 @page "/Matches"
+@using Blazorise
 @using MatchBy.Services.Matches
 @inject IMatchesService MatchesService
 @inject NavigationManager NavigationManager
@@ -7,71 +8,105 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using System.Security.Claims
 @using MatchBy.DTOs.Match
+@inject IJSRuntime JS
 
 <section class="bg-[var(--background)]">
-    <div class="py-8 px-4 mx-auto  text-center lg:py-16">
-        <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Create your Match!</h1>
-        <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage matches.</p>
-        <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes the setup quick, simple and collaborative!</p>
-        <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
-            <a @onclick="GoToCreateMatch" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]">
-                Get started
-                <svg class="w-3.5 h-3.5 ms-2 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                </svg>
-            </a>
-        </div>
+    <div class="grid max-w-screen-xl h-auto mx-auto px-4 py-8 lg:py-16 justify-center">
+        @if (isAuthenticated) {
+            @if (yourCreatedMatches is null) { <Loading></Loading> }
+            else {   
+                if (yourCreatedMatches.Count > 0){
+                    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Matches By you:</h1>
+                    <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+                        @foreach (var match in yourCreatedMatches)
+                        {
+                            <MatchCard Match="@match" />
+                        }
+                    </div>
+                }
+            }
+
+            @if (attendingMatches is null) { <Loading></Loading> }
+            else {   
+                if (attendingMatches.Count > 0){
+                    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your upcoming Matches:</h1>
+                    <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+                        @foreach (var match in attendingMatches) {
+                            <MatchCard Match="@match" />
+                        }
+                    </div>
+                }
+            }
+
+            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Recommended Matches:</h1>
+            @if (_showGeoHint)
+            {
+                <p class="text-md text-[var(--text)] mb-4 flex items-center gap-2 -mt-6">
+                    <svg class="w-6 h-6 text-[var(--main)]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                    <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clip-rule="evenodd"/>
+                    </svg>
+
+                    <span class ="text-[var(--main)]">Tip: </span>
+                    Activate browser geolocation for better recommendations!
+                </p>
+            }
+            @if (recommendedMatches is null) { <Loading></Loading> }
+            else if (recommendedMatches.Count > 0) {
+                <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+                    @foreach (var match in recommendedMatches)
+                    {
+                        <MatchCard Match="@match" />
+                    }
+                </div>
+            }
+            <button class="w-1/3 mx-auto block flex items-center justify-center 
+                px-5 py-3 text-base font-medium text-center 
+                rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]
+                text-[var(--text-contrast)] hover:text-[var(--text)]">
+                Find more matches!
+            </button>
+        }
+
+        else {
+            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Matches:</h1>
+            @if (matches is null) { <Loading></Loading> }
+            else if (matches.Count > 0) {
+                <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+                    @foreach (var match in matches)
+                    {
+                        <MatchCard Match="@match" />
+                    }
+                </div>
+            }
+            <button class="w-1/3 mx-auto block flex items-center justify-center 
+                px-5 py-3 text-base font-medium text-center 
+                rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]
+                text-[var(--text-contrast)] hover:text-[var(--text)]">
+                Find more matches!
+            </button>
+        }
     </div>
 </section>
 
-
-<div class="grid max-w-screen-xl h-auto mx-auto px-4 py-8 lg:py-16 justify-center">
-    @if (isAuthenticated)
-    {
-        @if (yourMatches is null)
-        {
-            <Loading></Loading>
-        }
-        else
-        {   
-            if(yourMatches.Count > 0)
-            {
-            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your Matches:</h1>
-            <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-                @foreach (var match in yourMatches)
-                {
-                    <MatchCard Match="@match" />
-                }
-            </div>
-            }
-        }
-    }
-
-    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Matches:</h1>
-    @if (matches is null)
-    {
-        <Loading></Loading>
-    }
-    else
-    {
-        <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-            @foreach (var match in matches)
-            {
-                <MatchCard Match="@match" />
-            }
-        </div>
-    }
-</div>
-
-
-
 @code {
     private bool isAuthenticated;
-    private List<MatchDto>? yourMatches { get; set; }
+    private List<MatchDto>? yourCreatedMatches { get; set; }
+    private List<MatchDto>? attendingMatches { get; set; }
     private List<MatchDto>? matches { get; set; }
+    private List<MatchDto>? recommendedMatches { get; set; }
+
+    private Location? _currentLocation;
+    private bool _showGeoHint = false;
+
+    public class BrowserLocation
+    {
+        public double latitude { get; set; }
+        public double longitude { get; set; }
+    }
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
+    private ICollection<Sports> preferredSports = new List<Sports>();
 
     protected override async Task OnInitializedAsync() {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -79,11 +114,10 @@
         isAuthenticated = user.Identity?.IsAuthenticated ?? false;
 
         if (!isAuthenticated) {
-            yourMatches = null;
+            yourCreatedMatches = null;
             
             var publicMatches = await MatchesService.GetMatches(MatchStatus.Pendent, null, null, 1, 5, CancellationToken.None);
-            if (!publicMatches.Success)
-            {
+            if (!publicMatches.Success) {
                 Console.WriteLine("Error fetching public matches: " + publicMatches.ErrorMessages);
                 return;
             }
@@ -92,38 +126,63 @@
         }
 
         _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        preferredSports = user.FindAll("PreferredSports").Select(c => Enum.Parse<Sports>(c.Value)).ToList();
 
         if (string.IsNullOrEmpty(_userId)) {    
-            yourMatches = [];
+            yourCreatedMatches = [];
+            attendingMatches = [];
             return;
         }
         
         var result = await MatchesService.GetMatchesForUser(_userId, null, 1, 5, CancellationToken.None);
-        if (!result.Success)
-        {
+        if (!result.Success) {
             Console.WriteLine("Error fetching user matches: " + result.ErrorMessages);
             return;
         }
-        yourMatches = result.Data!.Data;
+        yourCreatedMatches = result.Data!.Data;
         
         var resultMatches = await MatchesService.GetMatchesExceptUser(_userId, null, 1, 5, CancellationToken.None);
-        if (!resultMatches.Success)
-        {
+        if (!resultMatches.Success) {
             Console.WriteLine("Error fetching matches: " + resultMatches.ErrorMessages);
             return;
         }
         matches = resultMatches.Data!.Data;
+        
+        var attendingResult = await MatchesService.GetMatchesUserAttending(_userId, null, 1, 5, CancellationToken.None);
+        if (!attendingResult.Success) {
+            Console.WriteLine("Error fetching attending matches: " + attendingResult.ErrorMessages);
+            return;
+        }
+        attendingMatches = attendingResult.Data!.Data;
+        
+
+        var recommendedResult = await MatchesService.GetRecommendedMatches(_userId, preferredSports, _currentLocation, null, 1, 5, CancellationToken.None);
+        if (!attendingResult.Success) {
+            Console.WriteLine("Error fetching attending matches: " + attendingResult.ErrorMessages);
+            return;
+        }
+        recommendedMatches = recommendedResult.Data!.Data;
     }
-
-    private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
     
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return Task.CompletedTask;
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            try {
+                var pos = await JS.InvokeAsync<BrowserLocation>("getCurrentPosition");
 
-        SentrySdk.CaptureMessage("Hello Sentry");
-        StateHasChanged();
+                _currentLocation = new Location(
+                    pos.latitude,
+                    pos.longitude,
+                    "",
+                    "" 
+                );
 
-        return Task.CompletedTask;
+                Console.WriteLine($"Got location: {_currentLocation.Latitude}, {_currentLocation.Longitude}");
+            }
+            catch (JSException) {
+                Console.WriteLine("Geolocation not available or permission denied.");
+                _showGeoHint = true;
+            }
+            StateHasChanged();
+        }
     }
 }

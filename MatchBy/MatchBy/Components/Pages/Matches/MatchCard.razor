@@ -2,7 +2,7 @@
 
 @if (Match is null)
 {
-    <div class="p-4 text-[var(--text)]">Sem dados da partida.</div>
+    <div class="p-4 text-[var(--text)]">No data.</div>
     return;
 }
 
@@ -21,7 +21,7 @@
             @Match!.Sport
         </h5>
 
-        <p class="mb-2 font-normal text-[var(--text)] line-clamp-2">@Match!.Address</p>
+        <p class="mb-2 font-normal text-[var(--text)] line-clamp-1">@Match!.Address</p>
         <p class="mb-2 font-normal text-[var(--text)]">
             @Match!.MatchDateTimeUtc.ToLocalTime().ToString("dd/MM/yyyy - HH:mm")
         </p>
