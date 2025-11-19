@@ -208,8 +208,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
         if (match.CreatorId == userId)
         {
-            match.DeletedAtUtc = DateTime.UtcNow;
-            match.Participants.Clear();
+            match.Status = MatchStatus.Cancelled;
         }
         else
         {

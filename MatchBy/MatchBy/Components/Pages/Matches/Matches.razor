@@ -175,11 +175,8 @@
                     "",
                     "" 
                 );
-
-                Console.WriteLine($"Got location: {_currentLocation.Latitude}, {_currentLocation.Longitude}");
             }
             catch (JSException) {
-                Console.WriteLine("Geolocation not available or permission denied.");
                 _showGeoHint = true;
             }
             StateHasChanged();
