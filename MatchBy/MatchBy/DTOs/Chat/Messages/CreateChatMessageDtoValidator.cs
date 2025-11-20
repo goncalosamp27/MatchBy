@@ -13,11 +13,11 @@ public class CreateChatMessageDtoValidator : AbstractValidator<CreateChatMessage
         RuleFor(x => x.Content)
             .Must(s => !string.IsNullOrWhiteSpace(s))
             .WithMessage("Content cannot be whitespace only.")
-            .When(x => x.Content != null);
+            .When(x =>string.IsNullOrWhiteSpace(x.InviteUrl) && x.Location == null);
 
         RuleFor(x => x.Content)
             .MaximumLength(500).WithMessage("Content must not exceed 500 characters.")
-            .When(x =>  x.Content != null);
+            .When(x =>string.IsNullOrWhiteSpace(x.InviteUrl) && x.Location == null);
 
         RuleFor(x => x.CreatorUserId)
             .NotEmpty().WithMessage("CreatorUserId is required.")

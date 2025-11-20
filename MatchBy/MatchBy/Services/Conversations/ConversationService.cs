@@ -1,23 +1,23 @@
 ﻿using Amazon.S3;
 using FluentValidation;
+using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.S3;
-using MatchBy.Settings;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace MatchBy.Services.Conversations;
 
 public class ConversationService(
     ApplicationDbContext applicationDbContext,
     IS3Service s3Service,
-    IOptions<S3Settings> s3Settings,
     IValidator<CreateConversationDto> createConversationValidator,
-    IValidator<UpdateConversationDto> updateConversationValidator) : IConversationService
+    IValidator<UpdateConversationDto> updateConversationValidator,
+    IImageRefreshService imageRefreshService) : IConversationService
 {
     private async Task<CursorPaginationResponse<List<ConversationDto>>> PaginateAsync(
         IQueryable<Conversation> baseQuery,
@@ -66,7 +66,7 @@ public class ConversationService(
 
         foreach (Conversation conv in items)
         {
-            await RefreshConversationImagesAsync(conv);
+            await imageRefreshService.RefreshConversationImagesAsync(conv);
         }
 
         await applicationDbContext.SaveChangesAsync();
@@ -92,6 +92,8 @@ public class ConversationService(
             .Include(c => c.Participants)
             .Include(c => c.Creator)
             .Include(c => c.Messages)
+            .Include(m => m.Team)
+            .Include(m => m.Messages)
             .Where(c => c.Participants.Any(p => p.Id == creatorUserId));
 
         return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(await PaginateAsync(baseQuery, pageSize,
@@ -105,7 +107,9 @@ public class ConversationService(
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Include(m => m.Messages)
-            .Where(m => m.Id.Equals(conversationId))
+            .Include(m => m.Team)
+            .Include(m => m.Messages)
+            .Where(m => m.Id ==conversationId)
             .Where(m => m.Participants.Any(p => p.Id == creatorUserId))
             .FirstOrDefaultAsync(ct);
 
@@ -114,12 +118,12 @@ public class ConversationService(
             return Result<ConversationDto>.Fail("No conversation found");
         }
         
-        await RefreshConversationImagesAsync(conversation);
+        await imageRefreshService.RefreshConversationImagesAsync(conversation);
 
         // For private conversations, set the title to the other participant's name
         if (conversation.Type == ConversationType.Private)
         {
-            conversation.Title = conversation.Participants.FirstOrDefault(p => !p.Id.Equals(creatorUserId))?.DisplayName;
+            conversation.Title = conversation.Participants.FirstOrDefault(p => p.Id != creatorUserId)?.DisplayName;
         }
         
         return Result<ConversationDto>.Ok(conversation.ToDto());
@@ -129,7 +133,11 @@ public class ConversationService(
     public async Task<Result<ConversationDto>> CreateConversationAsync(CreateConversationDto createConversationDto,
         CancellationToken ct = default)
     {
-        await createConversationValidator.ValidateAndThrowAsync(createConversationDto, cancellationToken: ct);
+        ValidationResult? validationResult = await createConversationValidator.ValidateAsync(createConversationDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ConversationDto>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToArray());
+        }
 
         Conversation conversation = createConversationDto.ToEntity();
 
@@ -162,12 +170,18 @@ public class ConversationService(
     public async Task<Result<ConversationDto>> UpdateConversationAsync(UpdateConversationDto updateConversationDto,
         CancellationToken ct = default)
     {
-        await updateConversationValidator.ValidateAndThrowAsync(updateConversationDto, cancellationToken: ct);
-
+        ValidationResult? validationResult = await updateConversationValidator.ValidateAsync(updateConversationDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ConversationDto>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToArray());
+        }
+        
         // only the creator can update participants
         Conversation? convo = await applicationDbContext.Conversations
             .Include(m => m.Participants)
             .Include(m => m.Creator)
+            .Include(m => m.Messages)
+            .Include(m => m.Team)
             .Include(m => m.Messages)
             .Where(c => c.Id == updateConversationDto.ConversationId)
             .Where(c => c.CreatorId == updateConversationDto.CreatorUserId)
@@ -308,60 +322,5 @@ public class ConversationService(
         return await GetConversationByIdAsync(conversation.Id, userId, ct);
     }
 
-    private async Task RefreshConversationImagesAsync(Conversation c)
-    {
-        // Imagem da conversa
-        if (c.Image is not null)
-        {
-            if (c.Image.ExpireDateTimeUtc >= DateTime.UtcNow)
-            {
-                return;
-            }
 
-            Result<string> url = await s3Service.GetPresignedUrlAsync(
-                $"conversations/{c.Id}/image/{c.Image.Key}", HttpVerb.GET);
-            if (url.Success)
-            {
-                c.Image = c.Image with
-                {
-                    Url = url.Data!,
-                    ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry)
-                };
-            }
-        }
-
-        // Refresh Participants profile images
-        await Task.WhenAll(c.Participants.Select(RefreshProfileImage));
-
-        await applicationDbContext.SaveChangesAsync();
-
-        // Refresh Creator profile image
-        if (c.Creator is not null)
-        {
-            await RefreshProfileImage(c.Creator);
-        }
-    }
-
-    private async Task RefreshProfileImage(ApplicationUser user)
-    {
-        if (user.ProfileImage?.Key is null)
-        {
-            return;
-        }
-
-        if (user.ProfileImage.ExpireDateTimeUtc < DateTime.UtcNow || string.IsNullOrEmpty(user.ProfileImage.Url))
-        {
-            Result<string> url = await s3Service.GetPresignedUrlAsync(
-                $"users/{user.Id}/profile-pictures/{user.ProfileImage.Key}", HttpVerb.GET);
-
-            if (url.Success)
-            {
-                user.ProfileImage = user.ProfileImage with
-                {
-                    Url = url.Data!,
-                    ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry)
-                };
-            }
-        }
-    }
 }

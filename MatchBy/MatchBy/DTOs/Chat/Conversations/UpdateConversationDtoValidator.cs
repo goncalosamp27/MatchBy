@@ -38,8 +38,8 @@ public class UpdateConversationDtoValidator : AbstractValidator<UpdateConversati
         When(x => x.File is not null, () =>
         {
             RuleFor(x => x.File!)
-                .Must(f => fileValidator.IsValidBrowserImage(f) || fileValidator.IsValidBrowserVideo(f))
-                .WithMessage($"File is not allowed. Only .jpg, .jpeg, .png images or .mp4 videos are accepted, up to {maxMb:0.#} MB.");
+                .Must(fileValidator.IsValidBrowserImage)
+                .WithMessage($"File is not allowed. Only .jpg, .jpeg, .png images are accepted, up to {maxMb:0.#} MB.");
         });
     }
 }

@@ -12,7 +12,8 @@ public class ContactFormDtoValidator : AbstractValidator<ContactFormDto>
 
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
-            .EmailAddress().WithMessage("Invalid email address.");
+            .EmailAddress().WithMessage("Please enter a valid email address.")
+            .MaximumLength(200).WithMessage("Email cannot exceed 200 characters.");
 
         RuleFor(x => x.Subject)
             .NotEmpty().WithMessage("Subject is required.")
