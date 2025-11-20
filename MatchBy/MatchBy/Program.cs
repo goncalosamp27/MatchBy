@@ -15,6 +15,7 @@ using FluentValidation;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Hangfire.Common;
+using MatchBy.DTOs.PlayerRating;
 using MatchBy.Hubs;
 using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
@@ -22,6 +23,7 @@ using MatchBy.Services.Conversations;
 using MatchBy.Services.Email;
 using MatchBy.Services.FileValidator;
 using MatchBy.Services.Matches;
+using MatchBy.Services.PlayerRating;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
 using Resend;
@@ -132,7 +134,10 @@ builder.Services
     .AddBlazoriseFluentValidation();
 
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
+builder.Services.AddValidatorsFromAssemblyContaining<CreatePlayerRatingDto>();
 
+
+builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
