@@ -5,6 +5,43 @@ namespace MatchBy.Services.Email;
 
 public class EmailSender(IResend resend) : IEmailSender
 {
+    public async Task SendMatchCancelledAsync(
+        ApplicationUser user,
+        string email,
+        Match match,
+        string cancelledByName)
+    {
+
+        string subject = $"Match #{match.Id} Has Been Cancelled";
+
+        string body = $@"
+        <h2>Match Cancelled</h2>
+        <p>Hello {user.DisplayName},</p>
+        <p>The match you were scheduled to participate in has been <strong>cancelled</strong>.</p>
+
+        <h3>Match Details</h3>
+        <ul>
+            <li><strong>Sport:</strong> {match.Sport}</li>
+            <li><strong>Date:</strong> {match.MatchDateTimeUtc:dddd, MMM d yyyy hh:mm tt}</li>
+        </ul>
+
+        <p>The match was cancelled by <strong>{cancelledByName}</strong>.</p>
+
+        <br/>
+        <p>Best regards,<br/>MatchBy</p>
+    ";
+
+        var message = new EmailMessage
+        {
+            From = "MatchBy <matchby@uniqueue.site>",
+            To = email,
+            Subject = subject,
+            HtmlBody = body
+        };
+
+        await resend.EmailSendAsync(message);
+    }
+
     public async Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink)
     {
         var message = new EmailMessage

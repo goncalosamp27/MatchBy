@@ -5,12 +5,13 @@ using MatchBy.DTOs.Match;
 using MatchBy.Models;
 using MatchBy.Enums;
 using Microsoft.EntityFrameworkCore;
+using IEmailSender = MatchBy.Services.Email.IEmailSender;
 
 namespace MatchBy.Services.Matches;
 
 public class MatchesService(ApplicationDbContext applicationDbContext,
     IValidator<CreateMatchDto> createMatchValidator,
-    IValidator<UpdateMatchDto> updateMatchValidator) : IMatchesService
+    IValidator<UpdateMatchDto> updateMatchValidator, IEmailSender emailSender) : IMatchesService
 {
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
         string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
@@ -223,6 +224,22 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         if (match.CreatorId == userId)
         {
             match.DeletedAtUtc = DateTime.UtcNow;
+            match.Status = MatchStatus.Cancelled;
+            
+            // Send cancellation emails to all participants
+            foreach (ApplicationUser participant in match.Participants.Where(p => p.Id != userId))
+            {
+                if (participant.Email != null)
+                {
+                    await emailSender.SendMatchCancelledAsync(
+                        participant,
+                        participant.Email,
+                        match,
+                        user.DisplayName ?? "Unknown"
+                    );
+                }
+            }
+            
             match.Participants.Clear();
         }
         else
