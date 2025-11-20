@@ -86,14 +86,14 @@ public sealed class ChatState
     
     public void AddMessages(CursorPaginationResponse<List<ChatMessageDto>> messages)
     {
-        MessagesOfSelectedConversation.InsertRange(0, messages.Data);
+        MessagesOfSelectedConversation.InsertRange(0, messages.Data.Where(m => MessagesOfSelectedConversation.All(existing => existing.Id != m.Id)));
         NextChatMessagesCursor = messages.NextCursor;
         NotifyStateChanged();
     }
     
     public void AddConversations(CursorPaginationResponse<List<ConversationDto>> conversations)
     {
-        Conversations.AddRange(conversations.Data);
+        Conversations.AddRange(conversations.Data.Where(c => Conversations.All(existing => existing.Id != c.Id)));
         NextConversationCursor = conversations.NextCursor;
         NotifyStateChanged();
     }

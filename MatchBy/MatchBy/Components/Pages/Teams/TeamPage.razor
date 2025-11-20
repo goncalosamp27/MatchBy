@@ -1,0 +1,362 @@
+@page "/teams/{teamId}"
+@inject ITeamService TeamService
+@inject ITeamsInvitesService TeamInvitesService
+@using System.Security.Claims
+@using MatchBy.DTOs.Team
+@using MatchBy.DTOs.TeamInvite
+@using MatchBy.Services.Teams
+@using MatchBy.Services.TeamInvites
+@rendermode InteractiveServer
+@using Blazorise
+@inject IToastService ToastService 
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+@if (_team == null)
+{
+    <p>
+        <Loading></Loading>
+    </p>
+}
+else
+{
+    <div class="min-h-screen bg-[var(--background)] px-4 py-8">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content (Left) -->
+            <div class="lg:col-span-2 space-y-6">
+                <button @onclick="@(() => NavigationManager.NavigateTo("/teams"))" class="flex items-center gap-2 text-[var(--text)] hover:text-[var(--main)] mb-6">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Teams
+                </button>
+                <!-- Team Header Card -->
+                <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow-sm p-8">
+                    <div class="flex items-start gap-6">
+                        <div class="w-24 h-24 rounded-full bg-gray-300 flex-shrink-0 overflow-hidden border-4 border-[var(--section-secondary)]">
+                            @if (_team.ImageUrl is not null)
+                            {
+                                <img class="w-full h-full rounded-full flex-none object-cover"
+                                     src="@(_team.ImageUrl ?? "/images/user-avatar.png")"
+                                     alt="@_team.Name image"/>
+                            }
+                            else
+                            {
+                                <div class="w-full h-full rounded-full bg-[var(--section)]"></div>
+                            }
+                            
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h1 class="text-4xl font-bold text-[var(--main)]">@_team.Name</h1>
+                                </div>
+                                @if (_team.OwnerId == _userId)
+                                {
+                                    <button @onclick="@(() => NavigationManager.NavigateTo($"/teams/edit/{_team.Id}"))" class="px-6 py-2 bg-[var(--section-secondary)] border border-[var(--text)]/20 rounded-lg text-[var(--text)] hover:bg-[var(--background)] font-medium">
+                                        Edit Team
+                                    </button>
+                                }
+                            </div>
+
+                            <p class="text-[var(--text)] mt-4 text-lg">@_team.Description</p>
+
+                            <div class="flex flex-wrap gap-4 mt-6">
+                                @*<div class="flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-[var(--text)]" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11z"/>
+                                    </svg>
+                                    <span class="text-[var(--text)]">Porto, Portugal</span>
+                                </div>*@
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-[var(--text)]" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-2.08-2.54-1.41 1.41L10.5 18l4.04-5.29z"/>
+                                    </svg>
+                                    <span class="text-[var(--text)]">Created on @_team.CreatedAtUtc.ToLocalTime().ToString("dd 'of' MMMM 'of' yyyy")</span>
+                                </div>
+                            </div>
+
+                            @*<div class="flex gap-3 mt-6">
+                                <span class="inline-block px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">Recreativo</span>
+                                <span class="inline-block px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">Iniciantes</span>
+                            </div>*@
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members Section -->
+                <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow-sm p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-[var(--text)]">
+                            Members (@(_team.Members.Count)/@(_team.MaxMembers))
+                        </h2>
+                        <p class="text-[var(--text)]">All active members of this team</p>
+                    </div>
+
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        @if (_team?.Members != null && _team.Members.Any())
+                        {
+                            @foreach (var member in _team.Members)
+                            {
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-[var(--main)] hover:bg-[var(--main)]/5 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 rounded-full bg-gray-300 overflow-hidden border border-[var(--main)]">
+                                            @if (!string.IsNullOrEmpty(member.AvatarUrl))
+                                            {
+                                                <img src="@member.AvatarUrl" class="w-full h-full object-cover" alt=""/>
+                                            }
+                                            else
+                                            {
+                                                <img src="images/user-avatar.png" class="w-full h-full object-cover" alt=""/>
+                                            }
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-[var(--text)]">@member.DisplayName</p>
+                                            @if (member.Id == _team.OwnerId)
+                                            {
+                                                <span class="text-xs text-[var(--text)] opacity-70">You</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (member.Id == _team.OwnerId)
+                                    {
+                                        <span class="px-3 py-1 bg-[var(--main)] text-[var(--text-contrast)] rounded-full text-sm font-medium">Owner</span>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-[var(--text)] text-center py-8">No members yet.</p>
+                        }
+                    </div>
+                </div>
+
+                <!-- Invited Users Section (Only visible to team owner) -->
+                @if (_team?.OwnerId == _userId && _pendingInvites is { Count: > 0 })
+                {
+                    <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow-sm p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-[var(--text)]">
+                                Invited Users (@_pendingInvites.Count)
+                            </h2>
+                            <p class="text-[var(--text)] text-sm opacity-70">Pending invitations</p>
+                        </div>
+
+                        <div class="space-y-3 max-h-96 overflow-y-auto">
+                            @foreach (var invite in _pendingInvites)
+                            {
+                                <div class="flex items-center justify-between p-4 rounded-lg border border-[var(--main)] hover:bg-[var(--main)]/5 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 rounded-full bg-gray-300 overflow-hidden border border-[var(--main)]">
+                                            @if (!string.IsNullOrEmpty(invite.Receiver?.AvatarUrl))
+                                            {
+                                                <img src="@invite.Receiver.AvatarUrl" class="w-full h-full object-cover" alt=""/>
+                                            }
+                                            else
+                                            {
+                                                <img src="images/user-avatar.png" class="w-full h-full object-cover" alt=""/>
+                                            }
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-[var(--text)]">@invite.Receiver?.DisplayName</p>
+                                            <span class="text-xs text-[var(--text)] opacity-70">Invited @invite.CreatedAtUtc.ToLocalTime().ToString("MMM dd, yyyy")</span>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 bg-yellow-500/20 text-yellow-600 rounded-full text-sm font-medium">Pending</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Sidebar (Right) -->
+            <div class="lg:col-span-1 lg:mt-12">
+                <!-- Actions -->
+                <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-[var(--text)] mb-5">Actions</h3>
+
+                    @if (_team?.Members != null && _userId != null)
+                    {
+                        @if (_team.Members.All(m => m.Id != _userId) && _team.OwnerId != _userId)
+                        {
+                            <button
+                                @onclick="() => JoinTeam(_team.Id)"
+                                class="w-full py-3 rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] font-medium transition">
+                                Join Team
+                            </button>
+                        }
+                        else if (_team.Members.Any(m => m.Id == _userId) && _team.OwnerId != _userId)
+                        {
+                            <a href="/chat/@_team.ConversationId"
+                               class="block w-full py-3 mb-3 rounded-lg bg-[var(--main)] hover:opacity-90 text-[var(--text-contrast)] font-medium text-center transition">
+                                Go To Conversation
+                            </a>
+
+                            <button
+                                @onclick="() => LeaveTeam(_team.Id)"
+                                class="w-full py-3 rounded-lg bg-[var(--error)] hover:opacity-90 text-[var(--text-contrast)] font-medium transition">
+                                Leave Team
+                            </button>
+                        }
+                        else
+                        {
+                            <a href="/chat/@_team.ConversationId"
+                               class="block w-full py-3 mb-3 rounded-lg bg-[var(--main)] hover:opacity-90 text-[var(--text-contrast)] font-medium text-center transition">
+                                Go To Conversation
+                            </a>
+
+                            <button
+                                @onclick="() => LeaveTeam(_team.Id)"
+                                class="w-full py-3 rounded-lg bg-[var(--error)] hover:opacity-90 text-[var(--text-contrast)] font-medium transition">
+                                Delete Team
+                            </button>
+                        }
+                    }
+                </div>
+
+
+                <!-- Statistics -->
+                <div class="bg-[var(--section-secondary)] rounded-2xl border  border-[var(--main)] shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-[var(--text)] mb-6">Statistics</h3>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[var(--text)]">Total Members</span>
+                            <span class="text-2xl font-bold text-[var(--text)]">@(_team?.Members.Count ?? 0)</span>
+                        </div>
+
+                        <div class="border-t border-[var(--main)] pt-4 flex items-center justify-between">
+                            <span class="text-[var(--text)]">Available Spots</span>
+                            <span class="text-2xl font-bold text-[var(--text)]">13</span>
+                        </div>
+
+                        <div class="border-t  border-[var(--main)] pt-4 flex items-center justify-between">
+                            <span class="text-[var(--text)]">Occupancy Rate</span>
+                            <span class="text-2xl font-bold text-[var(--text)]">13%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
+@code {
+    [Parameter] public string TeamId { get; set; } = string.Empty;
+    private TeamDto? _team;
+    private List<TeamInviteDto>? _pendingInvites;
+    
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        var result = await TeamService.GetTeamByIdAsync(TeamId, _userId ?? "", CancellationToken.None);
+        if (!result.Success)
+        {
+            Console.WriteLine("Error fetching team: " + result.ErrorMessages);
+            await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error fetching team.");
+            NavigationManager.NavigateTo("/teams");
+            return;
+        }
+        _team = result.Data!;
+
+        // Load pending invites if user is the owner
+        if (_team.OwnerId == _userId)
+        {
+            await LoadPendingInvites();
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task LoadPendingInvites()
+    {
+        try
+        {
+            var result = await TeamInvitesService.GetInvitesForTeam(TeamId, 1, 100, CancellationToken.None);
+            if (result is { Success: true, Data: not null })
+            {
+                _pendingInvites = result.Data.Data
+                    .Where(i => i.Status == InviteStatus.Pending)
+                    .ToList();
+            }
+            else
+            {
+                _pendingInvites = [];
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading invites: {ex.Message}");
+            _pendingInvites = [];
+        }
+    }
+    
+    private async Task LeaveTeam(string teamId)
+    {
+        if (_userId is not null)
+        {
+            var result = await TeamService.LeaveTeamAsync(teamId, _userId, CancellationToken.None);
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error leaving team.");
+                return;
+            }
+            
+            if (result.Data == 1)
+            {
+                await ToastService.Success("Team deleted successfully!", "Leave Team");
+                NavigationManager.NavigateTo("/Teams");
+            }
+            else
+            {
+                await ToastService.Success("Successfully left the team!", "Leave Team");
+                var teamResult = await TeamService.GetTeamByIdAsync(teamId, _userId, CancellationToken.None);
+                if (teamResult.Success)
+                {
+                    _team = teamResult.Data!;
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+    
+    private async Task JoinTeam(string teamId)
+    {
+        if (_userId is not null)
+        {
+            var result = await TeamService.JoinTeamAsync(teamId, _userId, CancellationToken.None);
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error joining team.");
+                return;
+            }
+            
+            if (!result.Data)
+            {
+                NavigationManager.NavigateTo("/Teams");
+            }
+            else
+            {
+                await ToastService.Success("Successfully join the team!", "Join Team");
+                var teamResult = await TeamService.GetTeamByIdAsync(teamId, _userId, CancellationToken.None);
+                if (teamResult.Success)
+                {
+                    _team = teamResult.Data!;
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+}
+}

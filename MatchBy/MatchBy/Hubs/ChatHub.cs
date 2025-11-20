@@ -10,10 +10,7 @@ namespace MatchBy.Hubs;
 
 public class ChatHub(IChatMessageService chatMessageService, IConversationService conversationService) : Hub
 {
-    // Mapeia userId -> lista de connectionIds
     private static readonly ConcurrentDictionary<string, HashSet<string>> UserConnections = new();
-
-    // Mapeia connectionId -> userId (para lookup rápido)
     private static readonly ConcurrentDictionary<string, string> ConnectionUsers = new();
 
     public override Task OnDisconnectedAsync(Exception? exception)
@@ -94,7 +91,6 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
         string userId = EnsureUser();
         if (createChatMessageDto.CreatorUserId != userId)
         {
-            // Instead of throw, return error to caller
             await Clients.Caller.SendAsync("MessageCreated",
                 Result<ChatMessageDto>.Fail("Invalid sender."));
             return;
@@ -192,7 +188,6 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
 
         var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
 
-        // Send success to all participants
         await Clients.Clients(participantConnections)
             .SendAsync("MessageDeleted", Result<MessageDeletedDto>.Ok(new MessageDeletedDto(
                 conv.Data!,
@@ -222,7 +217,6 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
         // Add creator to the group
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(conv.Data!.Id));
 
-        // Notify all connected participants
         var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
         foreach (string participant in participantConnections)
@@ -243,7 +237,6 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
             return;
         }
 
-        // Notify all connected participants
         var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
 
         foreach (string participant in participantConnections)
@@ -276,7 +269,6 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
             return;
         }
 
-        // Notify all connected participants
         var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
 
         await Clients.Clients(participantConnections)

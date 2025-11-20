@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Chat.Messages;
 using MatchBy.Models;
@@ -80,7 +81,7 @@ public class ChatMessageService(
             .Include(m => m.ReplyToMessage)
             .ThenInclude(r => r!.Sender)
             .Include(m => m.Conversation)
-            .Where(m => m.Id.Equals(chatMessageId))
+            .Where(m => m.Id == chatMessageId)
             .FirstOrDefaultAsync(ct);
 
         if (chatMessage is null)
@@ -101,7 +102,11 @@ public class ChatMessageService(
     public async Task<Result<ChatMessageDto>> CreateChatMessageAsync(CreateChatMessageDto createChatMessageDto,
         CancellationToken ct = default)
     {
-        await createChatMessageValidator.ValidateAndThrowAsync(createChatMessageDto, ct);
+        ValidationResult? validationResult = await createChatMessageValidator.ValidateAsync(createChatMessageDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ChatMessageDto>.Fail(validationResult.ToString());
+        }
 
         ApplicationUser? sender = await applicationDbContext.Users
             .Where(u => u.Id == createChatMessageDto.CreatorUserId)
@@ -134,7 +139,11 @@ public class ChatMessageService(
     public async Task<Result<ChatMessageDto>> UpdateChatMessageAsync(UpdateChatMessageDto updateChatMessageDto,
         CancellationToken ct = default)
     {
-        await updateChatMessageValidator.ValidateAndThrowAsync(updateChatMessageDto, ct);
+        ValidationResult? validationResult = await updateChatMessageValidator.ValidateAsync(updateChatMessageDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ChatMessageDto>.Fail(validationResult.ToString());
+        }
 
         ApplicationUser? sender = await applicationDbContext.Users
             .Where(u => u.Id == updateChatMessageDto.CreatorUserId)

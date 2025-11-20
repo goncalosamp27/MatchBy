@@ -18,7 +18,8 @@
     <Loading></Loading>
 }
 else {
-    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-8">
+    <div class="max-w-screen-xl px-4 mt-8 mb-16 mx-auto">
+    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" class="mt-8">
         <Heading Size="HeadingSize.Is2" Margin="Margin.Is3.FromBottom" Style="color: var(--main);">
             Create Match
         </Heading>
@@ -26,7 +27,7 @@ else {
         <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
             <Fields>
                 <FieldLabel> Choose the match location by clicking on the map: </FieldLabel>
-                <div id="matchMap" class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-3 border-[var(--main)] shadow-sm"></div>
+                <div id="matchMap" class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-3 border-[var(--main)] shadow-sm z-0"></div>
 
                 @* HIDDEN LOCATION FIELDS *@
                 <div style="display:none">
@@ -86,13 +87,19 @@ else {
                     </Validation>
                 </div>
             </Fields>
-
             <Validation Validator="@ValidateAddress">
                 <Field>
                     <FieldLabel>Address</FieldLabel>
                     <FieldBody>
                         <TextEdit Placeholder="Type your match address" 
                                 Text="@_model.Address"
+                                Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                 TextChanged="@(v => _model = _model with { Address = v })"
                                 @onblur="@OnAddressBlur">
                             <Feedback>
@@ -109,6 +116,13 @@ else {
                     <FieldBody>
                         <TextEdit Placeholder="Type a description for your match" 
                                 Text="@_model.Description"
+                                Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                 TextChanged="@(v => _model = _model with { Description = v })">
                             <Feedback>
                                 <ValidationError/>
@@ -125,6 +139,13 @@ else {
                         <FieldBody>
                             <NumericEdit TValue="int" Placeholder="Min Players Number" 
                                         Value="@_model.MinPlayers"
+                                        Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                         ValueChanged="@(v => _model = _model with { MinPlayers = v })">
                                 <Feedback>
                                     <ValidationError/>
@@ -140,6 +161,13 @@ else {
                         <FieldBody>
                             <NumericEdit TValue="int" Placeholder="Max Players Number" 
                                         Value="@_model.MaxPlayers"
+                                        Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                         ValueChanged="@(v => _model = _model with { MaxPlayers = v })">
                                 <Feedback>
                                     <ValidationError/>
@@ -157,6 +185,13 @@ else {
                         <FieldBody>
                             <Select TValue="Sports" 
                                     SelectedValue="@_model.Sport"
+                                    Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                     SelectedValueChanged="@(v => _model = _model with { Sport = v })">
                                 @foreach (var item in Enum.GetValues<Sports>())
                                 {
@@ -173,6 +208,13 @@ else {
                         <FieldBody>
                             <Select TValue="MatchPrivacy" 
                                     SelectedValue="@_model.Privacy"
+                                    Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                     SelectedValueChanged="@(v => _model = _model with { Privacy = v })">
                                 @foreach (var item in Enum.GetValues<MatchPrivacy>())
                                 {
@@ -189,6 +231,13 @@ else {
                         <DatePicker TValue="DateTime"
                                     InputMode="DateInputMode.DateTime"
                                     DefaultHour="9"
+                                    Class ="!block !w-full !p-2.5 !rounded-lg
+                                    !bg-[var(--section-secondary)]
+                                    !text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0"
                                     DefaultMinute="15"
                                     TimeAs24hr="true"
                                     Placeholder="DD/MM/YYYY - HH:mm"
@@ -201,15 +250,27 @@ else {
                     </Field>
                 </Validation>
             </Fields>
-
+            <div class="mt-4">
             <Field>
-                <Button Color="Color.Primary" Clicked="@SubmitMatch" Loading="@_isLoading">
+                <Button Color="Color.Primary" Clicked="@SubmitMatch" Loading="@_isLoading" Width="Width.Is100"
+                        Class ="!block !w-full !p-2.5 !rounded-lg
+                                    hover:!text-[var(--text)]
+                                    focus:!border-[var(--main)]
+                                    focus:!ring-1 focus:!ring-[var(--main)]
+                                    focus:!outline-none
+                                    !border-0
+                                    !text-[var(--text-contrast)]
+                                    !bg-[var(--main)]
+                                    hover:!bg-[var(--main-hover)]"
+                                    >
                     Create Match
                 </Button>
             </Field>
+            </div>
 
         </Validations>
     </Div>
+    </div>
 }
 
 @code {
