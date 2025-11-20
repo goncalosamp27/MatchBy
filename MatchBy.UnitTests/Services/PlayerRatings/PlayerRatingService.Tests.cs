@@ -13,12 +13,14 @@ namespace MatchBy.UnitTests.Services.PlayerRatings;
 public class PlayerRatingServiceTests : IDisposable
 {
     private readonly Mock<IValidator<CreatePlayerRatingDto>> _createValidatorMock;
+    private readonly Mock<ILogger<PlayerRatingService>> _logger;
     private readonly ApplicationDbContext _dbContext;
     private readonly PlayerRatingService _playerRatingService;
 
     public PlayerRatingServiceTests()
     {
         _createValidatorMock = new Mock<IValidator<CreatePlayerRatingDto>>();
+        _logger = new Mock<ILogger<PlayerRatingService>>();
         var updateValidatorMock = new Mock<IValidator<UpdatePlayerRatingDto>>();
 
         DbContextOptions<ApplicationDbContext> options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -30,7 +32,8 @@ public class PlayerRatingServiceTests : IDisposable
         _playerRatingService = new PlayerRatingService(
             _dbContext,
             _createValidatorMock.Object,
-            updateValidatorMock.Object);
+            updateValidatorMock.Object,
+            _logger.Object);
     }
 
     public void Dispose()
@@ -65,7 +68,7 @@ public class PlayerRatingServiceTests : IDisposable
             SentById = "user1",
             ReceivedById = "user2",
             MatchId = "match1",
-            Rating = 4.5f,
+            Rating = 4,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -81,7 +84,7 @@ public class PlayerRatingServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.NotNull(result.Data);
         Assert.Equal("rating1", result.Data.Id);
-        Assert.Equal(4.5f, result.Data.Rating);
+        Assert.Equal(4, result.Data.Rating);
     }
 
     #endregion
@@ -117,7 +120,7 @@ public class PlayerRatingServiceTests : IDisposable
             SentById = "user1",
             ReceivedById = "user2",
             MatchId = "match1",
-            Rating = 4.5f
+            Rating = 4
         };
 
         _createValidatorMock
@@ -130,7 +133,7 @@ public class PlayerRatingServiceTests : IDisposable
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.Data);
-        Assert.Equal(4.5f, result.Data.Rating);
+        Assert.Equal(4, result.Data.Rating);
     }
 
     [Fact]
@@ -159,7 +162,7 @@ public class PlayerRatingServiceTests : IDisposable
             SentById = "user1",
             ReceivedById = "user2",
             MatchId = "match1",
-            Rating = 4.0f,
+            Rating = 4,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -173,7 +176,7 @@ public class PlayerRatingServiceTests : IDisposable
             SentById = "user1",
             ReceivedById = "user2",
             MatchId = "match1",
-            Rating = 4.5f
+            Rating = 4
         };
 
         _createValidatorMock
@@ -204,7 +207,7 @@ public class PlayerRatingServiceTests : IDisposable
             SentById = "user2",
             ReceivedById = "user1",
             MatchId = "match1",
-            Rating = 4.0f,
+            Rating = 4,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -214,7 +217,7 @@ public class PlayerRatingServiceTests : IDisposable
             SentById = "user3",
             ReceivedById = "user1",
             MatchId = "match2",
-            Rating = 5.0f,
+            Rating = 5,
             CreatedAtUtc = DateTime.UtcNow
         };
 

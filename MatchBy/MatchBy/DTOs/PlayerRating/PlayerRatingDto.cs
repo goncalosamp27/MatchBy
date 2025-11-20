@@ -6,7 +6,7 @@ namespace MatchBy.DTOs.PlayerRating;
 public sealed record PlayerRatingDto
 {
     public required string Id { get; init; }
-    public required float Rating { get; init; }
+    public required int Rating { get; init; }
     public required string SentById { get; init; }
     public UserDto? SentBy { get; init; }
     public required string ReceivedById { get; init; }

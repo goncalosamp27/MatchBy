@@ -9,12 +9,8 @@ public interface IPlayerRatingService
     Task<Result<PaginationResponse<List<PlayerRatingDto>>>> GetRatingsForMatch(string matchId, int page = 1, int pageSize = 10, CancellationToken ct = default);
     Task<Result<PaginationResponse<List<PlayerRatingDto>>>> GetRatingsGivenByUser(string userId, int page = 1, int pageSize = 10, CancellationToken ct = default);
     Task<Result<PaginationResponse<List<PlayerRatingDto>>>> GetRatingsReceivedByUser(string userId, int page = 1, int pageSize = 10, CancellationToken ct = default);
-    Task<Result<PlayerRatingDto>> CreateRating(CreatePlayerRatingDto createDto, CancellationToken ct = default);
+    Task<Result<PlayerRatingDto>> CreatePlayerRatingAsync(CreatePlayerRatingDto createDto, CancellationToken ct = default);
     Task<Result<PlayerRatingDto>> UpdateRating(UpdatePlayerRatingDto updateDto, CancellationToken ct = default);
     Task<Result<bool>> DeleteRating(string ratingId, string userId, CancellationToken ct = default);
     Task<Result<double>> GetAverageRatingForUser(string userId, CancellationToken ct = default);
 }
-
-
-
-

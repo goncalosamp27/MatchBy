@@ -11,7 +11,7 @@ public class CreatePlayerRatingDtoValidatorTests
     {
         return new CreatePlayerRatingDto
         {
-            Rating = 4.5f,
+            Rating = 4,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789"
@@ -21,10 +21,10 @@ public class CreatePlayerRatingDtoValidatorTests
     #region Rating Validation Tests
 
     [Theory]
-    [InlineData(-1f)]
-    [InlineData(5.1f)]
-    [InlineData(10f)]
-    public void Validate_RatingOutOfRange_ShouldHaveValidationError(float rating)
+    [InlineData(-1)]
+    [InlineData(5)]
+    [InlineData(10)]
+    public void Validate_RatingOutOfRange_ShouldHaveValidationError(int rating)
     {
         // Arrange
         CreatePlayerRatingDto dto = CreateValidDto() with { Rating = rating };
@@ -38,10 +38,10 @@ public class CreatePlayerRatingDtoValidatorTests
     }
 
     [Theory]
-    [InlineData(0f)]
-    [InlineData(2.5f)]
-    [InlineData(5f)]
-    public void Validate_RatingIsValid_ShouldNotHaveValidationError(float rating)
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(5)]
+    public void Validate_RatingIsValid_ShouldNotHaveValidationError(int rating)
     {
         // Arrange
         CreatePlayerRatingDto dto = CreateValidDto() with { Rating = rating };
@@ -198,7 +198,7 @@ public class CreatePlayerRatingDtoValidatorTests
         // Arrange
         var dto = new CreatePlayerRatingDto
         {
-            Rating = 4.0f,
+            Rating = 4,
             SentById = "user_123",
             ReceivedById = "user_123",
             MatchId = "match_789"
@@ -248,7 +248,7 @@ public class CreatePlayerRatingDtoValidatorTests
         // Arrange
         var dto = new CreatePlayerRatingDto
         {
-            Rating = -1f,
+            Rating = -1,
             SentById = string.Empty,
             ReceivedById = string.Empty,
             MatchId = string.Empty

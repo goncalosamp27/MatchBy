@@ -12,7 +12,7 @@ public class UpdatePlayerRatingDtoValidatorTests
         return new UpdatePlayerRatingDto
         {
             Id = "playerrating_123",
-            Rating = 4.5f,
+            Rating = 4,
             SentById = "sender_123"
         };
     }
@@ -65,10 +65,10 @@ public class UpdatePlayerRatingDtoValidatorTests
     #region Rating Validation Tests
 
     [Theory]
-    [InlineData(-0.5f)]
-    [InlineData(5.5f)]
-    [InlineData(10f)]
-    public void Validate_RatingOutOfRange_ShouldHaveValidationError(float rating)
+    [InlineData(0)]
+    [InlineData(5)]
+    [InlineData(10)]
+    public void Validate_RatingOutOfRange_ShouldHaveValidationError(int rating)
     {
         // Arrange
         UpdatePlayerRatingDto dto = CreateValidDto() with { Rating = rating };
@@ -82,10 +82,10 @@ public class UpdatePlayerRatingDtoValidatorTests
     }
 
     [Theory]
-    [InlineData(0f)]
-    [InlineData(2.5f)]
-    [InlineData(5f)]
-    public void Validate_RatingIsValid_ShouldNotHaveValidationError(float rating)
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(5)]
+    public void Validate_RatingIsValid_ShouldNotHaveValidationError(int rating)
     {
         // Arrange
         UpdatePlayerRatingDto dto = CreateValidDto() with { Rating = rating };
@@ -166,7 +166,7 @@ public class UpdatePlayerRatingDtoValidatorTests
         var dto = new UpdatePlayerRatingDto
         {
             Id = string.Empty,
-            Rating = -1f,
+            Rating = -1,
             SentById = string.Empty
         };
 
