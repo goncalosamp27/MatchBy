@@ -81,7 +81,7 @@ public class ChatMessageService(
             .Include(m => m.ReplyToMessage)
             .ThenInclude(r => r!.Sender)
             .Include(m => m.Conversation)
-            .Where(m => m.Id.Equals(chatMessageId))
+            .Where(m => m.Id == chatMessageId)
             .FirstOrDefaultAsync(ct);
 
         if (chatMessage is null)

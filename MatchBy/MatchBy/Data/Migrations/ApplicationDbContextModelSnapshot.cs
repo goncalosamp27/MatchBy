@@ -247,10 +247,12 @@ namespace MatchBy.Data.Migrations
 
                     b.Property<string>("ReceiverId")
                         .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("SenderId")
                         .IsRequired()
+                        .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
@@ -329,6 +331,9 @@ namespace MatchBy.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<DateTime?>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -337,7 +342,13 @@ namespace MatchBy.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeclinedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("MatchId")
@@ -354,6 +365,9 @@ namespace MatchBy.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -433,6 +447,9 @@ namespace MatchBy.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<int>("MaxMembers")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -462,6 +479,9 @@ namespace MatchBy.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<DateTime?>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -470,7 +490,13 @@ namespace MatchBy.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeclinedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReceiverId")
@@ -482,6 +508,9 @@ namespace MatchBy.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("TeamId")
                         .IsRequired()
@@ -983,6 +1012,41 @@ namespace MatchBy.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.OwnsOne("MatchBy.Models.FileStore", "Image", b1 =>
+                        {
+                            b1.Property<string>("TeamId")
+                                .HasColumnType("character varying(500)");
+
+                            b1.Property<DateTime>("CreatedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<DateTime>("ExpireDateTimeUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<int>("FileCategory")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("FileType")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Key")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.Property<string>("Url")
+                                .IsRequired()
+                                .HasColumnType("text");
+
+                            b1.HasKey("TeamId");
+
+                            b1.ToTable("Teams");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TeamId");
+                        });
+
+                    b.Navigation("Image");
+
                     b.Navigation("Owner");
                 });
 
@@ -991,13 +1055,13 @@ namespace MatchBy.Data.Migrations
                     b.HasOne("MatchBy.Models.ApplicationUser", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("MatchBy.Models.ApplicationUser", "Sender")
                         .WithMany()
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("MatchBy.Models.Team", "Team")

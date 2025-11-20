@@ -1,40 +1,96 @@
 @using MatchBy.DTOs.Team
 
-@if (Team is null)
-{
-    <div class="p-4 text-[var(--text)]">No team data available.</div>
-    return;
-}
 
 <a href="@("/teams/" + Team.Id)"
-   class="h-full flex flex-col md:flex-row bg-[var(--section)] border-2 border-[var(--main)] rounded-lg shadow-sm md:items-stretch
-          transform transition duration-200 ease-out
-          hover:-translate-y-1 hover:shadow-[0_0px_10px_-4px_var(--main)]
-          focus-visible:-translate-y-1">
-
-    <div class="md:basis-2/5 md:flex-none">
-        <img class="object-cover w-full h-64 md:h-full rounded-t-lg md:rounded-none md:rounded-s-lg" src="/images/sports/football.jpg" alt="@Team!.Name" />
+   class="rounded-xl border border-[var(--main)] p-6 hover:shadow-lg transition-shadow bg-[var(--section-secondary)]">
+    <div class="flex items-start justify-between mb-4">
+        <div class="flex items-center gap-4">
+            @if (Team.ImageUrl is not null)
+            {
+                <img class="w-14 h-14 rounded-full flex-none object-cover"
+                     src="@(Team.ImageUrl ?? "/images/user-avatar.png")"
+                     alt="@Team.Name image"/>
+            }
+            else
+            {
+                <div class="w-14 h-14 rounded-full bg-[var(--section)]"></div>
+            }
+            <h3 class="font-bold text-lg text-[var(--text)]">@Team.Name</h3>
+        </div>
+        @if(Team.OwnerId == UserId)
+        {
+            <span
+                class="text-xs font-medium px-2.5 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">Owner</span>
+        }
+        else if(Team.Members.Any(m => m.Id == UserId))
+        {
+            <span class="text-xs px-3 py-1 rounded-full bg-[var(--section)] text-[var(--text)]">Member</span>
+        }
+        else
+        {
+            <span class="text-xs px-3 py-1 rounded-full bg-[var(--section)] text-[var(--text)]">Invited</span>
+        }
     </div>
 
-    <div class="md:basis-3/5 flex flex-col justify-between p-4 leading-normal">
-        <h5 class="mb-2 text-xl font-bold tracking-tight text-[var(--main)]">
-            @Team!.Name
-        </h5>
+    <p class="text-sm mb-4 text-[var(--text)] opacity-70">@Team.Description</p>
 
-        <p class="mb-2 font-normal text-[var(--text)] line-clamp-2">@Team!.Description</p>
-        <p class="mb-2 font-normal text-[var(--text)]">
-            Created: @Team!.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")
-        </p>
-        <p class="mb-3 font-normal text-[var(--text)]">
-            Owner: @(Team!.Owner?.DisplayName ?? "Unknown")
-        </p>
-        <p class="text-sm text-[var(--main)]">
-            Members: @Team!.Members.Count
-        </p>
+    <!-- Stats Section -->
+    <div class="flex items-center justify-between pt-4 border-t border-[var(--main)]/20">
+        <div class="flex items-center gap-2">
+            <!-- Member Avatars Stack -->
+            <div class="flex -space-x-2">
+                @foreach (var member in Team.Members.Take(3))
+                {
+                    <img src="@(member.AvatarUrl ?? "/images/user-avatar.png")" 
+                         alt="@member.DisplayName" 
+                         class="w-8 h-8 rounded-full border-2 border-[var(--section-secondary)] object-cover"
+                         title="@member.DisplayName"/>
+                }
+                @if (Team.Members.Count > 3)
+                {
+                    <div class="w-8 h-8 rounded-full border-2 border-[var(--section-secondary)] bg-[var(--main)] flex items-center justify-center text-xs text-[var(--text-contrast)] font-medium">
+                        +@(Team.Members.Count - 3)
+                    </div>
+                }
+            </div>
+            <span class="text-sm font-medium text-[var(--text)]">@Team.Members.Count/@Team.MaxMembers member@(Team.Members.Count != 1 ? "s" : "")</span>
+        </div>
+        
+        <!-- Created info -->
+        <div class="text-xs text-[var(--text)] opacity-60">
+            <svg class="w-4 h-4 inline-block" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+            </svg>
+            @Team.Owner?.DisplayName
+        </div>
     </div>
+
+    @*
+    @if (Team.OwnerId == UserId)
+    {
+        <button
+            class="w-full py-3 rounded-lg font-medium transition-colors border-2 border-[var(--main)] text-[var(--text)] bg-transparent hover:bg-[var(--section)]">
+            Delete Team
+        </button>
+    }
+    else if (Team.Members.Any(m => m.Id == UserId))
+    {
+        <button
+            class="w-full py-3 rounded-lg font-medium transition-colors border-2 border-[var(--main)] text-[var(--text)] bg-transparent hover:bg-[var(--section)]">
+            Leave Team
+        </button>
+    }
+    else
+    {
+        <button
+            class="w-full py-3 rounded-lg font-medium transition-colors bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)]">
+            Join Team
+        </button>
+    }*@
 </a>
 
 
 @code {
-    [Parameter] public TeamDto? Team { get; set; }
+    [Parameter] public required TeamDto Team { get; set; }
+    [Parameter] public string? UserId { get; set; }
 }

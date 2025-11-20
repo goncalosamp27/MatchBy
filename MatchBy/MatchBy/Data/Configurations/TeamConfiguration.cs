@@ -25,6 +25,8 @@ public class TeamConfiguration: IEntityTypeConfiguration<Team>
             .HasMaxLength(500)
             .IsRequired();
         
+        builder.OwnsOne(u => u.Image);
+        
         builder.HasOne(t => t.Owner)
             .WithMany()
             .HasForeignKey(t => t.OwnerId)

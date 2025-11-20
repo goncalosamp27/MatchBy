@@ -1,11 +1,14 @@
 ﻿using FluentValidation;
+using MatchBy.Services.FileValidator;
 
 namespace MatchBy.DTOs.Team;
 
 public class UpdateTeamDtoValidator : AbstractValidator<UpdateTeamDto>
 {
-    public UpdateTeamDtoValidator()
+    public UpdateTeamDtoValidator(IFileValidator fileValidator)
     {
+        double maxMb = fileValidator.GetMaxFileBytes() / (1024d * 1024d);
+
         RuleFor(x => x.Id)
             .NotEmpty().WithMessage("TeamId is required.");
         
@@ -35,5 +38,12 @@ public class UpdateTeamDtoValidator : AbstractValidator<UpdateTeamDto>
         RuleFor(x => x)
             .Must(x => x.MembersIds.Contains(x.OwnerId))
             .WithMessage("Creator must be included in MembersIds.");
+        
+        When(x => x.File is not null, () =>
+        {
+            RuleFor(x => x.File!)
+                .Must(fileValidator.IsValidBrowserImage)
+                .WithMessage($"File is not allowed. Only .jpg, .jpeg, .png images are accepted, up to {maxMb:0.#} MB.");
+        });
     }
 }

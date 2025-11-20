@@ -14,13 +14,14 @@ public static class ConversationMappings
             ImageUrl = conversation.Image?.Url,
             CreatorId = conversation.CreatorId,
             TeamId = conversation.TeamId,
+            TeamImageUrl = conversation.Team?.Image?.Url,
             MatchId = conversation.MatchId,
             CreatedAtUtc = conversation.CreatedAtUtc,
             UpdatedAtUtc = conversation.UpdatedAtUtc,
             LastMessageContent = conversation.LastMessageContent,
-            MessagesCount = conversation.Messages?.Count ?? 0,
+            MessagesCount = conversation.Messages.Count,
             LastMessageAtUtc = conversation.LastMessageAtUtc,
-            Participants = [.. (conversation.Participants ?? Enumerable.Empty<ApplicationUser>()).Select(p => new ConversationParticipantDto
+            Participants = [.. conversation.Participants.Select(p => new ConversationParticipantDto
             {
                 Id = p.Id,
                 Username = p.UserName!, // assuming UserName is non-null because it's required in the user configuration

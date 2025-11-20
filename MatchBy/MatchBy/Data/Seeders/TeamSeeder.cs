@@ -27,6 +27,7 @@ public class TeamSeeder: ISeeder
             OwnerId = users[0].Id,
             Privacy = TeamPrivacy.Public,
             Members = users.Take(3).ToList(),
+            MaxMembers = 10,
             CreatedAtUtc = baseDate.AddDays(-25)
         });
         
@@ -41,6 +42,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[1].Id,
                 Privacy = TeamPrivacy.Private,
                 Members = new List<ApplicationUser> { users[1] },
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-20)
             });
         }
@@ -56,6 +58,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[2 % users.Count].Id,
                 Privacy = TeamPrivacy.Public,
                 Members = users.Take(Math.Min(5, users.Count)).ToList(),
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-15)
             });
         }
@@ -71,6 +74,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[0].Id,
                 Privacy = TeamPrivacy.Private,
                 Members = users.Where((u, i) => i % 2 == 0).Take(4).ToList(),
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-10)
             });
         }
@@ -86,6 +90,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[1].Id,
                 Privacy = TeamPrivacy.Public,
                 Members = new List<ApplicationUser> { users[1], users[Math.Min(2, users.Count - 1)] },
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-5)
             });
         }
@@ -101,6 +106,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[3 % users.Count].Id,
                 Privacy = TeamPrivacy.Public,
                 Members = users.Skip(2).Take(3).ToList(),
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-8)
             });
         }
@@ -116,6 +122,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[2].Id,
                 Privacy = TeamPrivacy.Private,
                 Members = users.Take(2).ToList(),
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-12)
             });
         }
@@ -131,6 +138,7 @@ public class TeamSeeder: ISeeder
                 OwnerId = users[0].Id,
                 Privacy = TeamPrivacy.Public,
                 Members = users.Take(Math.Min(4, users.Count)).ToList(),
+                MaxMembers = 10,
                 CreatedAtUtc = baseDate.AddDays(-18)
             });
         }

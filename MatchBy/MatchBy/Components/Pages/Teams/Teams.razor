@@ -1,89 +1,322 @@
-@page "/Teams"
-@using MatchBy.Services.Teams
-@inject ITeamService TeamService
-@inject NavigationManager NavigationManager
-@rendermode @(new InteractiveServerRenderMode(false))
-@attribute [StreamRendering]
-@inject AuthenticationStateProvider AuthenticationStateProvider
+﻿@page "/teams"
 @using System.Security.Claims
 @using MatchBy.DTOs.Team
-@using MatchBy.Components
+@using MatchBy.Services.Teams
+@using Blazorise
+@rendermode InteractiveServer
+@inject ITeamService TeamService
+@attribute [StreamRendering]
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<section class="bg-[var(--background)]">
-    <div class="py-8 px-4 mx-auto  text-center lg:py-16">
-        <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Create your Team!</h1>
-        <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage teams.</p>
-        <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes team management quick, simple and collaborative!</p>
-        <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
-            <a @onclick="GoToCreateTeam" class="inline-flex justify-center items-center py-3 px-5 text-base font-medium text-center text-[var(--text-contrast)] hover:text-[var(--text)] rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]">
-                Get started
-                <svg class="w-3.5 h-3.5 ms-2 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                </svg>
+<div class="min-h-screen p-8 bg-[var(--background)]">
+    <div class="max-w-7xl mx-auto">
+        <nav class="flex mb-4" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
+                <li class="inline-flex items-center">
+                    <a href="/" class="inline-flex items-center text-sm font-medium text-[var(--text)] hover:text-fg-brand">
+                        <svg class="w-4 h-4 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
+                             height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5"/>
+                        </svg>
+                        Home
+                    </a>
+                </li>
+                <li aria-current="page">
+                    <div class="flex items-center space-x-1.5">
+                        <svg class="w-3.5 h-3.5 rtl:rotate-180 text-[var(--text)]" aria-hidden="true"
+                             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="m9 5 7 7-7 7"/>
+                        </svg>
+                        <span class="inline-flex items-center text-sm font-medium text-[var(--text)]">Teams</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+        <!-- Header -->
+        <div class="flex justify-between items-start mb-8">
+            <div>
+                <h1 class="text-4xl font-bold mb-2 text-[var(--text)]">Teams</h1>
+                <p class="text-[var(--text)] opacity-70">Manage your teams or find new ones to join</p>
+            </div>
+            <a href="/teams/create"
+               class="px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)]">
+                <span class="text-xl">+</span>
+                Create Team
             </a>
         </div>
-    </div>
-</section>
 
+        <!-- Toggle Tabs -->
+        <div class="flex gap-4 mb-8">
+            <button
+                class="@(_activeTab == "my" ? "bg-[var(--section-secondary)] border-2 border-[var(--main)]" : "bg-[var(--section)] border-2 border-transparent") px-8 py-3 rounded-lg font-medium text-[var(--text)] hover:bg-[var(--section-secondary)] transition-all"
+                @onclick='() => _activeTab = "my"'>
+                My Teams
+            </button>
+            <button
+                class="@(_activeTab == "search" ? "bg-[var(--section-secondary)] border-2 border-[var(--main)]" : "bg-[var(--section)] border-2 border-transparent") px-8 py-3 rounded-lg font-medium text-[var(--text)] hover:bg-[var(--section-secondary)] transition-all"
+                @onclick='() => _activeTab = "search"'>
+                Search Teams
+            </button>
+        </div>
 
-<div class="grid max-w-screen-xl h-auto mx-auto px-4 py-8 lg:py-16 justify-center">
-    @if (_isAuthenticated)
-    {
-        @if (YourTeams is null)
+        @if (_activeTab == "my")
         {
-            <Loading></Loading>
+            <!-- My Teams View -->
+            <div>
+                <!-- Teams I Own -->
+                <div class="mb-12">
+                    <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Teams I Own</h2>
+                    @if (TeamsYouOwn is not null && TeamsYouOwn.Count == 0)
+                    {
+                        <div
+                            class="rounded-xl border border-[var(--main)] p-16 text-center bg-[var(--section-secondary)]">
+                            <p class="mb-6 text-[var(--text)] opacity-70">You haven't created any team yet</p>
+                            <a href="/teams/create"
+                               class="px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2 transition-colors bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)]">
+                                <span class="text-xl">+</span>
+                                Create First Team
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            @if (TeamsYouOwn is null)
+                            {
+                                <Loading></Loading>
+                            }
+                            else
+                            {
+                                foreach (var team in TeamsYouOwn)
+                                {
+                                    <TeamCard Team="@team" UserId="@_userId"></TeamCard>
+                                }
+                            }
+                        </div>
+                        <div class="flex justify-center mt-8">
+                            <OffsetPagination CurrentPage="@_currentPageOwnTeams" OnPageChanged="@OnPageChangedOwnTeams"
+                                              PageSize="@PageSize"
+                                              TotalItems="@_teamsYouOwnPagination.TotalCount"></OffsetPagination>
+                        </div>
+                    }
+                </div>
+
+                <!-- Teams I Participate -->
+                <div>
+                    <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Teams I Participate</h2>
+                    @if (TeamsYouParticipate is not null && TeamsYouParticipate.Count == 0)
+                    {
+                        <div
+                            class="rounded-xl border border-[var(--main)] p-16 text-center bg-[var(--section-secondary)]">
+                            <p class="mb-6 text-[var(--text)] opacity-70">You haven't joined any team yet</p>
+                            <a href="/teams/create"
+                               class="px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2 transition-colors bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)]">
+                                <span class="text-xl">+</span>
+                                Join a Team
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            @if (TeamsYouParticipate is null)
+                            {
+                                <Loading></Loading>
+                            }
+                            else
+                            {
+                                foreach (var team in TeamsYouParticipate)
+                                {
+                                    <TeamCard Team="@team" UserId="@_userId"></TeamCard>
+                                }
+                            }
+                        </div>
+                        <div class="flex justify-center mt-8">
+                            <OffsetPagination CurrentPage="@_currentPageParticipatingTeams"
+                                              OnPageChanged="@OnPageChangedParticipatingTeams" PageSize="@PageSize"
+                                              TotalItems="@_teamsYouParticipatePagination.TotalCount"></OffsetPagination>
+                        </div>
+                    }
+                </div>
+            </div>
         }
         else
-        {   
-            if(YourTeams.Count > 0)
-            {
-            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your Teams:</h1>
-            <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-                @foreach (var team in YourTeams)
-                {
-                    <TeamCard Team="@team" />
-                }
-            </div>
-            }
-            
-        }
-    }
-
-    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Teams:</h1>
-    @if (teams is null)
-    {
-        <Loading></Loading>
-    }
-    else
-    {
-        <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-            @foreach (var team in teams)
-            {
-                <TeamCard Team="@team" />
-            }
-        </div>
-        
-        @if (_teamsPagination is { TotalCount: > 0 })
         {
-            <div class="flex justify-center mt-4">
-                <OffsetPagination CurrentPage="@_currentPage"
-                                  OnPageChanged="OnPageChanged"
-                                  PageSize="@_pageSize"
-                                  TotalItems="@_teamsPagination.TotalCount"/>
+            <!-- Search Teams View -->
+            <div>
+                <!-- Search Filters -->
+                <div class="rounded-xl border border-[var(--main)] p-6 mb-8 bg-[var(--section-secondary)]">
+                    <h3 class="text-xl font-bold mb-2 text-[var(--text)]">Search Filters</h3>
+                    <p class="mb-6 text-[var(--text)] opacity-70">Find the perfect team for you</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Search Input -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-[var(--text)]">Search</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-3 text-[var(--text)] opacity-50">🔍</span>
+                                <input @bind:get="@TeamQueryParameters.Query"
+                                       @bind:set="@(text => { TeamQueryParameters = TeamQueryParameters with { Query = text }; })"
+                                       type="text"
+                                       placeholder="Name, description or tags..."
+                                       class="w-full pl-10 pr-4 py-3 rounded-lg border border-[var(--main)] bg-[var(--background)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]"/>
+                            </div>
+                        </div>
+
+                        <!-- Sport Dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-[var(--text)]">Privacy</label>
+                            <Select TValue="Privacy"
+                                    SelectedValue="@TeamQueryParameters.Privacy"
+                                    SelectedValueChanged="@(v => TeamQueryParameters = TeamQueryParameters with { Privacy = v })"
+                                    class="w-full px-4 py-3 rounded-lg border border-[var(--main)] bg-[var(--background)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">>
+                                @foreach (var item in Enum.GetValues<Privacy>())
+                                {
+                                    <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                }
+                            </Select>
+                        </div>
+
+                        <!-- Sort By Dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-[var(--text)]">Sort By</label>
+                            <Select TValue="SortBy"
+                                    SelectedValue="@TeamQueryParameters.SortBy"
+                                    SelectedValueChanged="@(v => TeamQueryParameters = TeamQueryParameters with { SortBy = v })"
+                                    class="w-full px-4 py-3 rounded-lg border border-[var(--main)] bg-[var(--background)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
+                                @foreach (var item in Enum.GetValues<SortBy>())
+                                {
+                                    <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                }
+                            </Select>
+                        </div>
+
+                        <!-- Order Dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-[var(--text)]">Order</label>
+                            <Select TValue="OrderBy"
+                                    SelectedValue="@TeamQueryParameters.OrderBy"
+                                    SelectedValueChanged="@(v => TeamQueryParameters = TeamQueryParameters with { OrderBy = v })"
+                                    class="w-full px-4 py-3 rounded-lg border border-[var(--main)] bg-[var(--background)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
+                                @foreach (var item in Enum.GetValues<OrderBy>())
+                                {
+                                    <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                }
+                            </Select>
+                        </div>
+                    </div>
+
+                    <!-- Filter by Location -->
+                    @*<div class="mt-6">
+                        <button
+                            class="font-medium flex items-center gap-2 text-[var(--text)] hover:opacity-70 transition-opacity">
+                            <span>📍</span>
+                            Filter by Location
+                        </button>
+                    </div>
+                    <div class="relative mb-6">
+                        <label for="labels-range-input" class="sr-only">Labels range</label>
+                        <input id="labels-range-input" type="range" value="1000" min="0" max="1500"
+                               class="slider-green w-full h-2 rounded-full appearance-none cursor-pointer">
+                        <span class="text-sm text-[var(--text)] absolute start-0 -bottom-6">Min (0 km)</span>
+                        <span
+                            class="text-sm text-[var(--text)] absolute start-1/3 -translate-x-1/2 rtl:translate-x-1/2 -bottom-6">500 km</span>
+                        <span
+                            class="text-sm text-[var(--text)] absolute start-2/3 -translate-x-1/2 rtl:translate-x-1/2 -bottom-6">1000 km</span>
+                        <span class="text-sm text-[var(--text)] absolute end-0 -bottom-6">Max (1500 km)</span>
+                    </div>*@
+                    <Button Clicked="SearchTeams"
+                            class="mt-6 shrink-0 rounded-lg !p-2.5 !sm:py-2 sm:px-4 text-sm transition-all font-medium active:scale-95 touch-manipulation flex items-center justify-center gap-2 hover:opacity-90"
+                            Style="background-color: var(--main); color: var(--text-contrast);">
+                        <span class="hidden sm:inline whitespace-nowrap">Search Teams</span>
+                    </Button>
+                </div>
+
+                <!-- Results -->
+                <div>
+                    <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Results (@(_searchedTeamsPagination.TotalCount))</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        @if (SearchedTeams is null)
+                        {
+                            <Loading></Loading>
+                        }
+                        else
+                        {
+                            foreach (var team in SearchedTeams)
+                            {
+                                <TeamCard Team="@team" UserId="@_userId"></TeamCard>
+                            }
+                        }
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <OffsetPagination CurrentPage="@_currentPageSearchedTeams"
+                                          OnPageChanged="@OnPageChangedSearchedTeams" PageSize="6"
+                                          TotalItems="@_searchedTeamsPagination.TotalCount"></OffsetPagination>
+                    </div>
+                </div>
             </div>
         }
-    }
+    </div>
 </div>
+<style>
+    /* Example 1: Basic Slider with Green Thumb */
+    .slider-green {
+        background: var(--main);
+    }
 
+    .slider-green::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--background);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
 
+    .slider-green::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--main);
+        cursor: pointer;
+        border: 2px solid var(--main);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+</style>
 
 @code {
+
     private bool _isAuthenticated;
-    private List<TeamDto>? YourTeams { get; set; }
-    private List<TeamDto>? teams { get; set; }
-    private PaginationResponse<List<TeamDto>>? _teamsPagination;
-    private int _currentPage = 1;
-    private readonly int _pageSize = 10;
+    private List<TeamDto>? TeamsYouOwn { get; set; }
+    private List<TeamDto>? TeamsYouParticipate { get; set; }
+    private List<TeamDto>? SearchedTeams { get; set; }
+
+    private TeamQueryParametersDto TeamQueryParameters { get; set; } = new()
+    {
+        UserId = "",
+        Page = 0,
+        PageSize = 0,
+        Query = "",
+        SortBy = SortBy.Name,
+        OrderBy = OrderBy.Ascending,
+        Privacy = Privacy.All
+    };
+
+    private string _activeTab = "my";
+
+    private PaginationResponse<List<TeamDto>> _teamsYouOwnPagination = new();
+    private PaginationResponse<List<TeamDto>> _teamsYouParticipatePagination = new();
+    private PaginationResponse<List<TeamDto>> _searchedTeamsPagination = new();
+    private int _currentPageOwnTeams = 1;
+    private int _currentPageParticipatingTeams = 1;
+    private int _currentPageSearchedTeams = 1;
+
+    private const int PageSize = 6;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
@@ -95,50 +328,88 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
-
-        if (!_isAuthenticated) {
-            YourTeams = null;
-            
-            var publicTeams = await TeamService.GetTeamsAsync("", _currentPage, _pageSize, "", CancellationToken.None);
-            if (!publicTeams.Success)
-            {
-                Console.WriteLine("Error fetching public teams: " + publicTeams.ErrorMessages);
-                return;
-            }
-            teams = publicTeams.Data!.Data;
-            _teamsPagination = publicTeams.Data;
-            return;
-        }
-
         _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        SearchedTeams = null;
+        TeamsYouOwn = null;
+        TeamsYouParticipate = null;
 
-        if (string.IsNullOrEmpty(_userId)) {    
-            YourTeams = [];
-            return;
-        }
-        
-        var result = await TeamService.GetTeamsAsync(_userId, _currentPage, _pageSize, "", CancellationToken.None);
-        if (!result.Success)
+        TeamQueryParameters = TeamQueryParameters with
         {
-            Console.WriteLine("Error fetching user teams: " + result.ErrorMessages);
+            Page = _currentPageSearchedTeams,
+            PageSize = PageSize,
+            UserId = _isAuthenticated ? _userId ?? "" : ""
+        };
+
+        var teamsYouSearchedResult = await TeamService.GetTeamsAsync(TeamQueryParameters, CancellationToken.None);
+        if (!teamsYouSearchedResult.Success)
+        {
+            Console.WriteLine("Error fetching user own teams: " + teamsYouSearchedResult.ErrorMessages);
             return;
         }
-        
-        // Filter teams where user is owner or member
-        var allTeams = result.Data!.Data;
-        YourTeams = allTeams.Where(t => t.OwnerId == _userId || t.Members.Any(m => m.Id == _userId)).ToList();
-        teams = allTeams.Where(t => t.OwnerId != _userId && t.Members.All(m => m.Id != _userId)).ToList();
-        _teamsPagination = result.Data;
+
+        SearchedTeams = teamsYouSearchedResult.Data!.Data;
+        _searchedTeamsPagination = teamsYouSearchedResult.Data;
+
+        if (!_isAuthenticated || string.IsNullOrEmpty(_userId))
+        {
+            TeamsYouOwn = [];
+            TeamsYouParticipate = [];
+            return;
+        }
+
+        var teamsYouOwnResult = await TeamService.GetTeamsUserOwnAsync(_userId, _currentPageOwnTeams, PageSize, "", CancellationToken.None);
+        if (!teamsYouOwnResult.Success)
+        {
+            Console.WriteLine("Error fetching user own teams: " + teamsYouOwnResult.ErrorMessages);
+            return;
+        }
+
+        TeamsYouOwn = teamsYouOwnResult.Data!.Data;
+        _teamsYouOwnPagination = teamsYouOwnResult.Data;
+
+        var teamsYouParticipateResult = await TeamService.GetTeamsUserParticipateAsync(_userId, _currentPageParticipatingTeams, PageSize, "", CancellationToken.None);
+        if (!teamsYouParticipateResult.Success)
+        {
+            Console.WriteLine("Error fetching user participating teams: " + teamsYouParticipateResult.ErrorMessages);
+            return;
+        }
+
+        TeamsYouParticipate = teamsYouParticipateResult.Data!.Data;
+        _teamsYouParticipatePagination = teamsYouParticipateResult.Data;
     }
 
-    private async Task OnPageChanged(int page)
+    private async Task OnPageChangedOwnTeams(int page) => await OnPageChanged(page, TeamPageType.OwnTeams);
+    private async Task OnPageChangedParticipatingTeams(int page) => await OnPageChanged(page, TeamPageType.ParticipatingTeams);
+    private async Task OnPageChangedSearchedTeams(int page) => await OnPageChanged(page, TeamPageType.SearchedTeams);
+
+    private async Task OnPageChanged(int page, TeamPageType pageType)
     {
-        _currentPage = page;
+        switch (pageType)
+        {
+            case TeamPageType.OwnTeams:
+                _currentPageOwnTeams = page;
+                break;
+            case TeamPageType.ParticipatingTeams:
+                _currentPageParticipatingTeams = page;
+                break;
+            case TeamPageType.SearchedTeams:
+                _currentPageSearchedTeams = page;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(pageType), pageType, null);
+        }
+
         await LoadTeams();
     }
 
-    private void GoToCreateTeam() => NavigationManager.NavigateTo("/CreateTeam");
-    
+    public enum TeamPageType
+    {
+        OwnTeams,
+        ParticipatingTeams,
+        SearchedTeams
+    }
+
+
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return Task.CompletedTask;
@@ -147,4 +418,26 @@
 
         return Task.CompletedTask;
     }
+
+    public async Task SearchTeams()
+    {
+        TeamQueryParameters = TeamQueryParameters with
+        {
+            Page = _currentPageSearchedTeams,
+            PageSize = PageSize,
+            UserId = _isAuthenticated ? _userId ?? "" : ""
+        };
+
+        var teamsYouSearchedResult = await TeamService.GetTeamsAsync(TeamQueryParameters, CancellationToken.None);
+        if (!teamsYouSearchedResult.Success)
+        {
+            Console.WriteLine("Error fetching user own teams: " + teamsYouSearchedResult.ErrorMessages);
+            return;
+        }
+
+        SearchedTeams = teamsYouSearchedResult.Data!.Data;
+        _searchedTeamsPagination = teamsYouSearchedResult.Data;
+        StateHasChanged();
+    }
+
 }

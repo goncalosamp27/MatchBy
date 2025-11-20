@@ -1,9 +1,10 @@
-﻿@page "/CreateTeam"
+﻿@page "/teams/create"
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject ITeamService TeamService
 @inject IUsersService UsersService
 @inject NavigationManager NavigationManager
+@using System.ComponentModel
 @using Blazorise
 @using System.Security.Claims
 @using FluentValidation
@@ -14,325 +15,257 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IValidator<CreateTeamDto> CreateTeamDtoValidator
 @inject IToastService ToastService
+@implements IDisposable
 
-@if (_isLoading)
+@if (_viewModel.IsLoading)
 {
     <Loading></Loading>
 }
 else
 {
-    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" Width="Width.Is50" class="mt-8">
-        <Heading Size="HeadingSize.Is2" Margin="Margin.Is3.FromBottom" Style="color: var(--main);">
-            Create Team
-        </Heading>
+    <div class="min-h-screen bg-[var(--background)] px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Back Button -->
+            <button @onclick="@(() => NavigationManager.NavigateTo("/teams"))" class="flex items-center gap-2 text-[var(--text)] hover:text-[var(--main)] mb-6 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Teams
+            </button>
 
-        <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
-            <Validation Validator="@ValidateName">
-                <Field>
-                    <FieldLabel>Team Name</FieldLabel>
-                    <FieldBody>
-                        <TextEdit Placeholder="Enter team name"
-                                  Text="@_model.Name"
-                                  TextChanged="@(v => _model = _model with { Name = v })">
-                            <Feedback>
-                                <ValidationError/>
-                            </Feedback>
-                        </TextEdit>
-                    </FieldBody>
-                </Field>
-            </Validation>
+            <!-- Main Card -->
+            <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow-sm p-6 md:p-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-[var(--main)] mb-6">Create Team</h1>
 
-            <Validation Validator="@ValidateDescription">
-                <Field>
-                    <FieldLabel>Description</FieldLabel>
-                    <FieldBody>
-                        <TextEdit Placeholder="Type a description for your team"
-                                  Text="@_model.Description"
-                                  TextChanged="@(v => _model = _model with { Description = v })">
-                            <Feedback>
-                                <ValidationError/>
-                            </Feedback>
-                        </TextEdit>
-                    </FieldBody>
-                </Field>
-            </Validation>
+                <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
+                    <Validation Validator="@ValidateName">
+                        <Field>
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Name</FieldLabel>
+                            <FieldBody>
+                                <TextEdit Placeholder="Enter team name"
+                                          Text="@_viewModel.Model.Name"
+                                          TextChanged="@(v => { _viewModel.UpdateName(v); StateHasChanged(); })"
+                                          Class="w-full"
+                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </TextEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
 
-            <Validation Validator="@ValidatePrivacy">
-                <Field>
-                    <FieldLabel>Privacy</FieldLabel>
-                    <FieldBody>
-                        <Select TValue="TeamPrivacy"
-                                SelectedValue="@_model.Privacy"
-                                SelectedValueChanged="@(v => _model = _model with { Privacy = v })">
-                            @foreach (var item in Enum.GetValues<TeamPrivacy>())
-                            {
-                                <SelectItem Value="@item">@item.ToString()</SelectItem>
-                            }
-                        </Select>
-                    </FieldBody>
-                </Field>
-            </Validation>
+                    <Validation Validator="@ValidateDescription">
+                        <Field class="mt-4">
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description</FieldLabel>
+                            <FieldBody>
+                                <TextEdit Placeholder="Type a description for your team"
+                                          Text="@_viewModel.Model.Description"
+                                          TextChanged="@(v => { _viewModel.UpdateDescription(v); StateHasChanged(); })"
+                                          Class="w-full"
+                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </TextEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
 
-            <Validation Validator="@ValidateMembers">
-                <Field>
-                    <FieldLabel>Invite Team Members</FieldLabel>
-                    <FieldBody>
-                        <div class="mb-3">
-                            <TextEdit @bind-Text="_memberSearch"
-                                      Placeholder="Search for users to add"
-                                      Role="TextRole.Search"
-                                      KeyDown="@OnMemberSearchKeyDown"
-                                      Class="form-control-lg"
-                                      Style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main);">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </TextEdit>
-                        </div>
+                    <Validation Validator="@ValidatePrivacy">
+                        <Field class="mt-4">
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Privacy</FieldLabel>
+                            <FieldBody>
+                                <Select TValue="TeamPrivacy"
+                                        SelectedValue="@_viewModel.Model.Privacy"
+                                        SelectedValueChanged="@(v => { _viewModel.UpdatePrivacy(v); StateHasChanged(); })"
+                                        Class="w-full"
+                                        Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                    @foreach (var item in Enum.GetValues<TeamPrivacy>())
+                                    {
+                                        <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                    }
+                                </Select>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
 
-                        @if (_isLoadingMembers)
-                        {
-                            <Loading></Loading>
-                        }
-                        else
-                        {
-                            <div class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-lg p-2"
-                                 style="background-color: var(--section-secondary);">
-                                @if ((_availableUsers.Data?.Count ?? 0) == 0)
+                    <Field class="mt-6">
+                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Image</FieldLabel>
+                        <FieldBody>
+                            <div class="flex items-center gap-3">
+                                <InputFile OnChange="@((e) => { _viewModel.OnImageSelected(e); StateHasChanged(); })"
+                                           accept="image/*"
+                                           class="block w-full text-sm text-[var(--text)] border-2 border-[var(--main)] rounded-lg cursor-pointer bg-[var(--background)] focus:outline-none focus:border-[var(--main)] file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--main)] file:text-[var(--text-contrast)] hover:file:opacity-80"/>
+                                @if (_viewModel.SelectedImage != null)
                                 {
-                                    <div class="py-3 text-center opacity-60" style="color: var(--text);">
-                                        No users found
-                                    </div>
+                                    <button type="button" @onclick="@(() => { _viewModel.RemoveImage(); StateHasChanged(); })"
+                                            class="shrink-0 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-[var(--error)] hover:opacity-80 text-white transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                }
+                            </div>
+                            <div class="text-xs text-[var(--text)] opacity-70 mt-2">
+                                Supported formats: JPG, PNG, GIF. Max size: 5MB
+                            </div>
+                        </FieldBody>
+                    </Field>
+
+                    <Validation Validator="@ValidateMembers">
+                        <Field class="mt-6">
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Invite Team Members</FieldLabel>
+                            <FieldBody>
+                                <div class="mb-3">
+                                    <TextEdit @bind-Text="_viewModel.MemberSearch"
+                                              @bind-Text:after="StateHasChanged"
+                                              Placeholder="Search for users to add"
+                                              Role="TextRole.Search"
+                                              KeyDown="@(async (e) => { await _viewModel.OnMemberSearchKeyDownAsync(e); StateHasChanged(); })"
+                                              Class="w-full"
+                                              Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                        <Feedback>
+                                            <ValidationError/>
+                                        </Feedback>
+                                    </TextEdit>
+                                </div>
+
+                                @if (_viewModel.IsLoadingMembers)
+                                {
+                                    <Loading></Loading>
                                 }
                                 else
                                 {
-                                    @foreach (var user in _availableUsers.Data ?? Enumerable.Empty<ApplicationUser>())
-                                    {
-                                        var isSelected = _model.MembersIds.Contains(user.Id);
-                                        var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                        <div
-                                            class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-opacity hover:opacity-70 @(isSelected ? "bg-[var(--main)]" : "")"
-                                            @onclick="@(() => ToggleMember(user.Id))"
-                                            style="color: var(--text);">
-                                            <img src="@photoUrl" alt="@user.UserName"
-                                                 class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
-                                            <span class="fw-500 truncate flex-1">@user.DisplayName</span>
-                                            @if (isSelected)
-                                            {
-                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd"
-                                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                          clip-rule="evenodd"/>
-                                                </svg>
-                                            }
-                                        </div>
-                                    }
-                                }
-                            </div>
-
-                            @if (_model.MembersIds.Count > 0)
-                            {
-                                <div class="mb-3">
-                                    <FieldLabel>Users to Invite (@_model.MembersIds.Count)</FieldLabel>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach (var memberId in _model.MembersIds)
+                                    <div class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-lg p-2 thin-scroll"
+                                         style="background-color: var(--background);">
+                                        @if (_viewModel.AvailableUsers.Data.Count == 0)
                                         {
-                                            var member = _availableUsers.Data?.FirstOrDefault(u => u.Id == memberId);
-                                            if (member != null)
+                                            <div class="py-3 text-center opacity-60" style="color: var(--text);">
+                                                No users found
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var user in _viewModel.AvailableUsers.Data)
                                             {
-                                                var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                var isSelected = _viewModel.Model.MembersIds.Contains(user.Id);
+                                                var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
                                                 <div
-                                                    class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
-                                                    <img src="@photoUrl" alt="@member.UserName"
-                                                         class="rounded-full w-6 h-6 object-cover"/>
-                                                    <span class="text-sm">@member.DisplayName</span>
-                                                    <button @onclick="@(() => RemoveMember(memberId))"
-                                                            @onclick:stopPropagation="true"
-                                                            class="ml-1 hover:opacity-70"
-                                                            title="Remove invite">
-                                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-all hover:opacity-70 @(isSelected ? "bg-[var(--main)]" : "")"
+                                                    @onclick="@(() => { _viewModel.ToggleMember(user.Id); StateHasChanged(); })"
+                                                    style="color: var(--text);">
+                                                    <img src="@photoUrl" alt="@user.UserName"
+                                                         class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
+                                                    <span class="fw-500 truncate flex-1">@user.DisplayName</span>
+                                                    @if (isSelected)
+                                                    {
+                                                        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                             <path fill-rule="evenodd"
-                                                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                                                   clip-rule="evenodd"/>
                                                         </svg>
-                                                    </button>
+                                                    }
                                                 </div>
                                             }
                                         }
                                     </div>
-                                </div>
-                            }
 
-                            @if (_availableUsers is { Data: not null, TotalCount: > 0 })
-                            {
-                                <div class="flex justify-center mt-2">
-                                    <OffsetPagination CurrentPage="@_currentMemberPage"
-                                                      OnPageChanged="OnMemberPageChanged"
-                                                      PageSize="10"
-                                                      TotalItems="@_availableUsers.TotalCount"/>
-                                </div>
-                            }
-                        }
-                    </FieldBody>
-                </Field>
+                                    @if (_viewModel.Model.MembersIds.Count > 0)
+                                    {
+                                        <div class="mb-3">
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Users to Invite (@_viewModel.Model.MembersIds.Count)</FieldLabel>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach (var memberId in _viewModel.Model.MembersIds)
+                                                {
+                                                    var member = _viewModel.AvailableUsers.Data?.FirstOrDefault(u => u.Id == memberId);
+                                                    if (member != null)
+                                                    {
+                                                        var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                        <div
+                                                            class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                            <img src="@photoUrl" alt="@member.UserName"
+                                                                 class="rounded-full w-6 h-6 object-cover"/>
+                                                            <span class="text-sm">@member.DisplayName</span>
+                                                            <button @onclick="@(() => { _viewModel.RemoveMember(memberId); StateHasChanged(); })"
+                                                                    @onclick:stopPropagation="true"
+                                                                    class="ml-1 hover:opacity-70 transition"
+                                                                    title="Remove invite">
+                                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd"
+                                                                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                          clip-rule="evenodd"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    }
 
-            </Validation>
+                                    @if (_viewModel.AvailableUsers is { Data: not null, TotalCount: > 0 })
+                                    {
+                                        <div class="flex justify-center mt-2">
+                                            <OffsetPagination CurrentPage="@_viewModel.CurrentMemberPage"
+                                                              OnPageChanged="@(async (page) => { await _viewModel.OnMemberPageChangedAsync(page); StateHasChanged(); })"
+                                                              PageSize="10"
+                                                              TotalItems="@_viewModel.AvailableUsers.TotalCount"/>
+                                        </div>
+                                    }
+                                }
+                            </FieldBody>
+                        </Field>
+                    </Validation>
 
-            <Field>
-                <Button Color="Color.Primary" Clicked="@SubmitTeam" Loading="@_isSubmitting">
-                    Create Team
-                </Button>
-            </Field>
-
-        </Validations>
-    </Div>
+                    <Field class="mt-6">
+                        <Button Color="Color.Primary" 
+                                Clicked="@SubmitTeam" 
+                                Loading="@_viewModel.IsSubmitting"
+                                Class="w-full md:w-auto"
+                                Style="background-color: var(--main); color: var(--text-contrast); padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s;">
+                            Create Team
+                        </Button>
+                    </Field>
+                </Validations>
+            </div>
+        </div>
+    </div>
 }
 
 <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 
 @code {
     Validations _validations = null!;
-
-    CreateTeamDto _model = new()
-    {
-        Name = string.Empty,
-        Description = string.Empty,
-        OwnerId = string.Empty,
-        Privacy = TeamPrivacy.Public,
-        MembersIds = new List<string>()
-    };
-
-    private string? _userId;
-    private bool _isLoading = true;
-    private bool _isSubmitting = false;
-    private bool _isLoadingMembers = false;
-    private string _memberSearch = "";
-    private int _currentMemberPage = 1;
-    private PaginationResponse<List<ApplicationUser>> _availableUsers = new();
+    private CreateTeamViewModel _viewModel = null!;
+    private PropertyChangedEventHandler? _propertyChangedHandler;
 
     private void ValidateProperty(ValidatorEventArgs e, string propertyPath)
     {
-        var errors = CreateTeamDtoValidator.Validate(_model).Errors
-            .Where(x => x.PropertyName == propertyPath)
-            .ToList();
-
-        if (errors.Any())
+        var status = _viewModel.ValidateProperty(propertyPath);
+        e.Status = status;
+        if (status == ValidationStatus.Error)
         {
-            e.Status = ValidationStatus.Error;
-            e.ErrorText = errors[0].ErrorMessage;
-        }
-        else
-        {
-            e.Status = ValidationStatus.Success;
+            e.ErrorText = _viewModel.GetValidationError(propertyPath);
         }
     }
-
     void ValidateName(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateTeamDto.Name));
     void ValidateDescription(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateTeamDto.Description));
     void ValidatePrivacy(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateTeamDto.Privacy));
     void ValidateMembers(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateTeamDto.MembersIds));
 
-    private void ToggleMember(string userId)
-    {
-        if (_model.MembersIds.Contains(userId))
-        {
-            _model.MembersIds.Remove(userId);
-        }
-        else
-        {
-            _model.MembersIds.Add(userId);
-        }
-
-        StateHasChanged();
-    }
-
-    private void RemoveMember(string userId)
-    {
-        _model.MembersIds.Remove(userId);
-        StateHasChanged();
-    }
-
-    private async Task LoadMembers()
-    {
-        if (_isLoadingMembers) return;
-        _isLoadingMembers = true;
-        try
-        {
-            var response = await UsersService.GetUsers(_memberSearch, _currentMemberPage, 10);
-            if (response.Success)
-            {
-                _availableUsers = response.Data!;
-                // Filter out current user
-                if (_userId != null)
-                {
-                    _availableUsers.Data = _availableUsers.Data.Where(u => u.Id != _userId).ToList();
-                }
-            }
-            else
-            {
-                await ToastService.Error(response.ErrorMessages.ToString());
-            }
-        }
-        finally
-        {
-            _isLoadingMembers = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnMemberSearchKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            _currentMemberPage = 1;
-            await LoadMembers();
-        }
-    }
-
-    private async Task OnMemberPageChanged(int page)
-    {
-        _currentMemberPage = page;
-        await LoadMembers();
-    }
-
     private async Task SubmitTeam()
     {
         if (!await _validations.ValidateAll()) return;
 
-        _isSubmitting = true;
-        try
+        var success = await _viewModel.SubmitTeamAsync();
+        if (success)
         {
-            var membersToInvite = _model.MembersIds;
-            membersToInvite.Add(_userId!);
-            var createDto = _model with
-            {
-                OwnerId = _userId!,
-                MembersIds = membersToInvite.Distinct().ToList()
-            };
-
-            var result = await TeamService.CreateTeamAsync(createDto, CancellationToken.None);
-
-            if (!result.Success)
-            {
-                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error creating team.");
-                return;
-            }
-
-            // Invites are sent automatically in CreateTeamAsync
-            if (_model.MembersIds.Count > 0)
-            {
-                await ToastService.Success($"Team created successfully! Invites sent to {_model.MembersIds.Count} user(s).", "Create Team");
-            }
-            else
-            {
-                await ToastService.Success("Team created successfully!", "Create Team");
-            }
-
             NavigationManager.NavigateTo("/Teams");
         }
-        finally
+        else
         {
-            _isSubmitting = false;
+            StateHasChanged();
         }
     }
 
@@ -341,15 +274,29 @@ else
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
-        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (_userId == null)
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
         {
             NavigationManager.NavigateTo("/Account/Login");
             return;
         }
 
-        await LoadMembers();
-        _isLoading = false;
+        _viewModel = new CreateTeamViewModel(TeamService, UsersService, CreateTeamDtoValidator, ToastService)
+        {
+            UserId = userId
+        };
+        _propertyChangedHandler = (_, _) => StateHasChanged();
+        _viewModel.PropertyChanged += _propertyChangedHandler;
+
+        await _viewModel.LoadMembersAsync();
+        _viewModel.IsLoading = false;
     }
 
+    public void Dispose()
+    {
+        if (_propertyChangedHandler != null)
+        {
+            _viewModel.PropertyChanged -= _propertyChangedHandler;
+        }
+    }
 }

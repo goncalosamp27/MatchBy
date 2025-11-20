@@ -2,5 +2,5 @@
 
 public enum FileCategory
 {
-    ProfileImage, MatchImage, ConversationImage
+    ProfileImage, MatchImage, ConversationImage, TeamImage
 }

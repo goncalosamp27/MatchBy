@@ -21,6 +21,8 @@ public static class TeamMappings
             ConversationId = team.ConversationId,
             Conversation = team.Conversation?.ToDto(),
             Privacy = team.Privacy,
+            MaxMembers = team.MaxMembers,
+            ImageUrl = team.Image?.Url,
             CreatedAtUtc = team.CreatedAtUtc,
             UpdatedAtUtc = team.UpdatedAtUtc,
             DeletedAtUtc = team.DeletedAtUtc
@@ -36,6 +38,7 @@ public static class TeamMappings
             Description = createTeamDto.Description,
             OwnerId = createTeamDto.OwnerId,
             Privacy = createTeamDto.Privacy,
+            MaxMembers = createTeamDto.MaxMembers,
             Members = [],
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
@@ -49,5 +52,6 @@ public static class TeamMappings
         team.Description = updateTeamDto.Description;
         team.UpdatedAtUtc = DateTime.UtcNow;
         team.Privacy = updateTeamDto.Privacy;
+        team.MaxMembers = updateTeamDto.MaxMembers;
     }
 }

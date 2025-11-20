@@ -18,7 +18,6 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
-            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator);
 
@@ -149,8 +148,8 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
     {
         int result = await applicationDbContext
             .Matches
-            .Where(m => m.Id.Equals(matchId))
-            .Where(m => m.CreatorId.Equals(userId))
+            .Where(m => m.Id == matchId)
+            .Where(m => m.CreatorId == userId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.DeletedAtUtc, DateTime.UtcNow), ct);
 
         return result == 0
@@ -200,14 +199,14 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         return await GetMatchById(matchId, userId, ct);
     }
     
-    public async Task<Result<MatchDto>> LeaveMatch(string matchId, string userId, CancellationToken ct = default)
+    public async Task<Result<bool>> LeaveMatch(string matchId, string userId, CancellationToken ct = default)
     {
         ApplicationUser? user = await applicationDbContext
             .Users
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null)
         {
-            return Result<MatchDto>.Fail($"User with id {userId} not found.");
+            return Result<bool>.Fail($"User with id {userId} not found.");
         }
         
         Match? match = await applicationDbContext
@@ -218,7 +217,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
 
         if (match is null)
         {
-            return Result<MatchDto>.Fail($"Match with id {matchId} not found.");
+            return Result<bool>.Fail($"Match with id {matchId} not found.");
         }
 
         if (match.CreatorId == userId)
@@ -232,7 +231,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         }
 
         await applicationDbContext.SaveChangesAsync(ct);
-        return await GetMatchById(matchId, userId, ct);
+        return Result<bool>.Ok(true);
     }
 
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q,
@@ -241,7 +240,6 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
-            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Where(m => m.CreatorId == userId);
@@ -280,7 +278,6 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
-            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Where(m => m.CreatorId != userId && m.Participants.All(p => p.Id != userId));

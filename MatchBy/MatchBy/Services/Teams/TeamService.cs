@@ -2,14 +2,18 @@
 using FluentValidation;
 using FluentValidation.Results;
 using MatchBy.Data;
+using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.DTOs.Team;
+using MatchBy.DTOs.TeamInvite;
+using MatchBy.Enums;
 using MatchBy.Models;
 using MatchBy.Services.Conversations;
+using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.S3;
-using MatchBy.Settings;
+using MatchBy.Services.TeamInvites;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace MatchBy.Services.Teams;
 
@@ -17,18 +21,20 @@ public class TeamService(
     ApplicationDbContext applicationDbContext,
     IS3Service s3Service,
     IConversationService conversationService,
-    IOptions<S3Settings> s3Settings,
+    ITeamsInvitesService teamInvitesService,
     IValidator<CreateTeamDto> createTeamValidator,
     IValidator<UpdateTeamDto> updateTeamValidator,
-    UserManager<ApplicationUser> userManager) : ITeamService
+    UserManager<ApplicationUser> userManager,
+    IImageRefreshService imageRefreshService) : ITeamService
 {
     
     public async Task<Result<PaginationResponse<List<TeamDto>>>> GetTeamsAsync(
-        string userId, int page, int pageSize, string q, CancellationToken ct = default)
+        TeamQueryParametersDto teamQueryParametersDto, CancellationToken ct = default)
     {
         List<string> invitedTeamIds = await applicationDbContext
             .TeamInvites
-            .Where(i => i.ReceiverId == userId)
+            .Where(i => i.ReceiverId == teamQueryParametersDto.UserId)
+            .Where(i => i.Status == InviteStatus.Pending  && i.ExpiresAtUtc > DateTime.UtcNow)
             .Select(i => i.TeamId)
             .ToListAsync(ct);
         
@@ -40,9 +46,89 @@ public class TeamService(
                 .ThenInclude(c => c!.Participants)
             .Include(t => t.Conversation)
                 .ThenInclude(c => c!.Messages)
-            .Where(m => m.Privacy == TeamPrivacy.Public || invitedTeamIds.Contains(m.Id))
-            .AsNoTracking()
-            .AsSplitQuery();
+            .AsNoTracking();
+
+        #pragma warning disable IDE0066
+        switch (teamQueryParametersDto.SortBy)
+        {
+            case SortBy.Description:
+                query = teamQueryParametersDto.OrderBy == OrderBy.Ascending ? query.OrderBy(t => t.Description) : query.OrderByDescending(t => t.Description);
+                break;
+            case SortBy.CreatedAt:
+                query = teamQueryParametersDto.OrderBy == OrderBy.Ascending ? query.OrderBy(t => t.CreatedAtUtc) : query.OrderByDescending(t => t.CreatedAtUtc);
+                break;
+            case SortBy.MembersCount:
+                query = teamQueryParametersDto.OrderBy == OrderBy.Ascending ? query.OrderBy(t => t.Members.Count) : query.OrderByDescending(t => t.Members.Count);
+                break;
+            default:
+                query = teamQueryParametersDto.OrderBy == OrderBy.Ascending ? query.OrderBy(t => t.Name) : query.OrderByDescending(t => t.Name);
+                break;
+        }
+
+        switch (teamQueryParametersDto.Privacy)
+        {
+            case Privacy.Public:
+                query = query.Where(t => t.Privacy == TeamPrivacy.Public);
+                break;
+            case Privacy.Private:
+                query = query.Where(t => t.Privacy == TeamPrivacy.Private && (t.Members.Any(u => u.Id == teamQueryParametersDto.UserId) || invitedTeamIds.Contains(t.Id)));
+                break;
+            case Privacy.All:
+                query = query.Where(t => t.Privacy == TeamPrivacy.Public || t.Privacy == TeamPrivacy.Private && (t.Members.Any(u => u.Id == teamQueryParametersDto.UserId) || invitedTeamIds.Contains(t.Id)));
+                break;
+            default:
+                query = query.Where(t => t.Privacy == TeamPrivacy.Public || t.Privacy == TeamPrivacy.Private && (t.Members.Any(u => u.Id == teamQueryParametersDto.UserId) || invitedTeamIds.Contains(t.Id)));
+                break;
+        }
+        #pragma warning restore IDE0066
+        
+        if (!string.IsNullOrWhiteSpace(teamQueryParametersDto.Query))
+        {
+            query = query.Where(c => c.Name.ToLower().Contains(teamQueryParametersDto.Query.ToLower()) || c.Description.ToLower().Contains(teamQueryParametersDto.Query.ToLower()));
+        }
+
+        int total = await query.CountAsync(ct);
+
+        List<Team> teams = await query
+            .Skip((teamQueryParametersDto.Page - 1) * teamQueryParametersDto.PageSize)
+            .Take(teamQueryParametersDto.PageSize)
+            .ToListAsync(ct);
+        
+        var distinctUsers = teams.SelectMany(t => t.Members).DistinctBy(u => u.Id).ToList();
+        IEnumerable<Task> userImageTasks = distinctUsers.Select(imageRefreshService.RefreshUserProfileImageAsync);
+        IEnumerable<Task> teamImageTasks = teams.Select(imageRefreshService.RefreshTeamImageAsync);
+        await Task.WhenAll(userImageTasks.Concat(teamImageTasks));
+
+        var list = teams.Select(team => team.ToDto()).ToList();
+
+        return Result<PaginationResponse<List<TeamDto>>>.Ok(
+            new PaginationResponse<List<TeamDto>>
+            {
+                Data = list,
+                TotalCount = total,
+                Page = teamQueryParametersDto.Page,
+                PageSize = teamQueryParametersDto.PageSize
+            });
+    }
+    
+    public async Task<Result<PaginationResponse<List<TeamDto>>>> GetTeamsUserOwnAsync(
+        string userId, int page, int pageSize, string q, CancellationToken ct = default)
+    {
+        if(string.IsNullOrWhiteSpace(userId))
+        {
+            return Result<PaginationResponse<List<TeamDto>>>.Fail("User ID cannot be null or empty.");
+        }
+        
+        IQueryable<Team> query = applicationDbContext
+            .Teams
+            .Include(t => t.Owner)
+            .Include(t => t.Members)
+            .Include(t => t.Conversation)
+            .ThenInclude(c => c!.Participants)
+            .Include(t => t.Conversation)
+            .ThenInclude(c => c!.Messages)
+            .Where(m => m.OwnerId == userId)
+            .AsNoTracking();
         
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -57,10 +143,56 @@ public class TeamService(
             .Take(pageSize)
             .ToListAsync(ct);
         
-        foreach (ApplicationUser u in teams.SelectMany(u => u.Members))
+        // Refresh images in parallel for better performance
+        var distinctUsers = teams.SelectMany(t => t.Members).DistinctBy(u => u.Id).ToList();
+        IEnumerable<Task> userImageTasks = distinctUsers.Select(imageRefreshService.RefreshUserProfileImageAsync);
+        IEnumerable<Task> teamImageTasks = teams.Select(imageRefreshService.RefreshTeamImageAsync);
+        await Task.WhenAll(userImageTasks.Concat(teamImageTasks));
+
+        var list = teams.Select(team => team.ToDto()).ToList();
+
+        return Result<PaginationResponse<List<TeamDto>>>.Ok(
+            new PaginationResponse<List<TeamDto>>
+            {
+                Data = list,
+                TotalCount = total,
+                Page = page,
+                PageSize = pageSize
+            });
+    }
+    
+    public async Task<Result<PaginationResponse<List<TeamDto>>>> GetTeamsUserParticipateAsync(
+        string userId, int page, int pageSize, string q, CancellationToken ct = default)
+    {
+        IQueryable<Team> query = applicationDbContext
+            .Teams
+            .Include(t => t.Owner)
+            .Include(t => t.Members)
+            .Include(t => t.Conversation)
+            .ThenInclude(c => c!.Participants)
+            .Include(t => t.Conversation)
+            .ThenInclude(c => c!.Messages)
+            .Where(m => m.Members.Any(u => u.Id == userId))
+            .AsNoTracking();
+        
+        if (!string.IsNullOrWhiteSpace(q))
         {
-            await RefreshProfileImage(u);
+            query = query.Where(c => c.Name.ToLower().Contains(q.ToLower()) || c.Description.ToLower().Contains(q.ToLower()));
         }
+
+        int total = await query.CountAsync(ct);
+
+        List<Team> teams = await query
+            .OrderByDescending(u => u.CreatedAtUtc)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        
+        // Refresh images in parallel for better performance
+        var distinctUsers = teams.SelectMany(t => t.Members).DistinctBy(u => u.Id).ToList();
+        IEnumerable<Task> userImageTasks = distinctUsers.Select(imageRefreshService.RefreshUserProfileImageAsync);
+        IEnumerable<Task> teamImageTasks = teams.Select(imageRefreshService.RefreshTeamImageAsync);
+        await Task.WhenAll(userImageTasks.Concat(teamImageTasks));
 
         var list = teams.Select(team => team.ToDto()).ToList();
 
@@ -76,24 +208,36 @@ public class TeamService(
 
     public async Task<Result<TeamDto>> GetTeamByIdAsync(string teamId, string userId, CancellationToken ct = default)
     {
-        bool hasInvite = await applicationDbContext
-            .TeamInvites
-            .AnyAsync(i => i.TeamId == teamId && i.ReceiverId == userId, ct);
+        Result<PaginationResponse<List<TeamInviteDto>>> invitesResult = await teamInvitesService.GetInvitesForTeam(teamId,1, int.MaxValue, ct);
+        
+        if(!invitesResult.Success)
+        {
+            return Result<TeamDto>.Fail("Failed to retrieve team invites.");
+        }
+        
+        bool hasInvite = invitesResult.Data!.Data.Where(i => i is { Status: InviteStatus.Pending, IsExpired: false }).Any(i => i.ReceiverId == userId);
         
         Team? team = await applicationDbContext
             .Teams
             .Include(m => m.Owner)
-            .Include(m => m.Conversation)
-            .ThenInclude(r => r!.Participants)
+            .Include(t => t.Conversation)
+            .ThenInclude(c => c!.Participants)
+            .Include(t => t.Conversation)
+            .ThenInclude(c => c!.Messages)
             .Include(m => m.Members)
-            .Where(m => m.Id.Equals(teamId))
-            .Where(m => m.Privacy == TeamPrivacy.Public || hasInvite || m.Members.Any(u => u.Id.Equals(userId)))
+            .Where(m => m.Id == teamId)
+            .Where(m => m.Privacy == TeamPrivacy.Public || hasInvite || m.Members.Any(u => u.Id == userId))
             .FirstOrDefaultAsync(ct);
 
         if (team is null)
         {
             return Result<TeamDto>.Fail("Team not found or access denied.");
         }
+        
+        // Refresh images in parallel for better performance
+        IEnumerable<Task> userImageTasks = team.Members.Select(imageRefreshService.RefreshUserProfileImageAsync);
+        Task teamImageTask = imageRefreshService.RefreshTeamImageAsync(team);
+        await Task.WhenAll(userImageTasks.Append(teamImageTask));
         
         return Result<TeamDto>.Ok(team.ToDto());
     }
@@ -116,13 +260,13 @@ public class TeamService(
         }
         
         // Don't add members directly - they will be added via invites
-        team.Members = (List<ApplicationUser>) [owner];
+        team.Members = new List<ApplicationUser> { owner };
         team.ConversationId = null; // will be set after conversation is created, to not give errors on FK constraint
 
         await applicationDbContext.Teams.AddAsync(team, ct);
         await applicationDbContext.SaveChangesAsync(ct);
         
-        var conversationCreationDto = new DTOs.Chat.Conversations.CreateConversationDto
+        var conversationCreationDto = new CreateConversationDto
         {
             CreatorUserId = team.OwnerId,
             ConversationType = ConversationType.Team,
@@ -131,7 +275,7 @@ public class TeamService(
             TeamId = team.Id
         };
         
-        Result<DTOs.Chat.Conversations.ConversationDto> conversationResult =
+        Result<ConversationDto> conversationResult =
             await conversationService.CreateConversationAsync(conversationCreationDto, ct);
         
         if (!conversationResult.Success)
@@ -140,22 +284,82 @@ public class TeamService(
         }
         
         team.ConversationId = conversationResult.Data!.Id; // since we set the conversation's ID to be the same as the team's ID
+        
         await applicationDbContext.SaveChangesAsync(ct);
         
-        // Send invites to selected users
-        if (createTeamDto.MembersIds.All(m => m == createTeamDto.OwnerId))
+        // Send invites to selected users (excluding the owner)
+        var membersToInvite = createTeamDto.MembersIds.Where(m => m != createTeamDto.OwnerId).ToList();
+        if (!membersToInvite.Any())
         {
             return await GetTeamByIdAsync(team.Id, team.OwnerId, ct);
         }
 
-        foreach (string receiverId in createTeamDto.MembersIds)
+        foreach (string receiverId in membersToInvite)
         {
-            await SendTeamInviteAsync(team.Id, createTeamDto.OwnerId, receiverId, $"You've been invited to join {team.Name}!", ct);
+            Result<TeamInviteDto> result = await teamInvitesService.CreateInvite(new CreateTeamInviteDto
+            {
+                TeamId = team.Id,
+                SenderId = createTeamDto.OwnerId,
+                ReceiverId = receiverId,
+                Content = $"You've been invited to join {team.Name}!"
+            }, ct);
+            Console.WriteLine(result.Success
+                ? $"Invite sent to user {receiverId} for team {team.Id}."
+                : $"Failed to send invite to user {receiverId} for team {team.Id}: {string.Join(", ", result.ErrorMessages)}");
         }
-
+        
+        if (createTeamDto.File is not null)
+        {
+            return await UpdateTeamImageAsync(team, createTeamDto.OwnerId, createTeamDto.File, ct);
+        }
+        
         return await GetTeamByIdAsync(team.Id, team.OwnerId, ct);
     }
+    
+    private async Task<Result<TeamDto>> UpdateTeamImageAsync(
+        Team team,
+        string userId,
+        IBrowserFile file,
+        CancellationToken ct = default)
+    {
+        // upload
+        Result<string> uploadedKey = await s3Service.UploadBrowserFileAsync(file, $"teams/{team.Id}/image");
+        if (!uploadedKey.Success)
+        {
+            return Result<TeamDto>.Fail(uploadedKey.ErrorMessages.ToArray());
+        }
 
+        // URL presign
+        Result<string> url =
+            await s3Service.GetPresignedUrlAsync($"teams/{team.Id}/image/{uploadedKey.Data}", HttpVerb.GET);
+        if (!url.Success)
+        {
+            return Result<TeamDto>.Fail(url.ErrorMessages.ToArray());
+        }
+
+        // delete previous, if it exists
+        string? oldKey = team.Image?.Key;
+        if (!string.IsNullOrWhiteSpace(oldKey) && !oldKey.Equals(uploadedKey.Data, StringComparison.OrdinalIgnoreCase))
+        {
+            await s3Service.DeleteFileAsync($"teams/{team.Id}/image/{oldKey}");
+        }
+
+        // store the image info
+        team.Image = new FileStore(
+            Url: url.Data!,
+            ExpireDateTimeUtc: DateTime.UtcNow.AddMinutes(30),
+            Key: uploadedKey.Data!,
+            FileCategory: FileCategory.TeamImage,
+            FileType: FileType.Image,
+            CreatedAtUtc: DateTime.UtcNow
+        );
+        team.UpdatedAtUtc = DateTime.UtcNow;
+
+        await applicationDbContext.SaveChangesAsync(ct);
+
+        return await GetTeamByIdAsync(team.Id, userId, ct);
+    }
+    
     public async Task<Result<TeamDto>> UpdateTeamAsync(UpdateTeamDto updateTeamDto, CancellationToken ct = default)
     {
         ValidationResult? validationResult = await updateTeamValidator.ValidateAsync(updateTeamDto, ct);
@@ -170,8 +374,8 @@ public class TeamService(
             .Include(m => m.Owner)
             .Include(m => m.Conversation)
             .Include(m => m.Members)
-            .Where(m => m.Id.Equals(updateTeamDto.Id))
-            .Where(m => m.OwnerId.Equals(updateTeamDto.OwnerId))
+            .Where(m => m.Id == updateTeamDto.Id)
+            .Where(m => m.OwnerId == updateTeamDto.OwnerId)
             .FirstOrDefaultAsync(ct);
         if (team is null)
         {
@@ -213,6 +417,11 @@ public class TeamService(
             return Result<TeamDto>.Fail("Associated conversation not found.");
         }
         
+        if (updateTeamDto.File is not null)
+        {
+            return await UpdateTeamImageAsync(team, updateTeamDto.OwnerId, updateTeamDto.File, ct);
+        }
+        
         await applicationDbContext.SaveChangesAsync(ct);
         return await GetTeamByIdAsync(team.Id, team.OwnerId, ct);
     }
@@ -220,7 +429,7 @@ public class TeamService(
     public async Task<Result<bool>> DeleteTeamAsync(string teamId, string userId, CancellationToken ct = default)
     {
         bool canDelete = await applicationDbContext.Teams
-            .AnyAsync(c => c.Id == teamId && c.OwnerId.Equals(userId, StringComparison.InvariantCulture), ct);
+            .AnyAsync(c => c.Id == teamId && c.OwnerId == userId, ct);
 
         if (!canDelete)
         {
@@ -237,7 +446,49 @@ public class TeamService(
             .Where(c => c.Id == teamId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
 
-        return Result<bool>.Ok(affectedTeams > 0 && affectedConversations > 0);
+        int affectedInvites = await applicationDbContext
+            .TeamInvites
+            .Where(i => i.TeamId == teamId && i.Status == InviteStatus.Pending)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(i => i.Status, InviteStatus.Cancelled)
+                .SetProperty(i => i.DeletedAtUtc, DateTime.UtcNow), ct);
+        
+        return Result<bool>.Ok(affectedTeams > 0 && affectedConversations > 0 && affectedInvites >= 0);
+    }
+
+    public async Task<Result<bool>> DeleteTeamImageAsync(string teamId, string userId, CancellationToken ct = default)
+    {
+        Team? team = await applicationDbContext
+            .Teams
+            .Include(m => m.Owner)
+            .Include(m => m.Members)
+            .Where(m => m.Id == teamId)
+            .Where(m => m.OwnerId == userId)
+            .FirstOrDefaultAsync(ct);
+
+        if (team is null)
+        {
+            return Result<bool>.Fail("Team not found or user is not the owner.");
+        }
+
+        if (team.Image is null || string.IsNullOrWhiteSpace(team.Image.Key))
+        {
+            return Result<bool>.Fail("Team does not have an image to delete.");
+        }
+
+        // Delete the image from S3
+        Result<bool> deleteResult = await s3Service.DeleteFileAsync($"teams/{team.Id}/image/{team.Image.Key}");
+        if (!deleteResult.Success)
+        {
+            return Result<bool>.Fail("Failed to delete image from storage.");
+        }
+
+        // Remove the image reference from the team
+        team.Image = null;
+        team.UpdatedAtUtc = DateTime.UtcNow;
+
+        await applicationDbContext.SaveChangesAsync(ct);
+
+        return Result<bool>.Ok(true);
     }
 
     public async Task<Result<int>> LeaveTeamAsync(string teamId, string userId, CancellationToken ct = default)
@@ -247,8 +498,8 @@ public class TeamService(
             .Include(m => m.Owner)
             .Include(m => m.Conversation)
             .Include(m => m.Members)
-            .Where(m => m.Id.Equals(teamId))
-            .Where(m => m.Members.Any(u => u.Id.Equals(userId)))
+            .Where(m => m.Id == teamId)
+            .Where(m => m.Members.Any(u => u.Id == userId))
             .FirstOrDefaultAsync(ct);
 
         if (team is null)
@@ -271,6 +522,11 @@ public class TeamService(
         if (mustSoftDelete)
         {
             team.DeletedAtUtc = DateTime.UtcNow;
+            Result<bool> deleteResult = await DeleteTeamAsync(team.Id, team.OwnerId, ct);
+            if (!deleteResult.Success)
+            {
+                return Result<int>.Fail("Failed to delete the team: " + deleteResult.ErrorMessages[0]);
+            }
         }
         
         Conversation? conversation = await applicationDbContext
@@ -282,11 +538,6 @@ public class TeamService(
         {
             conversation.Participants.Remove(me);
             conversation.UpdatedAtUtc = DateTime.UtcNow;
-
-            if (mustSoftDelete)
-            {
-                conversation.DeletedAtUtc = DateTime.UtcNow;
-            }
         }
         else
         {
@@ -300,17 +551,22 @@ public class TeamService(
     
     public async Task<Result<bool>> JoinTeamAsync(string teamId, string userId, CancellationToken ct = default)
     {
-        bool hasInvite = await applicationDbContext
-            .TeamInvites
-            .AnyAsync(i => i.TeamId == teamId && i.ReceiverId == userId, ct);
+        Result<PaginationResponse<List<TeamInviteDto>>> results = await teamInvitesService.GetInvitesForTeam(teamId, 1, int.MaxValue,ct);
+
+        if (!results.Success)
+        {
+            return Result<bool>.Fail("Failed to retrieve team invites.");
+        }
+        
+        TeamInviteDto? invite = results.Data!.Data.Where(i => i is { Status: InviteStatus.Pending, IsExpired: false }).FirstOrDefault(i => i.ReceiverId == userId);
         
         Team? team = await applicationDbContext
             .Teams
             .Include(m => m.Owner)
             .Include(m => m.Conversation)
             .Include(m => m.Members)
-            .Where(m => m.Id.Equals(teamId))
-            .Where(m => m.Privacy == TeamPrivacy.Public || hasInvite)
+            .Where(m => m.Id == teamId)
+            .Where(m => m.Privacy == TeamPrivacy.Public || invite != null)
             .FirstOrDefaultAsync(ct);
 
         if (team is null)
@@ -324,8 +580,26 @@ public class TeamService(
             return Result<bool>.Fail("User not found.");
         }
 
+        // Check if user is already a member
+        if (team.Members.Any(m => m.Id == userId))
+        {
+            return Result<bool>.Fail("User is already a member of this team.");
+        }
+
         team.Members.Add(me);
         team.UpdatedAtUtc = DateTime.UtcNow;
+
+        if (team.Privacy == TeamPrivacy.Private)
+        {
+            // Here, the invite must exist, as we filtered the team query above
+            Result<TeamInviteDto> resultAcceptInvite = await teamInvitesService.AcceptInvite(
+                invite?.Id ?? "NoInvite", userId, ct);
+        
+            if (!resultAcceptInvite.Success)
+            {
+                return Result<bool>.Fail("Failed to accept team invite: " + resultAcceptInvite.ErrorMessages[0]);
+            }
+        }
         
         Conversation? conversation = await applicationDbContext
             .Conversations
@@ -347,89 +621,5 @@ public class TeamService(
         return Result<bool>.Ok(true);
     }
 
-    public async Task<Result<bool>> SendTeamInviteAsync(string teamId, string senderId, string receiverId, string content, CancellationToken ct = default)
-    {
-        // Check if team exists and sender is owner
-        Team? team = await applicationDbContext.Teams
-            .FirstOrDefaultAsync(t => t.Id == teamId && t.OwnerId == senderId, ct);
-        
-        if (team is null)
-        {
-            return Result<bool>.Fail("Team not found or user is not the owner.");
-        }
 
-        // Check if receiver is already a member
-        bool isMember = await applicationDbContext.Teams
-            .Where(t => t.Id == teamId)
-            .AnyAsync(t => t.Members.Any(m => m.Id == receiverId), ct);
-        
-        if (isMember)
-        {
-            return Result<bool>.Fail("User is already a member of this team.");
-        }
-
-        // Check if invite already exists
-        bool inviteExists = await applicationDbContext.TeamInvites
-            .AnyAsync(i => i.TeamId == teamId && i.ReceiverId == receiverId && i.DeletedAtUtc == null, ct);
-        
-        if (inviteExists)
-        {
-            return Result<bool>.Fail("Invite already sent to this user.");
-        }
-
-        //remove this from here
-        var invite = new TeamInvite
-        {
-            Id = $"teamInvite_{Guid.CreateVersion7()}",
-            TeamId = teamId,
-            SenderId = senderId,
-            ReceiverId = receiverId,
-            Content = content,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await applicationDbContext.TeamInvites.AddAsync(invite, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
-
-        return Result<bool>.Ok(true);
-    }
-
-    public async Task<Result<bool>> DeleteTeamInviteAsync(string inviteId, string userId, CancellationToken ct = default)
-    {
-        TeamInvite? invite = await applicationDbContext.TeamInvites
-            .FirstOrDefaultAsync(i => i.Id == inviteId && (i.SenderId == userId || i.ReceiverId == userId), ct);
-        
-        if (invite is null)
-        {
-            return Result<bool>.Fail("Invite not found or user doesn't have permission.");
-        }
-
-        invite.DeletedAtUtc = DateTime.UtcNow;
-        await applicationDbContext.SaveChangesAsync(ct);
-
-        return Result<bool>.Ok(true);
-    }
-
-    private async Task RefreshProfileImage(ApplicationUser user)
-    {
-        if (user.ProfileImage?.Key is null)
-        {
-            return;
-        }
-
-        if (user.ProfileImage.ExpireDateTimeUtc < DateTime.UtcNow || string.IsNullOrEmpty(user.ProfileImage.Url))
-        {
-            Result<string> url = await s3Service.GetPresignedUrlAsync(
-                $"users/{user.Id}/profile-pictures/{user.ProfileImage.Key}", HttpVerb.GET);
-
-            if (url.Success)
-            {
-                user.ProfileImage = user.ProfileImage with
-                {
-                    Url = url.Data!,
-                    ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry)
-                };
-            }
-        }
-    }
 }

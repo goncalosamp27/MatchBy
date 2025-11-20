@@ -44,11 +44,20 @@ public class MatchInviteConfiguration: IEntityTypeConfiguration<MatchInvite>
             .WithMany()
             .HasForeignKey(i => i.MatchId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(i => i.Status)
+            .IsRequired()
+            .HasConversion<int>();
+
+        builder.Property(i => i.ExpiresAtUtc)
+            .IsRequired();
         
         builder.Property(i => i.CreatedAtUtc)
             .IsRequired();
 
         builder.Property(i => i.UpdatedAtUtc);
+        builder.Property(i => i.AcceptedAtUtc);
+        builder.Property(i => i.DeclinedAtUtc);
         builder.Property(i => i.DeletedAtUtc);
         builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }

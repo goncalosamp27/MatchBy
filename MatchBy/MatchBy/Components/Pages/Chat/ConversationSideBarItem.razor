@@ -11,7 +11,13 @@
                  src="@(otherParticipant?.ImageUrl ?? "/images/user-avatar.png")"
                  alt="">
         }
-        else
+        else if(Conversation.Type == ConversationType.Team)
+        {
+            <img class="size-10 rounded-full"
+                 src="@(Conversation.TeamImageUrl ?? "/images/user-avatar.png")"
+                 alt="">
+        }
+        else 
         {
             <img class="size-10 rounded-full"
                  src="@(Conversation.ImageUrl ?? "/images/user-avatar.png")"

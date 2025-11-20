@@ -14,11 +14,19 @@ public class FriendConfiguration: IEntityTypeConfiguration<Friend>
             .HasMaxLength(500)
             .IsRequired();
         
+        builder.Property(f => f.SenderId)
+            .HasMaxLength(500)
+            .IsRequired();
+        
         //Friend is associated with one Sender
         builder.HasOne(f => f.Sender)
             .WithMany()
             .HasForeignKey(f => f.SenderId)
             .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.Property(f => f.ReceiverId)
+            .HasMaxLength(500)
+            .IsRequired();
         
         //Friend is associated with one Receiver
         builder.HasOne(f => f.Receiver)

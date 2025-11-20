@@ -15,11 +15,10 @@ public sealed record TeamDto
     public ICollection<UserDto> Members { get; init; }
     public string? ConversationId { get; init; }
     public ConversationDto? Conversation { get; init; }
-    
+    public int MaxMembers { get; init; }
+    public string? ImageUrl { get; init; }
     public required TeamPrivacy Privacy { get; set; }
     public required DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; init; }
     public DateTime? DeletedAtUtc { get; init; }
 }
-
-

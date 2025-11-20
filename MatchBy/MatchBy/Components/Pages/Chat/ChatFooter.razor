@@ -3,24 +3,24 @@
 @inject IJSRuntime Js
 @inject IToastService ToastService
 
-<footer class="flex-none border-t px-3 sm:px-4 py-2.5 sm:py-3"
+<footer class="flex-none border-t px-2.5 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
         style="background-color: var(--section-secondary); border-color: var(--main);">
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-1.5 sm:gap-2">
         @if (ReplyTo is not null)
         {
-            <div class="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 border-l-4 rounded"
+            <div class="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 border-l-4 rounded"
                  style="background-color: var(--section); border-color: var(--main);">
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                    <div class="flex items-center gap-1 sm:gap-1.5 sm:gap-2 mb-0.5 sm:mb-1 flex-wrap">
                         <Icon Name="IconName.Reply" Size="IconSize.Small" Style="color: var(--main);"/>
-                        <span class="text-xs font-semibold" style="color: var(--main);">
+                        <span class="text-xs sm:text-sm font-semibold truncate" style="color: var(--main);">
                             Replying to @ReplyTo.Sender.DisplayName
                         </span>
                     </div>
                     <p class="text-xs sm:text-sm truncate opacity-75" style="color: var(--text);">@ReplyTo.Content</p>
                 </div>
                 <button @onclick="CancelReply"
-                        class="shrink-0 p-1 rounded transition-colors hover:opacity-70">
+                        class="shrink-0 p-1 sm:p-1.5 rounded transition-colors hover:opacity-70 active:opacity-50 touch-manipulation">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 opacity-60" style="color: var(--text);" fill="none"
                          stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -30,30 +30,43 @@
             </div>
         }
 
-        <div class="flex flex-row gap-1.5 sm:gap-2 items-end">
+        <div class="flex flex-row gap-1 sm:gap-1.5 sm:gap-2 items-end">
             <InputTextArea Value="@Text"
                            ValueChanged="TextChanged"
                            ValueExpression="() => Text"
                            rows="1"
                            placeholder="Write a message..."
-                           class="w-full resize-none rounded-lg border px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base outline-none transition-all focus:ring-2 max-h-32 overflow-y-auto"
+                           class="w-full resize-none rounded-lg border px-2.5 sm:px-3 py-2 sm:py-2 text-sm sm:text-base outline-none transition-all focus:ring-2 max-h-32 overflow-y-auto"
                            style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main);"
-                           />
+            />
             <Button Clicked="ShareLocation"
-                    class="shrink-0 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 transition-colors"
+                    class="shrink-0 rounded-lg !p-2.5 !sm:py-2 transition-all active:scale-95 touch-manipulation flex items-center justify-center hover:opacity-90"
                     Style="background-color: var(--main); color: var(--text-contrast);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     class="sm:w-6 sm:h-6">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="w-5 h-5 sm:w-5.5 sm:h-5.5"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                     <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
                     <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
                 </svg>
             </Button>
+
             <Button Clicked="Send"
-                    class="shrink-0 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base transition-colors font-medium"
+                    class="shrink-0 rounded-lg !p-2.5 !sm:py-2 sm:px-4 text-sm transition-all font-medium active:scale-95 touch-manipulation flex items-center justify-center gap-2 hover:opacity-90"
                     Style="background-color: var(--main); color: var(--text-contrast);">
-                Send
+                <span class="hidden sm:inline whitespace-nowrap">Send</span>
+                <svg class="w-5 h-5 sm:hidden"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                </svg>
             </Button>
         </div>
     </div>
@@ -70,6 +83,7 @@
 
     private Task Send() => OnSend.InvokeAsync();
     private Task CancelReply() => OnCancelReply.InvokeAsync();
+
     private async Task ShareLocation()
     {
         try
@@ -83,6 +97,7 @@
             Console.WriteLine(ex.Message);
         }
     }
-    
+
     public record GeolocationPosition(double Latitude, double Longitude);
+
 }
