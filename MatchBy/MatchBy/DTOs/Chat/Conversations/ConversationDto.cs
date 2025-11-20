@@ -12,8 +12,8 @@ public sealed record ConversationDto
     public required string CreatorId { get; init; }
 
     public string? TeamId { get; init; }
+    public string? TeamImageUrl { get; init; }
     public string? MatchId { get; init; }
-
     public required DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; init; }
     

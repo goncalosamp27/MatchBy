@@ -112,7 +112,7 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
                 bucketName: s3Settings.Value.BucketName,
                 key: key);
 
-            if (response.HttpStatusCode == HttpStatusCode.NoContent)
+            if (response.HttpStatusCode is HttpStatusCode.NoContent or HttpStatusCode.OK)
             {
                 logger.LogInformation("File '{Key}' deleted successfully from bucket '{Bucket}'.",
                     key, s3Settings.Value.BucketName);

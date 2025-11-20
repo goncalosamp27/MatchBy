@@ -5,6 +5,43 @@ namespace MatchBy.Services.Email;
 
 public class EmailSender(IResend resend) : IEmailSender
 {
+    public async Task SendMatchCancelledAsync(
+        ApplicationUser user,
+        string email,
+        Match match,
+        string cancelledByName)
+    {
+
+        string subject = $"Match #{match.Id} Has Been Cancelled";
+
+        string body = $@"
+        <h2>Match Cancelled</h2>
+        <p>Hello {user.DisplayName},</p>
+        <p>The match you were scheduled to participate in has been <strong>cancelled</strong>.</p>
+
+        <h3>Match Details</h3>
+        <ul>
+            <li><strong>Sport:</strong> {match.Sport}</li>
+            <li><strong>Date:</strong> {match.MatchDateTimeUtc:dddd, MMM d yyyy hh:mm tt}</li>
+        </ul>
+
+        <p>The match was cancelled by <strong>{cancelledByName}</strong>.</p>
+
+        <br/>
+        <p>Best regards,<br/>MatchBy</p>
+    ";
+
+        var message = new EmailMessage
+        {
+            From = "MatchBy <matchby@uniqueue.site>",
+            To = email,
+            Subject = subject,
+            HtmlBody = body
+        };
+
+        await resend.EmailSendAsync(message);
+    }
+
     public async Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink)
     {
         var message = new EmailMessage
@@ -82,9 +119,13 @@ public class EmailSender(IResend resend) : IEmailSender
         {
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Your match has been cancelled",
-            HtmlBody = """
-                       <h2>Match Cancellation Notice</h2>
-                       """
+            HtmlBody = $"""
+                        <h2>Match Cancellation Notice</h2>
+                        <p>Hi {displayName},</p>
+                        <p>We're sorry to inform you that your upcoming match has been cancelled.</p>
+                        <p>If you have any questions, please feel free to contact our support team.</p>
+                        <p>Best regards,<br/>The MatchBy Team</p>
+                        """
         };
         message.To.Add(email);
 
@@ -97,9 +138,14 @@ public class EmailSender(IResend resend) : IEmailSender
         {
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Confirm your upcoming match",
-            HtmlBody = """
-                       <h2>Match Confirmation Reminder</h2>
-                       """
+            HtmlBody = $"""
+                        <h2>Match Confirmation Reminder</h2>
+                        <p>Hi {displayName},</p>
+                        <p>Great news! Your match is confirmed and ready to go.</p>
+                        <p>Make sure to check the match details and prepare accordingly.</p>
+                        <p>If you need to reschedule, please let us know as soon as possible.</p>
+                        <p>Best regards,<br/>The MatchBy Team</p>
+                        """
         };
         message.To.Add(email);
 

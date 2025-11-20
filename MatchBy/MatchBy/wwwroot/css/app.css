@@ -18,6 +18,30 @@
     font-style: normal;
 }
 
+/* Thin scroll customization */
+.thin-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.thin-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+    background: var(--main);
+    border-radius: 3px;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--main-hover);
+}
+
+/* Firefox scroll customization */
+.thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--main) transparent;
+}
+
 .dark {
     --main: #afff2f;
     --main-hover: #405d13;
@@ -29,4 +53,3 @@
     --success: #1de667;
     --error: #ff4d4d;
 }
-

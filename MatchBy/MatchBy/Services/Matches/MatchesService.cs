@@ -1,13 +1,17 @@
-﻿using MatchBy.Data;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using MatchBy.Data;
 using MatchBy.DTOs.Match;
 using MatchBy.Models;
 using MatchBy.Enums;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using IEmailSender = MatchBy.Services.Email.IEmailSender;
 
 namespace MatchBy.Services.Matches;
 
-public class MatchesService(ApplicationDbContext applicationDbContext) : IMatchesService
+public class MatchesService(ApplicationDbContext applicationDbContext,
+    IValidator<CreateMatchDto> createMatchValidator,
+    IValidator<UpdateMatchDto> updateMatchValidator, IEmailSender emailSender) : IMatchesService
 {
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
         string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
@@ -15,7 +19,6 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
-            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator);
 
@@ -104,6 +107,12 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
     public async Task<Result<bool>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default)
     {
+        ValidationResult? validationResult = await createMatchValidator.ValidateAsync(createMatchDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<bool>.Fail(validationResult.ToString());
+        }
+        
         Match match = createMatchDto.ToEntity();
         match.Participants = (List<ApplicationUser>)
             [await applicationDbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
@@ -115,6 +124,12 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
     public async Task<Result<bool>> UpdateMatch(UpdateMatchDto updateMatchDto, CancellationToken ct = default)
     {
+        ValidationResult? validationResult = await updateMatchValidator.ValidateAsync(updateMatchDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<bool>.Fail(validationResult.ToString());
+        }
+        
         Match? match = await applicationDbContext
             .Matches
             .Where(m => m.CreatorId == updateMatchDto.UserId)
@@ -134,8 +149,8 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
     {
         int result = await applicationDbContext
             .Matches
-            .Where(m => m.Id.Equals(matchId))
-            .Where(m => m.CreatorId.Equals(userId))
+            .Where(m => m.Id == matchId)
+            .Where(m => m.CreatorId == userId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.DeletedAtUtc, DateTime.UtcNow), ct);
 
         return result == 0
@@ -185,14 +200,14 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         return await GetMatchById(matchId, userId, ct);
     }
     
-    public async Task<Result<MatchDto>> LeaveMatch(string matchId, string userId, CancellationToken ct = default)
+    public async Task<Result<bool>> LeaveMatch(string matchId, string userId, CancellationToken ct = default)
     {
         ApplicationUser? user = await applicationDbContext
             .Users
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null)
         {
-            return Result<MatchDto>.Fail($"User with id {userId} not found.");
+            return Result<bool>.Fail($"User with id {userId} not found.");
         }
         
         Match? match = await applicationDbContext
@@ -203,12 +218,28 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
 
         if (match is null)
         {
-            return Result<MatchDto>.Fail($"Match with id {matchId} not found.");
+            return Result<bool>.Fail($"Match with id {matchId} not found.");
         }
 
         if (match.CreatorId == userId)
         {
             match.DeletedAtUtc = DateTime.UtcNow;
+            match.Status = MatchStatus.Cancelled;
+            
+            // Send cancellation emails to all participants
+            foreach (ApplicationUser participant in match.Participants.Where(p => p.Id != userId))
+            {
+                if (participant.Email != null)
+                {
+                    await emailSender.SendMatchCancelledAsync(
+                        participant,
+                        participant.Email,
+                        match,
+                        user.DisplayName ?? "Unknown"
+                    );
+                }
+            }
+            
             match.Participants.Clear();
         }
         else
@@ -217,7 +248,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         }
 
         await applicationDbContext.SaveChangesAsync(ct);
-        return await GetMatchById(matchId, userId, ct);
+        return Result<bool>.Ok(true);
     }
 
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q,
@@ -226,7 +257,6 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
-            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Where(m => m.CreatorId == userId);
@@ -265,7 +295,6 @@ public class MatchesService(ApplicationDbContext applicationDbContext) : IMatche
         IQueryable<Match> query = applicationDbContext
             .Matches
             .AsNoTracking()
-            .AsSplitQuery()
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Where(m => m.CreatorId != userId && m.Participants.All(p => p.Id != userId));

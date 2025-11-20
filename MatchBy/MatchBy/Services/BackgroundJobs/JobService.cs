@@ -35,6 +35,7 @@ public class JobService(ILogger<JobService> logger, IServiceProvider serviceProv
         
         List<Match> pendentMatchesBefore1Day = await dbContext.Matches
             .Include(m => m.Creator)
+            .Include(m => m.Participants)
             .Where(m => m.Status == MatchStatus.Pendent 
                 && m.MatchDateTimeUtc <= now.Add(oneDay))
             .ToListAsync();
@@ -45,8 +46,22 @@ public class JobService(ILogger<JobService> logger, IServiceProvider serviceProv
             {
                 try
                 {
+                    foreach (ApplicationUser participant in match.Participants.Where(p => p.Id != match.CreatorId))
+                    {
+                        if (participant.Email != null)
+                        {
+                            await emailSender.SendMatchCancelledAsync(
+                                participant,
+                                participant.Email,
+                                match,
+                                match.Creator.DisplayName
+                            );
+                        }
+                    }
+                    
                     await emailSender.SendMatchCancelationEmail(match.Creator.Email, match.Creator.DisplayName);
                     logger.LogInformation("Cancellation email sent to creator for match {MatchId}", match.Id);
+                    logger.LogInformation("Cancellation email sent for match {MatchId} sent to all users participating", match.Id);
                 }
                 catch (Exception ex)
                 {

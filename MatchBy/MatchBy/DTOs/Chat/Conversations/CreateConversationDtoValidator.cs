@@ -14,6 +14,7 @@ public class CreateConversationDtoValidator : AbstractValidator<CreateConversati
             .IsInEnum().WithMessage("ConversationType is invalid.");
 
         RuleFor(x => x.ParticipantIds)
+            .Cascade(CascadeMode.Stop)
             .NotNull().WithMessage("Participants are required.")
             .Must(p => p.Count > 0).WithMessage("Provide at least one participant.")
             .Must(p => p.All(id => !string.IsNullOrWhiteSpace(id)))
@@ -31,7 +32,8 @@ public class CreateConversationDtoValidator : AbstractValidator<CreateConversati
             RuleFor(x => x.MatchId).Empty().WithMessage("Private conversations must not have a MatchId.");
             RuleFor(x => x.ParticipantIds)
                 .Must(p => p.Count == 2)
-                .WithMessage("Private conversations must have exactly two participants.");
+                .WithMessage("Private conversations must have exactly two participants.")
+                .When(x => x.ParticipantIds != null);
         });
 
         When(x => x.ConversationType == ConversationType.Team, () =>
@@ -48,7 +50,7 @@ public class CreateConversationDtoValidator : AbstractValidator<CreateConversati
 
         // Enforce that the creator is among participants
         RuleFor(x => x)
-            .Must(x => x.ParticipantIds.Contains(x.CreatorUserId))
+            .Must(x => x.ParticipantIds != null && x.ParticipantIds.Contains(x.CreatorUserId))
             .WithMessage("Creator must be included in ParticipantIds.");
     }
 }
