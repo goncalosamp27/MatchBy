@@ -31,7 +31,7 @@ public class TeamMappingsTests
             CreatedAtUtc = createdAt
         };
 
-        var team = new Models.Team
+        var team = new MatchBy.Models.Team
         {
             Id = "team_123",
             Name = "Team Alpha",
@@ -83,7 +83,7 @@ public class TeamMappingsTests
         // Arrange
         DateTime createdAt = DateTime.UtcNow;
         
-        var team = new Models.Team
+        var team = new MatchBy.Models.Team
         {
             Id = "team_123",
             Name = "Team Alpha",
@@ -135,7 +135,7 @@ public class TeamMappingsTests
         };
 
         // Act
-        Models.Team entity = createDto.ToEntity();
+        MatchBy.Models.Team entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity);
@@ -168,8 +168,8 @@ public class TeamMappingsTests
         };
 
         // Act
-        Models.Team entity1 = createDto.ToEntity();
-        Models.Team entity2 = createDto.ToEntity();
+        MatchBy.Models.Team entity1 = createDto.ToEntity();
+        MatchBy.Models.Team entity2 = createDto.ToEntity();
 
         // Assert
         Assert.NotEqual(entity1.Id, entity2.Id);
@@ -191,7 +191,7 @@ public class TeamMappingsTests
         };
 
         // Act
-        Models.Team entity = createDto.ToEntity();
+        MatchBy.Models.Team entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity.Members);
@@ -207,7 +207,7 @@ public class TeamMappingsTests
     {
         // Arrange
         DateTime createdAt = DateTime.UtcNow.AddDays(-10);
-        var team = new Models.Team
+        var team = new MatchBy.Models.Team
         {
             Id = "team_123",
             Name = "Old Name",
@@ -253,7 +253,7 @@ public class TeamMappingsTests
     public void UpdateEntity_ShouldNotChangeId()
     {
         // Arrange
-        var team = new Models.Team
+        var team = new MatchBy.Models.Team
         {
             Id = "team_123",
             Name = "Original Name",
@@ -290,7 +290,7 @@ public class TeamMappingsTests
     public void UpdateEntity_ShouldSetUpdatedAtUtc()
     {
         // Arrange
-        var team = new Models.Team
+        var team = new MatchBy.Models.Team
         {
             Id = "team_123",
             Name = "Original Name",

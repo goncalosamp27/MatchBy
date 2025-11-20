@@ -230,12 +230,23 @@ else
 
                         <div class="border-t border-[var(--main)] pt-4 flex items-center justify-between">
                             <span class="text-[var(--text)]">Available Spots</span>
-                            <span class="text-2xl font-bold text-[var(--text)]">13</span>
+                            <span class="text-2xl font-bold text-[var(--text)]">
+                                @if (_team != null)
+                                {
+                                    @(_team.MaxMembers - _team.Members.Count)
+                                }
+                            </span>
                         </div>
 
                         <div class="border-t  border-[var(--main)] pt-4 flex items-center justify-between">
                             <span class="text-[var(--text)]">Occupancy Rate</span>
-                            <span class="text-2xl font-bold text-[var(--text)]">13%</span>
+                            <span class="text-2xl font-bold text-[var(--text)]">
+                                @if (_team != null)
+                                {
+                                    var percentage = _team.Members.Count / (double)_team.MaxMembers * 100;
+                                    @($"{percentage:F2}%")
+                                }
+                            </span>
                         </div>
                     </div>
                 </div>

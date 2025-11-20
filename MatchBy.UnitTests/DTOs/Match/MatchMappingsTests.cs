@@ -33,7 +33,7 @@ public class MatchMappingsTests
             CreatedAtUtc = createdAt
         };
 
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_789",
             Location = location,
@@ -86,7 +86,7 @@ public class MatchMappingsTests
         DateTime createdAt = DateTime.UtcNow;
         var location = new Location(0, 0, "City", "Country");
 
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_789",
             Location = location,
@@ -144,7 +144,7 @@ public class MatchMappingsTests
         };
 
         // Act
-        Models.Match entity = createDto.ToEntity();
+        MatchBy.Models.Match entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity);
@@ -184,8 +184,8 @@ public class MatchMappingsTests
         };
 
         // Act
-        Models.Match entity1 = createDto.ToEntity();
-        Models.Match entity2 = createDto.ToEntity();
+        MatchBy.Models.Match entity1 = createDto.ToEntity();
+        MatchBy.Models.Match entity2 = createDto.ToEntity();
 
         // Assert
         Assert.NotEqual(entity1.Id, entity2.Id);
@@ -209,7 +209,7 @@ public class MatchMappingsTests
         };
 
         // Act
-        Models.Match entity = createDto.ToEntity();
+        MatchBy.Models.Match entity = createDto.ToEntity();
 
         // Assert
         Assert.Equal(MatchStatus.Pendent, entity.Status);
@@ -233,7 +233,7 @@ public class MatchMappingsTests
         };
 
         // Act
-        Models.Match entity = createDto.ToEntity();
+        MatchBy.Models.Match entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity.Participants);
@@ -252,7 +252,7 @@ public class MatchMappingsTests
         var oldLocation = new Location(0, 0, "Old City", "Old Country");
         var newLocation = new Location(40.7128, -74.0060, "New York", "USA");
 
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_123",
             Location = oldLocation,
@@ -309,7 +309,7 @@ public class MatchMappingsTests
     public void UpdateEntity_ShouldNotChangeIdAndStatus()
     {
         // Arrange
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_123",
             Location = new Location(0, 0, "City", "Country"),
@@ -354,7 +354,7 @@ public class MatchMappingsTests
     public void UpdateEntity_ShouldSetUpdatedAtUtc()
     {
         // Arrange
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_123",
             Location = new Location(0, 0, "City", "Country"),
@@ -399,7 +399,7 @@ public class MatchMappingsTests
     public void UpdateEntity_ShouldSpecifyUtcKindForMatchDateTime()
     {
         // Arrange
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_123",
             Location = new Location(0, 0, "City", "Country"),

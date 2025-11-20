@@ -5,7 +5,6 @@ using FluentValidation.Results;
 using MatchBy.Components.Pages.Teams;
 using MatchBy.DTOs.Team;
 using MatchBy.DTOs.User;
-using MatchBy.Enums;
 using MatchBy.Models;
 using MatchBy.Services.Teams;
 using MatchBy.Services.Users;

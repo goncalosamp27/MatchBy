@@ -252,23 +252,7 @@ public class UpdateConversationDtoValidatorTests
         // Assert
         result.ShouldNotHaveValidationErrorFor(x => x.File);
     }
-
-    [Fact]
-    public void Validate_WhenFileIsValidVideo_ShouldPass()
-    {
-        // Arrange
-        var mockFile = new Mock<IBrowserFile>();
-        _fileValidatorMock.Setup(x => x.IsValidBrowserImage(It.IsAny<IBrowserFile>())).Returns(false);
-        _fileValidatorMock.Setup(x => x.IsValidBrowserVideo(It.IsAny<IBrowserFile>())).Returns(true);
-        UpdateConversationDto dto = CreateValidDto() with { File = mockFile.Object };
-
-        // Act
-        TestValidationResult<UpdateConversationDto> result = _validator.TestValidate(dto);
-
-        // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.File);
-    }
-
+   
     [Fact]
     public void Validate_WhenFileIsInvalid_ShouldFail()
     {
@@ -283,7 +267,7 @@ public class UpdateConversationDtoValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.File)
-            .WithErrorMessage("File is not allowed. Only .jpg, .jpeg, .png images or .mp4 videos are accepted, up to 50 MB.");
+            .WithErrorMessage("File is not allowed. Only .jpg, .jpeg, .png images are accepted, up to 50 MB.");
     }
 
     private static UpdateConversationDto CreateValidDto()

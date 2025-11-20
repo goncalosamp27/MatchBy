@@ -3,6 +3,7 @@ using MatchBy.Data;
 using MatchBy.DTOs.Match;
 using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Services.Email;
 using MatchBy.Services.Matches;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -13,14 +14,14 @@ namespace MatchBy.UnitTests.Services.Matches;
 public class MatchesServiceTests : IDisposable
 {
     private readonly Mock<IValidator<CreateMatchDto>> _createValidatorMock;
-    private readonly Mock<IValidator<UpdateMatchDto>> _updateValidatorMock;
     private readonly ApplicationDbContext _dbContext;
     private readonly MatchesService _matchesService;
 
     public MatchesServiceTests()
     {
         _createValidatorMock = new Mock<IValidator<CreateMatchDto>>();
-        _updateValidatorMock = new Mock<IValidator<UpdateMatchDto>>();
+        var updateValidatorMock = new Mock<IValidator<UpdateMatchDto>>();
+        var emailSenderMock = new Mock<IEmailSender>();
 
         DbContextOptions<ApplicationDbContext> options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -31,7 +32,9 @@ public class MatchesServiceTests : IDisposable
         _matchesService = new MatchesService(
             _dbContext,
             _createValidatorMock.Object,
-            _updateValidatorMock.Object);
+            updateValidatorMock.Object,
+            emailSenderMock.Object
+            );
     }
 
     public void Dispose()
@@ -361,5 +364,6 @@ public class MatchesServiceTests : IDisposable
 
     #endregion
 }
+
 
 

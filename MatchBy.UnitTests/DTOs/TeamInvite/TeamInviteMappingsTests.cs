@@ -12,7 +12,7 @@ public class TeamInviteMappingsTests
         DateTime createdAt = DateTime.UtcNow;
         DateTime expiresAt = DateTime.UtcNow.AddDays(7);
         
-        var teamInvite = new Models.TeamInvite
+        var teamInvite = new MatchBy.Models.TeamInvite
         {
             Id = "teaminvite_123",
             Content = "Join our team!",
@@ -58,7 +58,7 @@ public class TeamInviteMappingsTests
         };
 
         // Act
-        Models.TeamInvite entity = createDto.ToEntity();
+        MatchBy.Models.TeamInvite entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity);
@@ -87,7 +87,7 @@ public class TeamInviteMappingsTests
         DateTime afterCreation = DateTime.UtcNow.AddDays(8);
 
         // Act
-        Models.TeamInvite entity = createDto.ToEntity();
+        MatchBy.Models.TeamInvite entity = createDto.ToEntity();
 
         // Assert
         Assert.True(entity.ExpiresAtUtc >= beforeCreation && entity.ExpiresAtUtc <= afterCreation);
@@ -97,7 +97,7 @@ public class TeamInviteMappingsTests
     public void UpdateEntity_ShouldUpdateContentWhenProvided()
     {
         // Arrange
-        var teamInvite = new Models.TeamInvite
+        var teamInvite = new MatchBy.Models.TeamInvite
         {
             Id = "teaminvite_123",
             Content = "Old content",
@@ -128,7 +128,7 @@ public class TeamInviteMappingsTests
     public void UpdateEntity_ShouldSetAcceptedAtUtcWhenStatusIsAccepted()
     {
         // Arrange
-        var teamInvite = new Models.TeamInvite
+        var teamInvite = new MatchBy.Models.TeamInvite
         {
             Id = "teaminvite_123",
             Content = "Join our team!",
@@ -161,7 +161,7 @@ public class TeamInviteMappingsTests
     public void UpdateEntity_ShouldSetDeclinedAtUtcWhenStatusIsDeclined()
     {
         // Arrange
-        var teamInvite = new Models.TeamInvite
+        var teamInvite = new MatchBy.Models.TeamInvite
         {
             Id = "teaminvite_123",
             Content = "Join our team!",
@@ -194,7 +194,7 @@ public class TeamInviteMappingsTests
     public void UpdateEntity_ShouldSetUpdatedAtUtc()
     {
         // Arrange
-        var teamInvite = new Models.TeamInvite
+        var teamInvite = new MatchBy.Models.TeamInvite
         {
             Id = "teaminvite_123",
             Content = "Join our team!",

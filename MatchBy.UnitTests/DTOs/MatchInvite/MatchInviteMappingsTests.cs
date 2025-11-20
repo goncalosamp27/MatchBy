@@ -12,7 +12,7 @@ public class MatchInviteMappingsTests
         DateTime createdAt = DateTime.UtcNow;
         DateTime expiresAt = DateTime.UtcNow.AddDays(7);
         
-        var matchInvite = new Models.MatchInvite
+        var matchInvite = new MatchBy.Models.MatchInvite
         {
             Id = "matchinvite_123",
             Content = "Join our match!",
@@ -58,7 +58,7 @@ public class MatchInviteMappingsTests
         };
 
         // Act
-        Models.MatchInvite entity = createDto.ToEntity();
+        MatchBy.Models.MatchInvite entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity);
@@ -87,7 +87,7 @@ public class MatchInviteMappingsTests
         DateTime afterCreation = DateTime.UtcNow.AddDays(8);
 
         // Act
-        Models.MatchInvite entity = createDto.ToEntity();
+        MatchBy.Models.MatchInvite entity = createDto.ToEntity();
 
         // Assert
         Assert.True(entity.ExpiresAtUtc >= beforeCreation && entity.ExpiresAtUtc <= afterCreation);
@@ -97,7 +97,7 @@ public class MatchInviteMappingsTests
     public void UpdateEntity_ShouldUpdateContentWhenProvided()
     {
         // Arrange
-        var matchInvite = new Models.MatchInvite
+        var matchInvite = new MatchBy.Models.MatchInvite
         {
             Id = "matchinvite_123",
             Content = "Old content",
@@ -128,7 +128,7 @@ public class MatchInviteMappingsTests
     public void UpdateEntity_ShouldSetAcceptedAtUtcWhenStatusIsAccepted()
     {
         // Arrange
-        var matchInvite = new Models.MatchInvite
+        var matchInvite = new MatchBy.Models.MatchInvite
         {
             Id = "matchinvite_123",
             Content = "Join our match!",
@@ -161,7 +161,7 @@ public class MatchInviteMappingsTests
     public void UpdateEntity_ShouldSetDeclinedAtUtcWhenStatusIsDeclined()
     {
         // Arrange
-        var matchInvite = new Models.MatchInvite
+        var matchInvite = new MatchBy.Models.MatchInvite
         {
             Id = "matchinvite_123",
             Content = "Join our match!",
@@ -194,7 +194,7 @@ public class MatchInviteMappingsTests
     public void UpdateEntity_ShouldSetUpdatedAtUtc()
     {
         // Arrange
-        var matchInvite = new Models.MatchInvite
+        var matchInvite = new MatchBy.Models.MatchInvite
         {
             Id = "matchinvite_123",
             Content = "Join our match!",

@@ -30,7 +30,7 @@ public class FriendMappingsTests
             CreatedAtUtc = createdAt
         };
 
-        var friend = new Models.Friend
+        var friend = new MatchBy.Models.Friend
         {
             Id = "friend_789",
             SenderId = "sender_123",
@@ -65,7 +65,7 @@ public class FriendMappingsTests
         // Arrange
         DateTime createdAt = DateTime.UtcNow;
 
-        var friend = new Models.Friend
+        var friend = new MatchBy.Models.Friend
         {
             Id = "friend_789",
             SenderId = "sender_123",
@@ -106,7 +106,7 @@ public class FriendMappingsTests
         };
 
         // Act
-        Models.Friend entity = createDto.ToEntity();
+        MatchBy.Models.Friend entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity);
@@ -129,8 +129,8 @@ public class FriendMappingsTests
         };
 
         // Act
-        Models.Friend entity1 = createDto.ToEntity();
-        Models.Friend entity2 = createDto.ToEntity();
+        MatchBy.Models.Friend entity1 = createDto.ToEntity();
+        MatchBy.Models.Friend entity2 = createDto.ToEntity();
 
         // Assert
         Assert.NotEqual(entity1.Id, entity2.Id);
@@ -149,7 +149,7 @@ public class FriendMappingsTests
         DateTime beforeCreation = DateTime.UtcNow.AddSeconds(-1);
 
         // Act
-        Models.Friend entity = createDto.ToEntity();
+        MatchBy.Models.Friend entity = createDto.ToEntity();
         DateTime afterCreation = DateTime.UtcNow.AddSeconds(1);
 
         // Assert
@@ -164,7 +164,7 @@ public class FriendMappingsTests
     public void UpdateEntity_ShouldSetUpdatedAtUtc()
     {
         // Arrange
-        var friend = new Models.Friend
+        var friend = new MatchBy.Models.Friend
         {
             Id = "friend_789",
             SenderId = "sender_123",
@@ -191,7 +191,7 @@ public class FriendMappingsTests
     {
         // Arrange
         DateTime createdAt = DateTime.UtcNow.AddDays(-10);
-        var friend = new Models.Friend
+        var friend = new MatchBy.Models.Friend
         {
             Id = "friend_789",
             SenderId = "sender_123",

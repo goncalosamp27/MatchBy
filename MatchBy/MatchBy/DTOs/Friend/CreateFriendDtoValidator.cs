@@ -22,3 +22,4 @@ public class CreateFriendDtoValidator : AbstractValidator<CreateFriendDto>
 
 
 
+

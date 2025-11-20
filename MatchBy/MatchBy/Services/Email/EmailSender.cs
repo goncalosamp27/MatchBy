@@ -119,9 +119,13 @@ public class EmailSender(IResend resend) : IEmailSender
         {
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Your match has been cancelled",
-            HtmlBody = """
-                       <h2>Match Cancellation Notice</h2>
-                       """
+            HtmlBody = $"""
+                        <h2>Match Cancellation Notice</h2>
+                        <p>Hi {displayName},</p>
+                        <p>We're sorry to inform you that your upcoming match has been cancelled.</p>
+                        <p>If you have any questions, please feel free to contact our support team.</p>
+                        <p>Best regards,<br/>The MatchBy Team</p>
+                        """
         };
         message.To.Add(email);
 
@@ -134,9 +138,14 @@ public class EmailSender(IResend resend) : IEmailSender
         {
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Confirm your upcoming match",
-            HtmlBody = """
-                       <h2>Match Confirmation Reminder</h2>
-                       """
+            HtmlBody = $"""
+                        <h2>Match Confirmation Reminder</h2>
+                        <p>Hi {displayName},</p>
+                        <p>Great news! Your match is confirmed and ready to go.</p>
+                        <p>Make sure to check the match details and prepare accordingly.</p>
+                        <p>If you need to reschedule, please let us know as soon as possible.</p>
+                        <p>Best regards,<br/>The MatchBy Team</p>
+                        """
         };
         message.To.Add(email);
 

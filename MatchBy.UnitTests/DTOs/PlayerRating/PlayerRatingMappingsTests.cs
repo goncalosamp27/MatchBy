@@ -31,7 +31,7 @@ public class PlayerRatingMappingsTests
             CreatedAtUtc = createdAt
         };
 
-        var match = new Models.Match
+        var match = new MatchBy.Models.Match
         {
             Id = "match_789",
             Location = new Location(0, 0, "City", "Country"),
@@ -48,7 +48,7 @@ public class PlayerRatingMappingsTests
             CreatedAtUtc = createdAt
         };
 
-        var playerRating = new Models.PlayerRating
+        var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_999",
             Rating = 4.5f,
@@ -90,7 +90,7 @@ public class PlayerRatingMappingsTests
         // Arrange
         DateTime createdAt = DateTime.UtcNow;
 
-        var playerRating = new Models.PlayerRating
+        var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_999",
             Rating = 3.0f,
@@ -136,7 +136,7 @@ public class PlayerRatingMappingsTests
         };
 
         // Act
-        Models.PlayerRating entity = createDto.ToEntity();
+        MatchBy.Models.PlayerRating entity = createDto.ToEntity();
 
         // Assert
         Assert.NotNull(entity);
@@ -163,8 +163,8 @@ public class PlayerRatingMappingsTests
         };
 
         // Act
-        Models.PlayerRating entity1 = createDto.ToEntity();
-        Models.PlayerRating entity2 = createDto.ToEntity();
+        MatchBy.Models.PlayerRating entity1 = createDto.ToEntity();
+        MatchBy.Models.PlayerRating entity2 = createDto.ToEntity();
 
         // Assert
         Assert.NotEqual(entity1.Id, entity2.Id);
@@ -185,7 +185,7 @@ public class PlayerRatingMappingsTests
         DateTime beforeCreation = DateTime.UtcNow.AddSeconds(-1);
 
         // Act
-        Models.PlayerRating entity = createDto.ToEntity();
+        MatchBy.Models.PlayerRating entity = createDto.ToEntity();
         DateTime afterCreation = DateTime.UtcNow.AddSeconds(1);
 
         // Assert
@@ -201,7 +201,7 @@ public class PlayerRatingMappingsTests
     {
         // Arrange
         DateTime createdAt = DateTime.UtcNow.AddDays(-10);
-        var playerRating = new Models.PlayerRating
+        var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_123",
             Rating = 3.0f,
@@ -237,7 +237,7 @@ public class PlayerRatingMappingsTests
     public void UpdateEntity_ShouldNotChangeIdAndOtherProperties()
     {
         // Arrange
-        var playerRating = new Models.PlayerRating
+        var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_123",
             Rating = 3.0f,
@@ -271,7 +271,7 @@ public class PlayerRatingMappingsTests
     public void UpdateEntity_ShouldSetUpdatedAtUtc()
     {
         // Arrange
-        var playerRating = new Models.PlayerRating
+        var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_123",
             Rating = 3.0f,

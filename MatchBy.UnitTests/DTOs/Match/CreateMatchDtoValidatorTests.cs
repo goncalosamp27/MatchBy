@@ -87,17 +87,17 @@ public class CreateMatchDtoValidatorTests
     }
 
     [Fact]
-    public void Validate_MinPlayersExceeds10_ShouldHaveValidationError()
+    public void Validate_MinPlayersExceeds30_ShouldHaveValidationError()
     {
         // Arrange
-        CreateMatchDto dto = CreateValidDto() with { MinPlayers = 11 };
+        CreateMatchDto dto = CreateValidDto() with { MinPlayers = 31 };
 
         // Act
         TestValidationResult<CreateMatchDto>? result = _validator.TestValidate(dto);
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.MinPlayers)
-              .WithErrorMessage("Minimum players must be less than or equal to 10.");
+              .WithErrorMessage("Minimum players must be less than or equal to 30.");
     }
 
     [Theory]

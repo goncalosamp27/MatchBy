@@ -30,3 +30,4 @@ public class CreatePlayerRatingDtoValidator : AbstractValidator<CreatePlayerRati
 
 
 
+
