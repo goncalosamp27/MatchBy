@@ -24,7 +24,8 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
 
         builder.HasOne(ti => ti.Sender)
             .WithMany()
-            .HasForeignKey(ti => ti.SenderId);
+            .HasForeignKey(ti => ti.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(ti => ti.ReceiverId)
             .HasMaxLength(500)
@@ -32,7 +33,8 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
 
         builder.HasOne(ti => ti.Receiver)
             .WithMany()
-            .HasForeignKey(ti => ti.ReceiverId);
+            .HasForeignKey(ti => ti.ReceiverId)
+            .OnDelete(DeleteBehavior.Restrict);
         
         builder.Property(ti => ti.TeamId)
             .HasMaxLength(500)
@@ -40,12 +42,22 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
         
         builder.HasOne(ti => ti.Team)
             .WithMany()
-            .HasForeignKey(ti => ti.TeamId);
+            .HasForeignKey(ti => ti.TeamId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(ti => ti.Status)
+            .IsRequired()
+            .HasConversion<int>();
+
+        builder.Property(ti => ti.ExpiresAtUtc)
+            .IsRequired();
         
         builder.Property(t => t.CreatedAtUtc)
             .IsRequired();
 
         builder.Property(t => t.UpdatedAtUtc);
+        builder.Property(t => t.AcceptedAtUtc);
+        builder.Property(t => t.DeclinedAtUtc);
         builder.Property(t => t.DeletedAtUtc);
         builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }

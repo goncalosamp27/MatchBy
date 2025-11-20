@@ -9,7 +9,21 @@ public abstract class Invite
     public string ReceiverId { get; set; }
     public ApplicationUser? Receiver { get; set; }
     
+    public InviteStatus Status { get; set; }
+    public DateTime ExpiresAtUtc { get; set; }
+    public bool IsExpired => DateTime.UtcNow > ExpiresAtUtc;
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? AcceptedAtUtc { get; set; } 
+    public DateTime? DeclinedAtUtc { get; set; } 
     public DateTime? DeletedAtUtc { get; set; }
+}
+
+public enum InviteStatus
+{
+    Pending = 0,
+    Accepted = 1,
+    Declined = 2,
+    Expired = 3,
+    Cancelled = 4
 }

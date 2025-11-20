@@ -1,0 +1,25 @@
+@using Blazorise
+@using MatchBy.Components.Pages
+@inherits LayoutComponentBase
+
+<Layout>
+    <LayoutContent Class="bg-[var(--background)]">
+        <ErrorBoundary @ref="_errorBoundary">
+            <ChildContent>
+                <div class="flex flex-col h-screen w-full overflow-hidden bg-[var(--background)] text-[var(--text)]">
+                    <Header></Header>
+                    @Body
+                </div>
+            </ChildContent>
+            <ErrorContent>
+                <CustomErrorPage StatusCode="500"/>
+            </ErrorContent>
+        </ErrorBoundary>
+    </LayoutContent>
+</Layout>
+
+@code {
+    ErrorBoundary? _errorBoundary;
+    protected override void OnParametersSet() => _errorBoundary?.Recover();
+}
+
