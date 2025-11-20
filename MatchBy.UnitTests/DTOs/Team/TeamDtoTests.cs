@@ -13,7 +13,13 @@ public class TeamDtoTests
         DateTime createdAt = DateTime.UtcNow;
         var members = new List<UserDto>
         {
-            new(id: "user_1", displayName: "User 1", avatarUrl: null)
+            new()
+            {
+                Id = "user_1",
+                DisplayName = "User 1",
+                AvatarUrl = null,
+                PlayerRating = null
+            }
         };
 
         // Act

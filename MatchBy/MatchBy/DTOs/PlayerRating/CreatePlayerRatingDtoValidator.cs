@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace MatchBy.DTOs.PlayerRating;
 
@@ -7,7 +7,7 @@ public class CreatePlayerRatingDtoValidator : AbstractValidator<CreatePlayerRati
     public CreatePlayerRatingDtoValidator()
     {
         RuleFor(x => x.Rating)
-            .InclusiveBetween(0f, 5f)
+            .InclusiveBetween(0, 5)
             .WithMessage("Rating must be between 0 and 5.");
 
         RuleFor(x => x.SentById)

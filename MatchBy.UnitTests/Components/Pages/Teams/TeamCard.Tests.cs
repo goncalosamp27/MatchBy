@@ -246,9 +246,20 @@ public class TeamCardTests
 
     private static TeamDto CreateTestTeam(string? imageUrl = null)
     {
-        var owner = new UserDto("owner-id", "Team Owner", "https://example.com/owner-avatar.jpg");
-        var member = new UserDto("member-id", "Team Member", "https://example.com/member-avatar.jpg");
-        
+        var owner = new UserDto
+        {
+            Id = "owner-id",
+            DisplayName = "Team Owner",
+            AvatarUrl = "https://example.com/owner-avatar.jpg",
+            PlayerRating = null
+        };
+        var member = new UserDto
+        {
+            Id = "member-id",
+            DisplayName = "Team Member",
+            AvatarUrl = "https://example.com/member-avatar.jpg"
+        };
+
         return new TeamDto
         {
             Id = "team-id-1",
@@ -266,9 +277,20 @@ public class TeamCardTests
 
     private static TeamDto CreateTestTeamWithMembers(int memberCount)
     {
-        var owner = new UserDto("owner-id", "Team Owner", "https://example.com/owner-avatar.jpg");
+        var owner = new UserDto
+        {
+            Id = "owner-id",
+            DisplayName = "Team Owner",
+            AvatarUrl = "https://example.com/owner-avatar.jpg",
+            PlayerRating = null
+        };
         var members = Enumerable.Range(1, memberCount)
-            .Select(i => new UserDto($"member-id-{i}", $"Member {i}", $"https://example.com/member-{i}-avatar.jpg"))
+            .Select(i => new UserDto
+            {
+                Id = $"member-id-{i}",
+                DisplayName = $"Member {i}",
+                AvatarUrl = $"https://example.com/member-{i}-avatar.jpg"
+            })
             .ToList();
         
         return new TeamDto

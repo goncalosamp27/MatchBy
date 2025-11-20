@@ -4,16 +4,15 @@
 @using System.Security.Claims
 @using MatchBy.DTOs.Match
 @using MatchBy.Services.Matches
-@using MatchBy.Services.PlayerRating
 @using MatchBy.DTOs.User
 @using MatchBy.DTOs.PlayerRating
+@using MatchBy.Services.PlayerRatings
 @rendermode InteractiveServer
 @using Blazorise
 @inject IToastService ToastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IPlayerRatingService PlayerRatingService
-
 
 @if (_match == null)
 {
@@ -75,7 +74,7 @@ else
                             </span>
                         </div>
                         <div class="cursor-pointer" @onclick="ToggleParticipantsModal">
-                            @if (!showParticipantsModal)
+                            @if (!_showParticipantsModal)
                             {
                                 <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true"
                                      xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
@@ -218,7 +217,7 @@ else
             </div>
         </div>
     </div>
-    @if (showParticipantsModal)
+    @if (_showParticipantsModal)
     {
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center">
             <div class="w-[90%] max-w-xl bg-[var(--section)] rounded-xl border-2 border-[var(--main)] shadow-xl p-6">
@@ -251,7 +250,7 @@ else
                                             class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
                                             @p.DisplayName
                                         </div>
-                                        @if (p.PlayerRating.HasValue && p.PlayerRating.Value > 0)
+                                        @if (p.PlayerRating is > 0)
                                         {
                                             <div class="flex items-center gap-1 text-sm text-[var(--text)]">
                                                 <svg class="w-4 h-4 text-yellow-400" fill="currentColor"
@@ -411,12 +410,9 @@ else
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
 
-    private bool showParticipantsModal = false;
+    private bool _showParticipantsModal;
 
-    private void ToggleParticipantsModal()
-    {
-        showParticipantsModal = !showParticipantsModal;
-    }
+    private void ToggleParticipantsModal() => _showParticipantsModal = !_showParticipantsModal;
 
     private void GoToLogin()
     {

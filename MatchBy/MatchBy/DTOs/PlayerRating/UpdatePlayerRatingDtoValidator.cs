@@ -11,7 +11,7 @@ public class UpdatePlayerRatingDtoValidator : AbstractValidator<UpdatePlayerRati
             .MaximumLength(500).WithMessage("Id cannot exceed 500 characters.");
 
         RuleFor(x => x.Rating)
-            .InclusiveBetween(0f, 5f)
+            .InclusiveBetween(0, 5)
             .WithMessage("Rating must be between 0 and 5.");
 
         RuleFor(x => x.SentById)

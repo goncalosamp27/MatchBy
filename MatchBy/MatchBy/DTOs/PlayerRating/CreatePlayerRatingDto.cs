@@ -1,6 +1,6 @@
 ﻿namespace MatchBy.DTOs.PlayerRating;
 
-public class CreatePlayerRatingDto
+public sealed record CreatePlayerRatingDto
 {
 
     public required string SentById { get; init; }

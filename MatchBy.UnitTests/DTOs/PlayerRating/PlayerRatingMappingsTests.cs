@@ -51,7 +51,7 @@ public class PlayerRatingMappingsTests
         var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_999",
-            Rating = 4.5f,
+            Rating = 4,
             SentById = "sender_123",
             SentBy = sender,
             ReceivedById = "receiver_456",
@@ -69,7 +69,7 @@ public class PlayerRatingMappingsTests
         // Assert
         Assert.NotNull(dto);
         Assert.Equal("playerrating_999", dto.Id);
-        Assert.Equal(4.5f, dto.Rating);
+        Assert.Equal(4, dto.Rating);
         Assert.Equal("sender_123", dto.SentById);
         Assert.NotNull(dto.SentBy);
         Assert.Equal("sender_123", dto.SentBy.Id);
@@ -93,7 +93,7 @@ public class PlayerRatingMappingsTests
         var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_999",
-            Rating = 3.0f,
+            Rating = 3,
             SentById = "sender_123",
             SentBy = null,
             ReceivedById = "receiver_456",
@@ -129,7 +129,7 @@ public class PlayerRatingMappingsTests
         // Arrange
         var createDto = new CreatePlayerRatingDto
         {
-            Rating = 4.5f,
+            Rating = 4,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789"
@@ -141,7 +141,7 @@ public class PlayerRatingMappingsTests
         // Assert
         Assert.NotNull(entity);
         Assert.StartsWith("playerrating_", entity.Id);
-        Assert.Equal(4.5f, entity.Rating);
+        Assert.Equal(4, entity.Rating);
         Assert.Equal("sender_123", entity.SentById);
         Assert.Equal("receiver_456", entity.ReceivedById);
         Assert.Equal("match_789", entity.MatchId);
@@ -156,7 +156,7 @@ public class PlayerRatingMappingsTests
         // Arrange
         var createDto = new CreatePlayerRatingDto
         {
-            Rating = 4.0f,
+            Rating = 4,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789"
@@ -176,7 +176,7 @@ public class PlayerRatingMappingsTests
         // Arrange
         var createDto = new CreatePlayerRatingDto
         {
-            Rating = 5.0f,
+            Rating = 5,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789"
@@ -204,7 +204,7 @@ public class PlayerRatingMappingsTests
         var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_123",
-            Rating = 3.0f,
+            Rating = 3,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789",
@@ -216,7 +216,7 @@ public class PlayerRatingMappingsTests
         var updateDto = new UpdatePlayerRatingDto
         {
             Id = "playerrating_123",
-            Rating = 4.5f,
+            Rating = 4,
             SentById = "sender_123"
         };
 
@@ -226,7 +226,7 @@ public class PlayerRatingMappingsTests
         DateTime afterUpdate = DateTime.UtcNow.AddSeconds(1);
 
         // Assert
-        Assert.Equal(4.5f, playerRating.Rating);
+        Assert.Equal(4, playerRating.Rating);
         Assert.NotNull(playerRating.UpdatedAtUtc);
         Assert.True(playerRating.UpdatedAtUtc >= beforeUpdate && playerRating.UpdatedAtUtc <= afterUpdate);
         Assert.Equal(createdAt, playerRating.CreatedAtUtc); // Should not change
@@ -240,7 +240,7 @@ public class PlayerRatingMappingsTests
         var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_123",
-            Rating = 3.0f,
+            Rating = 3,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789",
@@ -252,7 +252,7 @@ public class PlayerRatingMappingsTests
         var updateDto = new UpdatePlayerRatingDto
         {
             Id = "playerrating_999", // Different ID
-            Rating = 5.0f,
+            Rating = 5,
             SentById = "sender_456" // Different sender
         };
 
@@ -274,7 +274,7 @@ public class PlayerRatingMappingsTests
         var playerRating = new MatchBy.Models.PlayerRating
         {
             Id = "playerrating_123",
-            Rating = 3.0f,
+            Rating = 3,
             SentById = "sender_123",
             ReceivedById = "receiver_456",
             MatchId = "match_789",
@@ -286,7 +286,7 @@ public class PlayerRatingMappingsTests
         var updateDto = new UpdatePlayerRatingDto
         {
             Id = "playerrating_123",
-            Rating = 4.0f,
+            Rating = 4,
             SentById = "sender_123"
         };
 

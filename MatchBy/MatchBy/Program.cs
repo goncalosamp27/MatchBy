@@ -140,6 +140,7 @@ builder.Services
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
 builder.Services.AddScoped<IEmailSender, EmailSender>();
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IImageRefreshService, ImageRefreshService>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
 builder.Services.AddScoped<IMatchesInvitesService, MatchesInvitesService>();
