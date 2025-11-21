@@ -107,7 +107,7 @@
 
         if (result.Succeeded)
         {
-            // Mantém a sessão atual coerente caso o utilizador esteja autenticado.
+            // Keep the current session consistent if the user is authenticated.
             await SignInManager.RefreshSignInAsync(user);
             _statusMessage = "Thank you for confirming your email. Your account is now verified.";
         }

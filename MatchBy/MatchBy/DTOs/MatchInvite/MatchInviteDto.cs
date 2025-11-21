@@ -23,7 +23,3 @@ public sealed record MatchInviteDto
     public DateTime? DeclinedAtUtc { get; init; }
     public DateTime? DeletedAtUtc { get; init; }
 }
-
-
-
-

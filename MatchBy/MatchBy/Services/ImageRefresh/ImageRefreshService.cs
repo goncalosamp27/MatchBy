@@ -58,6 +58,42 @@ public class ImageRefreshService(
             }
         }
     }
+    
+    public async Task RefreshTeamImagesAsync(Team team)
+    {
+        // Refresh conversation image
+        await RefreshTeamImageAsync(team);
+
+        // Refresh all participant profile images
+        await Task.WhenAll(team.Members.Select(RefreshUserProfileImageAsync));
+
+        // Refresh creator profile image
+        if (team.Owner is not null)
+        {
+            await RefreshUserProfileImageAsync(team.Owner);
+        }
+        
+        // Refresh team conversation image
+        if (team.Conversation is not null)
+        {
+            await RefreshConversationImageAsync(team.Conversation);
+        }
+    }
+    
+    public async Task RefreshNotificationImagesAsync(Notification notification)
+    {
+        // Refresh receiver profile image
+        if (notification.Receiver is not null)
+        {
+            await RefreshUserProfileImageAsync(notification.Receiver);
+        }
+        
+        // Refresh sender profile image
+        if (notification.Sender is not null)
+        {
+            await RefreshUserProfileImageAsync(notification.Sender);
+        }
+    }
 
     public async Task RefreshConversationImageAsync(Conversation conversation)
     {

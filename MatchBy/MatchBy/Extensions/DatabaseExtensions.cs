@@ -10,10 +10,10 @@ public static class DatabaseExtensions
 {
     public static async Task RecreateDatabase(this WebApplication app)
     {
-        // 1. "Vou ao armazém dos servicos da nossa app, criando temporariamente"
+        // 1. Go to the service container of our app, creating temporarily
         using IServiceScope scope = app.Services.CreateScope();
         
-        // 2. "Quero o serviço da base de dados, por favor, dentro do scope e no provedor de servicos da nossa app"
+        // 2. Get the database service within the scope and from the service provider of our app
         await using ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         
         try
@@ -28,16 +28,16 @@ public static class DatabaseExtensions
         }
     }
     
-    //metodo de extensao da WebApplication para adicionar a funcionalidade ApplyMigrationsAsync á app(pois usamos o 'this').
+    // Extension method of WebApplication to add the ApplyMigrationsAsync functionality to the app (since we use 'this').
     public static async Task ApplyMigrationsAsync(this WebApplication app)
     {
-        // 1. "Vou ao armazém dos servicos da nossa app, criando temporariamente"
+        // 1. Go to the service container of our app, creating temporarily
         using IServiceScope scope = app.Services.CreateScope();
         
-        // 2. "Quero o serviço da base de dados, por favor, dentro do scope e no provedor de servicos da nossa app"
+        // 2. Get the database service within the scope and from the service provider of our app
         await using ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         
-        // 3. "Vou usar para aplicar migrações"
+        // 3. Apply migrations
         try
         {
             await dbContext.Database.MigrateAsync();

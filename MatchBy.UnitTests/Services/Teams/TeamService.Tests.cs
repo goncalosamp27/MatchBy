@@ -5,6 +5,7 @@ using MatchBy.DTOs.TeamInvite;
 using MatchBy.Models;
 using MatchBy.Services.Conversations;
 using MatchBy.Services.ImageRefresh;
+using MatchBy.Services.Notifications;
 using MatchBy.Services.S3;
 using MatchBy.Services.TeamInvites;
 using MatchBy.Services.Teams;
@@ -21,6 +22,8 @@ public class TeamServiceTests : IDisposable
     private readonly Mock<IValidator<CreateTeamDto>> _createValidatorMock;
     private readonly Mock<IValidator<UpdateTeamDto>> _updateValidatorMock;
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+    private readonly Mock<IDbContextFactory<ApplicationDbContext>> _dbContextFactoryMock;
+    private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
     private readonly ApplicationDbContext _dbContext;
     private readonly TeamService _teamService;
 
@@ -32,6 +35,8 @@ public class TeamServiceTests : IDisposable
         _createValidatorMock = new Mock<IValidator<CreateTeamDto>>();
         _updateValidatorMock = new Mock<IValidator<UpdateTeamDto>>();
         var imageRefreshServiceMock = new Mock<IImageRefreshService>();
+        var notificationServiceMock = new Mock<INotificationService>();
+        _dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
         // Setup image refresh service to return completed tasks
         imageRefreshServiceMock
@@ -45,26 +50,46 @@ public class TeamServiceTests : IDisposable
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
-        DbContextOptions<ApplicationDbContext> options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        // Setup in-memory database with a unique name per test class
+        // All contexts created with these options will share the same database
+        string databaseName = Guid.NewGuid().ToString();
+        _dbContextOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
-        _dbContext = new ApplicationDbContext(options);
+        // Create a test context for setup and verification
+        // This context will share the same in-memory database as contexts created by the factory
+        _dbContext = new ApplicationDbContext(_dbContextOptions);
+
+        // Setup the factory to return a new instance each time
+        // This prevents the service from disposing the test's context instance
+        _dbContextFactoryMock
+            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
 
         _teamService = new TeamService(
-            _dbContext,
+            _dbContextFactoryMock.Object,
             s3ServiceMock.Object,
             _conversationServiceMock.Object,
             _teamInvitesServiceMock.Object,
             _createValidatorMock.Object,
             _updateValidatorMock.Object,
-            _userManagerMock.Object,
-            imageRefreshServiceMock.Object);
+            imageRefreshServiceMock.Object,
+            notificationServiceMock.Object);
     }
 
     public void Dispose()
     {
         _dbContext.Dispose();
+    }
+
+    /// <summary>
+    /// Helper method to create a fresh DbContext for verification.
+    /// This ensures we're querying the database directly rather than using cached entities from the change tracker.
+    /// </summary>
+    private ApplicationDbContext CreateFreshDbContext()
+    {
+        return new ApplicationDbContext(_dbContextOptions);
     }
 
     #region GetTeamByIdAsync Tests
@@ -388,8 +413,11 @@ public class TeamServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.Equal(2, result.Data); // Returns 2 when not soft-deleted
         
-        Team? updatedTeam = await _dbContext.Teams.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == "team1");
-        Assert.DoesNotContain(updatedTeam!.Members, m => m.Id == "user2");
+        // Use a fresh context to verify the changes were persisted
+        await using ApplicationDbContext freshContext = CreateFreshDbContext();
+        Team? updatedTeam = await freshContext.Teams.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == "team1");
+        Assert.NotNull(updatedTeam);
+        Assert.DoesNotContain(updatedTeam.Members, m => m.Id == "user2");
     }
 
     #endregion

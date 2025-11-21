@@ -20,6 +20,12 @@ public interface IImageRefreshService
     Task RefreshTeamImageAsync(Team team);
 
     /// <summary>
+    /// Refreshes the team image, owner image and all members profile images.
+    /// </summary>
+    /// <param name="team">The team to refresh images for.</param>
+    Task RefreshTeamImagesAsync(Team team);
+
+    /// <summary>
     /// Refreshes the conversation image URL if it has expired.
     /// </summary>
     /// <param name="conversation">The conversation whose image should be refreshed.</param>
@@ -30,4 +36,10 @@ public interface IImageRefreshService
     /// </summary>
     /// <param name="conversation">The conversation to refresh images for.</param>
     Task RefreshConversationImagesAsync(Conversation conversation);
+    
+    /// <summary>
+    /// Refreshes the notification related images such as sender and receiver profile images.
+    /// </summary>
+    /// <param name="notification">The notification to refresh images for.</param>
+    Task RefreshNotificationImagesAsync(Notification notification);
 }

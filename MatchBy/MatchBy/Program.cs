@@ -16,6 +16,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Hangfire.Common;
 using MatchBy.Hubs;
+using MatchBy.Services.Notifications;
 using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
@@ -32,6 +33,7 @@ using MatchBy.Services.Users;
 using MatchBy.Settings;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
+using INotificationService = MatchBy.Services.Notifications.INotificationService;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +43,7 @@ builder.Services.AddRazorComponents()
     .AddAuthenticationStateSerialization();
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
@@ -98,8 +101,7 @@ builder.Services.AddAuthentication(options =>
 string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                           throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -152,6 +154,7 @@ builder.Services.AddScoped<ITeamsInvitesService, TeamsInvitesService>();
 builder.Services.AddScoped<IFriendService, FriendService>();
 builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
 builder.Services.AddScoped<IJobService, JobService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
@@ -200,6 +203,7 @@ app.UseAntiforgery();
 app.UseHangfireDashboard();
 
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode();

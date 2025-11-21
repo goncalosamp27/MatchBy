@@ -5,18 +5,21 @@ using MatchBy.Data;
 using MatchBy.DTOs.PlayerRating;
 using MatchBy.Models;
 using Microsoft.EntityFrameworkCore;
+using Sentry.Protocol;
 
 namespace MatchBy.Services.PlayerRatings;
 
 public class PlayerRatingService(
-    ApplicationDbContext applicationDbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreatePlayerRatingDto> createRatingValidator,
-    IValidator<UpdatePlayerRatingDto> updateRatingValidator, 
+    IValidator<UpdatePlayerRatingDto> updateRatingValidator,
     ILogger<PlayerRatingService> logger) : IPlayerRatingService
 {
     public async Task<Result<PlayerRatingDto>> GetRatingById(string ratingId, CancellationToken ct = default)
     {
-        Models.PlayerRating? rating = await applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        PlayerRating? rating = await dbContext
             .PlayerRatings
             .AsNoTracking()
             .Include(r => r.SentBy)
@@ -35,14 +38,16 @@ public class PlayerRatingService(
     public async Task<Result<PaginationResponse<List<PlayerRatingDto>>>> GetRatingsForMatch(
         string matchId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         // Check if the match exists
-        bool matchExists = await applicationDbContext.Matches.AnyAsync(m => m.Id == matchId, ct);
+        bool matchExists = await dbContext.Matches.AnyAsync(m => m.Id == matchId, ct);
         if (!matchExists)
         {
             return Result<PaginationResponse<List<PlayerRatingDto>>>.Fail($"Match with id {matchId} not found.");
         }
 
-        IQueryable<Models.PlayerRating> query = applicationDbContext
+        IQueryable<Models.PlayerRating> query = dbContext
             .PlayerRatings
             .AsNoTracking()
             .Include(r => r.SentBy)
@@ -79,7 +84,9 @@ public class PlayerRatingService(
     public async Task<Result<PaginationResponse<List<PlayerRatingDto>>>> GetRatingsGivenByUser(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<Models.PlayerRating> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Models.PlayerRating> query = dbContext
             .PlayerRatings
             .AsNoTracking()
             .Include(r => r.SentBy)
@@ -116,7 +123,9 @@ public class PlayerRatingService(
     public async Task<Result<PaginationResponse<List<PlayerRatingDto>>>> GetRatingsReceivedByUser(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<Models.PlayerRating> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Models.PlayerRating> query = dbContext
             .PlayerRatings
             .AsNoTracking()
             .Include(r => r.SentBy)
@@ -158,9 +167,12 @@ public class PlayerRatingService(
             return Result<PlayerRatingDto>.Fail("You cannot rate yourself.");
         }
 
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+
         try
         {
-            Match match = await applicationDbContext.Matches
+            Match match = await dbContext.Matches
                 .Include(m => m.Participants)
                 .SingleOrDefaultAsync(m => m.Id == createDto.MatchId, ct);
 
@@ -178,10 +190,11 @@ public class PlayerRatingService(
 
             if (!participantIds.Contains(createDto.ReceivedById))
             {
-                return Result<PlayerRatingDto>.Fail("The player you are trying to rate is not a participant of this match.");
+                return Result<PlayerRatingDto>.Fail(
+                    "The player you are trying to rate is not a participant of this match.");
             }
 
-            Models.PlayerRating? existing = await applicationDbContext.PlayerRatings
+            Models.PlayerRating? existing = await dbContext.PlayerRatings
                 .SingleOrDefaultAsync(r =>
                     r.SentById == createDto.SentById &&
                     r.ReceivedById == createDto.ReceivedById &&
@@ -195,16 +208,16 @@ public class PlayerRatingService(
             else
             {
                 existing = createDto.ToEntity();
-                applicationDbContext.PlayerRatings.Add(existing);
+                dbContext.PlayerRatings.Add(existing);
             }
 
-            await applicationDbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync(ct);
 
             // Recalculate and update the user's average rating
             await UpdateUserAverageRatingAsync(createDto.ReceivedById);
 
             logger.LogInformation("Rating from {SenterId} to {ReceiverId} for match {MatchId} saved successfully",
-            createDto.SentById, createDto.ReceivedById, createDto.MatchId);
+                createDto.SentById, createDto.ReceivedById, createDto.MatchId);
 
             return Result<PlayerRatingDto>.Ok(existing.ToDto());
         }
@@ -224,22 +237,24 @@ public class PlayerRatingService(
             return Result<PlayerRatingDto>.Fail(validationResult.ToString());
         }
 
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         // Check if sender exists
-        bool senderExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.SentById, ct);
+        bool senderExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.SentById, ct);
         if (!senderExists)
         {
             return Result<PlayerRatingDto>.Fail($"Sender with id {createDto.SentById} not found.");
         }
 
         // Check if receiver exists
-        bool receiverExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.ReceivedById, ct);
+        bool receiverExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.ReceivedById, ct);
         if (!receiverExists)
         {
             return Result<PlayerRatingDto>.Fail($"Receiver with id {createDto.ReceivedById} not found.");
         }
 
         // Check if match exists
-        Match? match = await applicationDbContext.Matches
+        Match? match = await dbContext.Matches
             .Include(m => m.Participants)
             .FirstOrDefaultAsync(m => m.Id == createDto.MatchId, ct);
 
@@ -266,7 +281,7 @@ public class PlayerRatingService(
         }
 
         // Check if rating already exists
-        bool existingRating = await applicationDbContext.PlayerRatings
+        bool existingRating = await dbContext.PlayerRatings
             .AnyAsync(r => r.SentById == createDto.SentById
                            && r.ReceivedById == createDto.ReceivedById
                            && r.MatchId == createDto.MatchId, ct);
@@ -277,8 +292,8 @@ public class PlayerRatingService(
         }
 
         Models.PlayerRating rating = createDto.ToEntity();
-        await applicationDbContext.PlayerRatings.AddAsync(rating, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.PlayerRatings.AddAsync(rating, ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetRatingById(rating.Id, ct);
     }
@@ -292,7 +307,10 @@ public class PlayerRatingService(
             return Result<PlayerRatingDto>.Fail(validationResult.ToString());
         }
 
-        Models.PlayerRating? rating = await applicationDbContext.PlayerRatings
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+
+        Models.PlayerRating? rating = await dbContext.PlayerRatings
             .FirstOrDefaultAsync(r => r.Id == updateDto.Id, ct);
 
         if (rating == null)
@@ -307,14 +325,17 @@ public class PlayerRatingService(
         }
 
         rating.UpdateEntity(updateDto);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetRatingById(rating.Id, ct);
     }
 
     public async Task<Result<bool>> DeleteRating(string ratingId, string userId, CancellationToken ct = default)
     {
-        Models.PlayerRating? rating = await applicationDbContext.PlayerRatings
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+
+        Models.PlayerRating? rating = await dbContext.PlayerRatings
             .FirstOrDefaultAsync(r => r.Id == ratingId, ct);
 
         if (rating == null)
@@ -329,21 +350,23 @@ public class PlayerRatingService(
         }
 
         rating.DeletedAtUtc = DateTime.UtcNow;
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<double>> GetAverageRatingForUser(string userId, CancellationToken ct = default)
     {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         // Check if user exists
-        bool userExists = await applicationDbContext.Users.AnyAsync(u => u.Id == userId, ct);
+        bool userExists = await dbContext.Users.AnyAsync(u => u.Id == userId, ct);
         if (!userExists)
         {
             return Result<double>.Fail($"User with id {userId} not found.");
         }
 
-        List<Models.PlayerRating> ratings = await applicationDbContext.PlayerRatings
+        List<Models.PlayerRating> ratings = await dbContext.PlayerRatings
             .Where(r => r.ReceivedById == userId)
             .ToListAsync(ct);
 
@@ -355,13 +378,16 @@ public class PlayerRatingService(
         double averageRating = ratings.Average(r => r.Rating);
         return Result<double>.Ok(Math.Round(averageRating, 2));
     }
+
     private async Task UpdateUserAverageRatingAsync(string userId)
     {
-        float average = await applicationDbContext.PlayerRatings
-                            .Where(r => r.ReceivedById == userId)
-                            .AverageAsync(r => (float?)r.Rating) ?? 0f;
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync();
 
-        await applicationDbContext.Users
+        float average = await dbContext.PlayerRatings
+            .Where(r => r.ReceivedById == userId)
+            .AverageAsync(r => (float?)r.Rating) ?? 0f;
+
+        await dbContext.Users
             .Where(u => u.Id == userId)
             .ExecuteUpdateAsync(setters =>
                 setters.SetProperty(u => u.Rating, (float)Math.Round(average, 2)));

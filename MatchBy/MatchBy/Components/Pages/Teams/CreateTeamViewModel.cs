@@ -122,6 +122,16 @@ public sealed class CreateTeamViewModel(
         set
         {
             _userId = value;
+            if(_userId != null)
+            {
+                var members = new List<string>(Model.MembersIds);
+                if (!members.Contains(_userId))
+                {
+                    members.Add(_userId);
+                }
+                Model = Model with { MembersIds = members};
+                OnPropertyChanged(nameof(Model));
+            }
             OnPropertyChanged(nameof(UserId));
         }
     }
@@ -244,7 +254,10 @@ public sealed class CreateTeamViewModel(
         IsSubmitting = true;
         try
         {
-            var membersToInvite = new List<string>(_model.MembersIds) { _userId! };
+            var membersToInvite = new List<string>(_model.MembersIds)
+            {
+                _userId!
+            };
             CreateTeamDto createDto = _model with
             {
                 OwnerId = _userId!,

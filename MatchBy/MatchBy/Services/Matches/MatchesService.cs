@@ -2,27 +2,34 @@
 using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Match;
+using MatchBy.DTOs.Notification;
 using MatchBy.Models;
 using MatchBy.Enums;
+using MatchBy.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using IEmailSender = MatchBy.Services.Email.IEmailSender;
 
 namespace MatchBy.Services.Matches;
 
-public class MatchesService(ApplicationDbContext applicationDbContext,
+public class MatchesService(
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateMatchDto> createMatchValidator,
-    IValidator<UpdateMatchDto> updateMatchValidator, IEmailSender emailSender) : IMatchesService
+    IValidator<UpdateMatchDto> updateMatchValidator, 
+    IEmailSender emailSender,
+    INotificationService notificationService) : IMatchesService
 {
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
         string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .Include(m => m.Participants)
             .Include(m => m.Creator);
 
-        List<MatchInvite> invites = await applicationDbContext
+        List<MatchInvite> invites = await dbContext
             .MatchInvites
             .Where(mi => mi.ReceiverId == userId)
             .ToListAsync(ct);
@@ -72,15 +79,17 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
     }
 
     public async Task<Result<MatchDto>> GetMatchById(string matchId, string? userId, CancellationToken ct = default)
-    {
+    {        
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         Match? match;
         if (!string.IsNullOrEmpty(userId))
         {
-            bool hasInvite = await applicationDbContext
+            bool hasInvite = await dbContext
                 .MatchInvites
                 .AnyAsync(i => i.MatchId == matchId && i.ReceiverId == userId, ct);
 
-            match = await applicationDbContext
+            match = await dbContext
                 .Matches
                 .Include(m => m.Participants)
                 .Include(m => m.Creator)
@@ -93,7 +102,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
                 : Result<MatchDto>.Ok(match.ToDto());
         }
 
-        match = await applicationDbContext
+        match = await dbContext
             .Matches
             .Include(m => m.Participants)
             .Include(m => m.Creator)
@@ -112,12 +121,13 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         {
             return Result<bool>.Fail(validationResult.ToString());
         }
-        
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         Match match = createMatchDto.ToEntity();
         match.Participants = (List<ApplicationUser>)
-            [await applicationDbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
-        await applicationDbContext.Matches.AddAsync(match, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
+            [await dbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
+        await dbContext.Matches.AddAsync(match, ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(true);
     }
@@ -129,8 +139,9 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         {
             return Result<bool>.Fail(validationResult.ToString());
         }
-        
-        Match? match = await applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        Match? match = await dbContext
             .Matches
             .Where(m => m.CreatorId == updateMatchDto.UserId)
             .FirstOrDefaultAsync(m => m.Id == updateMatchDto.MatchId, ct);
@@ -141,13 +152,15 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         }
 
         match.UpdateEntity(updateMatchDto);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<bool>> DeleteMatch(string matchId, string userId, CancellationToken ct = default)
-    {
-        int result = await applicationDbContext
+    {       
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        int result = await dbContext
             .Matches
             .Where(m => m.Id == matchId)
             .Where(m => m.CreatorId == userId)
@@ -159,13 +172,15 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
     }
 
     public async Task<Result<MatchDto>> JoinMatch(string matchId, string userId, CancellationToken ct = default)
-    {
-        bool invited = await applicationDbContext
+    {        
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        bool invited = await dbContext
             .MatchInvites
             .Where(mi => mi.ReceiverId == userId)
             .AnyAsync(i => i.MatchId == matchId,ct);
 
-        Match? match = await applicationDbContext
+        Match? match = await dbContext
             .Matches
             .Include(m => m.Participants)
             .Where(m => m.Privacy == MatchPrivacy.Public || invited)
@@ -187,7 +202,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
             return Result<MatchDto>.Fail($"User with id {userId} already joined the match {matchId}.");
         }
 
-        ApplicationUser? user = await applicationDbContext
+        ApplicationUser? user = await dbContext
             .Users
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null)
@@ -196,13 +211,43 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
         }
 
         match.Participants.Add(user);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
+
+        // Notify match creator that someone joined
+        if (match.CreatorId == userId)
+        {
+            return await GetMatchById(matchId, userId, ct);
+        }
+
+        string matchName = $"{match.Sport} em {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}";
+        
+        string? newParticipant = await dbContext.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.DisplayName)
+            .FirstOrDefaultAsync(ct);
+        
+        var notification = new CreateNotificationDto
+        {
+            Type = NotificationType.MatchJoined,
+            ReceiverUserId = match.CreatorId,
+            SenderUserId = userId,
+            RelatedEntityId = match.Id,
+            RelatedEntityName = matchName,
+            Title = "New participant",
+            Message = $"{newParticipant} joined the match {matchName}",
+            ActionUrl = $"/matches/{match.Id}"
+        };
+
+        await notificationService.SendNotificationAsync(notification, ct);
+
         return await GetMatchById(matchId, userId, ct);
     }
     
     public async Task<Result<bool>> LeaveMatch(string matchId, string userId, CancellationToken ct = default)
     {
-        ApplicationUser? user = await applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        ApplicationUser? user = await dbContext
             .Users
             .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null)
@@ -210,7 +255,7 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
             return Result<bool>.Fail($"User with id {userId} not found.");
         }
         
-        Match? match = await applicationDbContext
+        Match? match = await dbContext
             .Matches
             .Include(m => m.Participants)
             .Where(m => m.Participants.Any(p => p.Id == userId))
@@ -247,14 +292,16 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
             match.Participants.Remove(user);
         }
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q,
         int page = 1, int pageSize = 5, CancellationToken ct = default)
-    {
-        IQueryable<Match> query = applicationDbContext
+    {        
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .Include(m => m.Participants)
@@ -292,7 +339,9 @@ public class MatchesService(ApplicationDbContext applicationDbContext,
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesExceptUser(string userId, string? q,
         int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .Include(m => m.Participants)

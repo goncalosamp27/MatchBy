@@ -6,6 +6,7 @@ using MatchBy.Hubs;
 using MatchBy.Models;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
+using MatchBy.Services.Notifications;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
 
@@ -17,6 +18,7 @@ public class ChatHubTests : IDisposable
 {
     private readonly Mock<IChatMessageService> _chatMessageServiceMock;
     private readonly Mock<IConversationService> _conversationServiceMock;
+    private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly Mock<IHubCallerClients> _hubClientsMock;
     private readonly Mock<IGroupManager> _groupManagerMock;
     private readonly ChatHub _chatHub;
@@ -25,6 +27,7 @@ public class ChatHubTests : IDisposable
     {
         _chatMessageServiceMock = new Mock<IChatMessageService>();
         _conversationServiceMock = new Mock<IConversationService>();
+        _notificationServiceMock = new Mock<INotificationService>();
         var hubCallerContextMock = new Mock<HubCallerContext>();
         _hubClientsMock = new Mock<IHubCallerClients>();
         var clientProxyMock = new Mock<IClientProxy>();
@@ -36,7 +39,7 @@ public class ChatHubTests : IDisposable
         _hubClientsMock.Setup(x => x.Clients(It.IsAny<IReadOnlyList<string>>())).Returns(clientProxyMock.Object);
         _hubClientsMock.Setup(x => x.Client(It.IsAny<string>())).Returns(singleClientProxyMock.Object);
 
-        _chatHub = new ChatHub(_chatMessageServiceMock.Object, _conversationServiceMock.Object)
+        _chatHub = new ChatHub(_chatMessageServiceMock.Object, _conversationServiceMock.Object, _notificationServiceMock.Object)
         {
             Context = hubCallerContextMock.Object,
             Clients = _hubClientsMock.Object,
@@ -910,7 +913,7 @@ public class ChatHubTests : IDisposable
         hubClientsMock.Setup(x => x.Clients(It.IsAny<IReadOnlyList<string>>())).Returns(clientProxyMock.Object);
         hubClientsMock.Setup(x => x.Client(It.IsAny<string>())).Returns(singleClientProxyMock.Object);
 
-        var hub = new ChatHub(_chatMessageServiceMock.Object, _conversationServiceMock.Object)
+        var hub = new ChatHub(_chatMessageServiceMock.Object, _conversationServiceMock.Object, _notificationServiceMock.Object)
         {
             Context = hubCallerContextMock.Object,
             Clients = hubClientsMock.Object,

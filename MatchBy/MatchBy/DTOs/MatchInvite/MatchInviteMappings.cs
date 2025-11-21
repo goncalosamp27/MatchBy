@@ -76,7 +76,3 @@ public static class MatchInviteMappings
         matchInvite.UpdatedAtUtc = DateTime.UtcNow;
     }
 }
-
-
-
-

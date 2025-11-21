@@ -8,7 +8,3 @@ public sealed record CreateMatchInviteDto
     public required string MatchId { get; init; }
     public DateTime? ExpiresAtUtc { get; init; }
 }
-
-
-
-

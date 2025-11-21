@@ -65,7 +65,7 @@ public class TeamCardTests
     }
 
     [Fact]
-    public void Render_WhenUserIdIsNotOwnerOrMember_ShouldDisplayInvitedBadge()
+    public void Render_WhenUserIdIsNotOwnerOrMemberAndIsPublic_ShouldDisplayInvitedBadge()
     {
         // Arrange
         using var ctx = new BunitContext();
@@ -79,10 +79,10 @@ public class TeamCardTests
         
         // Assert
         IElement badge = cut.Find("span");
-        Assert.Equal("Invited", badge.TextContent);
+        Assert.Equal("Public", badge.TextContent);
         Assert.Contains("bg-[var(--section)]", badge.ClassName);
     }
-
+    
     [Fact]
     public void Render_WhenTeamHasImageUrl_ShouldDisplayImage()
     {
@@ -228,7 +228,7 @@ public class TeamCardTests
     }
 
     [Fact]
-    public void Render_WithNullUserId_ShouldDisplayInvitedBadge()
+    public void Render_WithNullUserId_ShouldDisplayPublicOnPublicTeamBadge()
     {
         // Arrange
         using var ctx = new BunitContext();
@@ -241,7 +241,7 @@ public class TeamCardTests
         
         // Assert
         IElement badge = cut.Find("span");
-        Assert.Equal("Invited", badge.TextContent);
+        Assert.Equal("Public", badge.TextContent);
     }
 
     private static TeamDto CreateTestTeam(string? imageUrl = null)

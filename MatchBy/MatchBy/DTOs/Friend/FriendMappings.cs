@@ -36,7 +36,3 @@ public static class FriendMappings
         friend.UpdatedAtUtc = DateTime.UtcNow;
     }
 }
-
-
-
-

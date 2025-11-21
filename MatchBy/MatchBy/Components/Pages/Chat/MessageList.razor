@@ -68,8 +68,8 @@
         var currentCount = ChatMessages.Count;
         if (_isInitialized && currentCount > _previousMessageCount)
         {
-            // Novas mensagens chegaram - marcar para scroll automático
-            _shouldAutoScroll = _isUserAtBottom; // Só faz auto-scroll se já estava no fundo
+            // New messages arrived - mark for auto-scroll
+            _shouldAutoScroll = _isUserAtBottom; // Only auto-scroll if already at the bottom
         }
         _previousMessageCount = currentCount;
     }
@@ -80,12 +80,12 @@
         {
             _isInitialized = true;
             _previousMessageCount = ChatMessages.Count;
-            await Task.Delay(100); // Pequeno delay para garantir que o DOM está renderizado
+            await Task.Delay(100); // Small delay to ensure the DOM is rendered
             await ScrollToBottom();
             return;
         }
 
-        // Scroll apenas se foi marcado para auto-scroll (novas mensagens + usuário estava no fundo)
+        // Scroll only if auto-scroll was marked (new messages + user was at the bottom)
         if (_shouldAutoScroll)
         {
             _shouldAutoScroll = false; // Reset flag

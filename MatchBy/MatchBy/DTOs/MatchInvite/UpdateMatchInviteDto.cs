@@ -9,7 +9,3 @@ public sealed record UpdateMatchInviteDto
     public InviteStatus? Status { get; init; }
     public DateTime? ExpiresAtUtc { get; init; }
 }
-
-
-
-

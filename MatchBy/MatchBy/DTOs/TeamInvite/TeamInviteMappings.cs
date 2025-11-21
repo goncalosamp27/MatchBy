@@ -76,7 +76,3 @@ public static class TeamInviteMappings
         teamInvite.UpdatedAtUtc = DateTime.UtcNow;
     }
 }
-
-
-
-
