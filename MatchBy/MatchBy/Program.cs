@@ -12,16 +12,28 @@ using Blazorise.FluentValidation;
 using Blazorise.Tailwind;
 using Blazorise.Icons.FontAwesome;
 using FluentValidation;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Hangfire.Common;
 using MatchBy.Hubs;
+using MatchBy.Services.Notifications;
+using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
 using MatchBy.Services.Email;
 using MatchBy.Services.FileValidator;
+using MatchBy.Services.Friends;
+using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.Matches;
+using MatchBy.Services.MatchInvites;
+using MatchBy.Services.PlayerRatings;
+using MatchBy.Services.Teams;
+using MatchBy.Services.TeamInvites;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
+using INotificationService = MatchBy.Services.Notifications.INotificationService;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +43,7 @@ builder.Services.AddRazorComponents()
     .AddAuthenticationStateSerialization();
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
@@ -54,6 +67,7 @@ builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("Upl
 
 
 builder.Services.AddOptions();
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<ResendClient>();
 builder.Services.Configure<ResendClientOptions>( o =>
 {
@@ -86,9 +100,20 @@ builder.Services.AddAuthentication(options =>
 
 string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
                           throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddHangfire(config =>
+    {
+        config.UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString));
+    }
+);
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
@@ -116,11 +141,20 @@ builder.Services
 
 builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
 
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
+builder.Services.AddScoped<IImageRefreshService, ImageRefreshService>();
 builder.Services.AddScoped<IMatchesService, MatchesService>();
+builder.Services.AddScoped<IMatchesInvitesService, MatchesInvitesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<ITeamsInvitesService, TeamsInvitesService>();
+builder.Services.AddScoped<IFriendService, FriendService>();
+builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
+builder.Services.AddScoped<IJobService, JobService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
@@ -148,6 +182,15 @@ else
     app.UseHsts();
 }
 
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    IRecurringJobManager recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    recurringJobManager.AddOrUpdate(
+        "process-match-states",
+        Job.FromExpression<IJobService>(service => service.ProcessMatchStatesAsync()),
+        "*/1 * * * *" // Every minute
+    );
+}
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
@@ -156,11 +199,14 @@ app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.UseHangfireDashboard();
+
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(MatchBy.Client._Imports).Assembly);
+    .AddInteractiveWebAssemblyRenderMode();
 app.MapAdditionalIdentityEndpoints();
 
 await app.RunAsync();

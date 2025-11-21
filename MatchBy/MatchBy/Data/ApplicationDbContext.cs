@@ -1,3 +1,4 @@
+using MatchBy.Data.Configurations;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PlayerRating> PlayerRatings { get; set; }
     public DbSet<Team> Teams { get; set; }
     public DbSet<TeamInvite> TeamInvites { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

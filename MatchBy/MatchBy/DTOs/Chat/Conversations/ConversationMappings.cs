@@ -14,6 +14,7 @@ public static class ConversationMappings
             ImageUrl = conversation.Image?.Url,
             CreatorId = conversation.CreatorId,
             TeamId = conversation.TeamId,
+            TeamImageUrl = conversation.Team?.Image?.Url,
             MatchId = conversation.MatchId,
             CreatedAtUtc = conversation.CreatedAtUtc,
             UpdatedAtUtc = conversation.UpdatedAtUtc,

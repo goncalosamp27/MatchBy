@@ -1,42 +1,150 @@
 ﻿@using MatchBy.DTOs.Chat.Messages
-<section class="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+@inject IJSRuntime Js
+
+<section @ref="_scrollContainer"
+         class="flex-1 min-h-0 overflow-y-auto thin-scroll px-2.5 sm:px-3 md:px-4 py-3 sm:py-4 relative"
+         @onscroll="HandleScroll">
+    
+    <!-- Scroll to Bottom Button -->
+    @if (!_isUserAtBottom)
+    {
+        <button @onclick="ScrollToBottom"
+                class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-20 p-2.5 sm:p-3 rounded-full shadow-lg transition-all hover:scale-110 active:scale-95"
+                style="background-color: var(--main); color: var(--text-contrast);">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+            </svg>
+        </button>
+    }
+
     <CursorPagination OnNext="OnNext" NextCursor="@NextCursor" />
-    <div class="space-y-4">
-        <Virtualize Items="Groups" Context="group" ItemSize="56">
-            <div class="flex justify-center mb-4">
-                <span class="text-xs px-3 py-1 rounded-full border shadow-sm"
-                      style="background-color: var(--section); color: var(--text); border-color: var(--main);">
-                    @group.Date.ToString("dd MMM yyyy")
-                </span>
+    
+    <div class="space-y-3 sm:space-y-4">
+        @foreach (var group in Groups)
+        {
+            <div class="mb-6">
+                <div class="flex justify-center mb-3 sm:mb-4 sticky top-0 z-10 py-2">
+                    <span class="text-xs sm:text-sm px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border shadow-md backdrop-blur-sm"
+                          style="background-color: var(--section); color: var(--text); border-color: var(--main);">
+                        @FormatDate(group.Date)
+                    </span>
+                </div>
+                
+                <div class="space-y-2 sm:space-y-3">
+                    @foreach (var m in group.Messages)
+                    {
+                        <ChatMessage Message="m" 
+                                     CurrentUserId="@CurrentUserId"
+                                     OnEditClicked="OnEdit"
+                                     OnReplyToClicked="OnReply"
+                                     OnDeleteClicked="OnDelete"/>
+                    }
+                </div>
             </div>
-            @foreach (var m in group.Messages)
-            {
-                <ChatMessage Message="m" 
-                             CurrentUserId="@CurrentUserId"
-                             OnEditClicked="OnEdit"
-                             OnReplyToClicked="OnReply"
-                             OnDeleteClicked="OnDelete"/>
-            }
-        </Virtualize>
+        }
     </div>
 </section>
+
 @code{
     [Parameter] public required List<ChatMessageDto> ChatMessages { get; set; }
     [Parameter] public required string CurrentUserId { get; set; }
     [Parameter] public EventCallback<UpdateChatMessageDto> OnEdit { get; set; }
     [Parameter] public EventCallback<ChatMessageDto> OnReply { get; set; }
     [Parameter] public EventCallback<ChatMessageDto> OnDelete { get; set; }
-
     [Parameter] public EventCallback<string?> OnNext { get; set; }
     [Parameter] public string? NextCursor { get; set; }
 
+    private ElementReference _scrollContainer;
+    private int _previousMessageCount;
+    private bool _isUserAtBottom = true;
+    private bool _isInitialized;
+    private bool _shouldAutoScroll;
+
     private List<MessageGroup> Groups => GroupByDay(ChatMessages);
 
+    protected override void OnParametersSet()
+    {
+        // Detectar novas mensagens
+        var currentCount = ChatMessages.Count;
+        if (_isInitialized && currentCount > _previousMessageCount)
+        {
+            // New messages arrived - mark for auto-scroll
+            _shouldAutoScroll = _isUserAtBottom; // Only auto-scroll if already at the bottom
+        }
+        _previousMessageCount = currentCount;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isInitialized = true;
+            _previousMessageCount = ChatMessages.Count;
+            await Task.Delay(100); // Small delay to ensure the DOM is rendered
+            await ScrollToBottom();
+            return;
+        }
+
+        // Scroll only if auto-scroll was marked (new messages + user was at the bottom)
+        if (_shouldAutoScroll)
+        {
+            _shouldAutoScroll = false; // Reset flag
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("scrollToBottom", _scrollContainer);
+            _isUserAtBottom = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao fazer scroll: {ex.Message}");
+        }
+    }
+
+    private async Task CheckScrollPosition()
+    {
+        try
+        {
+            var position = await Js.InvokeAsync<ScrollPosition>("getScrollPosition", _scrollContainer);
+            
+            // Considera "no fundo" se estiver a 100px do final
+            var distanceFromBottom = position.ScrollHeight - position.ScrollTop - position.ClientHeight;
+            _isUserAtBottom = distanceFromBottom < 100;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao verificar posição: {ex.Message}");
+        }
+    }
+    
+    private async Task HandleScroll() => await CheckScrollPosition();
+
+    private static string FormatDate(DateTime date)
+    {
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        
+        if (date.Date == today)
+            return "Today";
+        if (date.Date == yesterday)
+            return "Yesterday";
+        
+        return date.ToString("dd MMM yyyy");
+    }
+
     private static List<MessageGroup> GroupByDay(List<ChatMessageDto> messages)
-        => messages.GroupBy(m => m.CreatedAtUtc.Date)
+        => messages
+            .OrderBy(m => m.CreatedAtUtc)
+            .GroupBy(m => m.CreatedAtUtc.Date)
             .OrderBy(g => g.Key)
-            .Select(g => new MessageGroup(g.Key, g.ToList()))
+            .Select(g => new MessageGroup(g.Key, g.OrderBy(m => m.CreatedAtUtc).ToList()))
             .ToList();
 
     private sealed record MessageGroup(DateTime Date, List<ChatMessageDto> Messages);
+    private sealed record ScrollPosition(double ScrollTop, double ScrollHeight, double ClientHeight);
 }

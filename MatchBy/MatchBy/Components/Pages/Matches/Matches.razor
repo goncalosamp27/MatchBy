@@ -9,7 +9,7 @@
 @using MatchBy.DTOs.Match
 
 <section class="bg-[var(--background)]">
-    <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
+    <div class="py-8 px-4 mx-auto  text-center lg:py-16">
         <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-[var(--main)] md:text-5xl lg:text-6xl">Create your Match!</h1>
         <p class="mb-2 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">Easily create, organize, share, and manage matches.</p>
         <p class="mb-8 text-lg font-normal text-[var(--text)] lg:text-xl sm:px-16 lg:px-48">MatchBy makes the setup quick, simple and collaborative!</p>
@@ -25,32 +25,44 @@
 </section>
 
 
-<div class="w-full max-w-[90vw] mx-auto"> 
-@if (isAuthenticated) { 
-    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your Matches:</h1> 
-        @if(yourMatches is null) { 
-            <Loading></Loading> 
-        } 
-        else { 
-            <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(400px,1fr))] mb-8"> 
-            @foreach (var match in yourMatches) { 
-                <MatchCard Match="@match" /> 
-            } 
-            </div> 
-        } 
-    } 
-<h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Matches:</h1> 
-    @if(matches is null) { 
-        <Loading></Loading> 
-    } 
-    else { 
-        <div class="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(400px,1fr))] mb-8"> 
-            @foreach (var match in matches) { 
-                <MatchCard Match="@match" /> 
-            } 
-        </div> 
-        } 
-    </div>
+<div class="grid max-w-screen-xl h-auto mx-auto px-4 py-8 lg:py-16 justify-center">
+    @if (isAuthenticated)
+    {
+        @if (yourMatches is null)
+        {
+            <Loading></Loading>
+        }
+        else
+        {   
+            if(yourMatches.Count > 0)
+            {
+            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your Matches:</h1>
+            <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+                @foreach (var match in yourMatches)
+                {
+                    <MatchCard Match="@match" />
+                }
+            </div>
+            }
+        }
+    }
+
+    <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Available Matches:</h1>
+    @if (matches is null)
+    {
+        <Loading></Loading>
+    }
+    else
+    {
+        <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
+            @foreach (var match in matches)
+            {
+                <MatchCard Match="@match" />
+            }
+        </div>
+    }
+</div>
+
 
 
 @code {

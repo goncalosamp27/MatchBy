@@ -1,0 +1,74 @@
+﻿@using MatchBy.DTOs.Notification
+
+<a @onclick="HandleClick"
+   @onclick:preventDefault
+   class="flex py-3 px-4 border-b border-[var(--main)]/10 cursor-pointer bg-[var(--section-secondary)] hover:bg-[var(--section)] transition-colors duration-150 @(!Notification.IsRead ? "bg-[var(--section)]/20" : "")">
+    <div class="flex-shrink-0">
+        @if (Notification.Sender?.AvatarUrl != null)
+        {
+            <img
+                class="w-11 h-11 rounded-full ring-2 ring-[var(--main)]/20"
+                src="@Notification.Sender.AvatarUrl"
+                alt="@Notification.Sender.DisplayName avatar"/>
+        }
+        else
+        {
+            <div class="w-11 h-11 rounded-full ring-2 ring-[var(--main)]/20 bg-[var(--main)]/20 flex items-center justify-center">
+                <span class="text-[var(--text)] font-semibold text-sm">
+                    @(Notification.Sender?.DisplayName.Substring(0, 1).ToUpper() ?? "?")
+                </span>
+            </div>
+        }
+    </div>
+    <div class="pl-3 w-full">
+        <div class="text-[var(--text)] font-normal text-sm mb-1.5">
+            <span class="font-semibold text-[var(--text)]">@Notification.Title</span>
+            @if (!string.IsNullOrEmpty(Notification.Message))
+            {
+                <span>: @Notification.Message</span>
+            }
+        </div>
+        <div class="text-xs font-medium text-[var(--main)]">
+            @GetTimeAgo(Notification.CreatedAtUtc)
+        </div>
+    </div>
+    @if (!Notification.IsRead)
+    {
+        <div class="flex-shrink-0 ml-2">
+            <div class="w-2 h-2 bg-[var(--main)] rounded-full"></div>
+        </div>
+    }
+</a>
+
+@code {
+    [Parameter] public required NotificationDto Notification { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public EventCallback OnMarkAsRead { get; set; }
+
+    private async Task HandleClick()
+    {
+        await OnMarkAsRead.InvokeAsync();
+        await OnClick.InvokeAsync();
+    }
+
+    private static string GetTimeAgo(DateTime createdAtUtc)
+    {
+        var timeSpan = DateTime.UtcNow - createdAtUtc;
+        if (timeSpan.TotalSeconds < 60)
+        {
+            return "just now";
+        }
+        if(timeSpan.TotalMinutes < 60)
+        {
+            return $"{(int)timeSpan.TotalMinutes} min ago";
+        }
+        if (timeSpan.TotalHours < 24)
+        {
+            return $"{(int)timeSpan.TotalHours}h ago";
+        }
+        return timeSpan.TotalDays < 30 ? $"{(int)timeSpan.TotalDays} days ago" : $"{(int)(timeSpan.TotalDays / 30)} months ago";
+    }
+}
+
+                                
+                                

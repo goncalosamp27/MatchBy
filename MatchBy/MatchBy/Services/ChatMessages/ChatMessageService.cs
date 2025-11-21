@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Chat.Messages;
 using MatchBy.Models;
@@ -8,7 +9,7 @@ using ChatMessage = MatchBy.Models.ChatMessage;
 namespace MatchBy.Services.ChatMessages;
 
 public class ChatMessageService(
-    ApplicationDbContext applicationDbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateChatMessageDto> createChatMessageValidator,
     IValidator<UpdateChatMessageDto> updateChatMessageValidator) : IChatMessageService
 {
@@ -19,7 +20,9 @@ public class ChatMessageService(
         string? cursor,
         CancellationToken ct = default)
     {
-        bool isUserInvolved = await applicationDbContext.Conversations
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        bool isUserInvolved = await dbContext.Conversations
             .Where(c => c.Id == conversationId)
             .Where(c => c.Participants.Any(p => p.Id == userId))
             .AnyAsync(ct);
@@ -30,7 +33,7 @@ public class ChatMessageService(
                 "User is not a participant in the conversation.");
         }
 
-        IQueryable<ChatMessage> query = applicationDbContext
+        IQueryable<ChatMessage> query = dbContext
             .ChatMessages
             .Include(m => m.Sender)
             .Include(m => m.ReplyToMessage)
@@ -75,12 +78,13 @@ public class ChatMessageService(
     public async Task<Result<ChatMessageDto>> GetChatMessageByIdAsync(string chatMessageId, string userId,
         CancellationToken ct = default)
     {
-        ChatMessage? chatMessage = await applicationDbContext.ChatMessages
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        ChatMessage? chatMessage = await dbContext.ChatMessages
             .Include(m => m.Sender)
             .Include(m => m.ReplyToMessage)
             .ThenInclude(r => r!.Sender)
             .Include(m => m.Conversation)
-            .Where(m => m.Id.Equals(chatMessageId))
+            .Where(m => m.Id == chatMessageId)
             .FirstOrDefaultAsync(ct);
 
         if (chatMessage is null)
@@ -88,7 +92,7 @@ public class ChatMessageService(
             return Result<ChatMessageDto>.Fail("Chat message not found.");
         }
 
-        bool isUserInvolved = await applicationDbContext.Conversations
+        bool isUserInvolved = await dbContext.Conversations
             .Where(c => c.Id == chatMessage.ConversationId)
             .Where(c => c.Participants.Any(p => p.Id == userId))
             .AnyAsync(ct);
@@ -101,9 +105,14 @@ public class ChatMessageService(
     public async Task<Result<ChatMessageDto>> CreateChatMessageAsync(CreateChatMessageDto createChatMessageDto,
         CancellationToken ct = default)
     {
-        await createChatMessageValidator.ValidateAndThrowAsync(createChatMessageDto, ct);
+        ValidationResult? validationResult = await createChatMessageValidator.ValidateAsync(createChatMessageDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ChatMessageDto>.Fail(validationResult.ToString());
+        }
 
-        ApplicationUser? sender = await applicationDbContext.Users
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        ApplicationUser? sender = await dbContext.Users
             .Where(u => u.Id == createChatMessageDto.CreatorUserId)
             .FirstOrDefaultAsync(ct);
         if (sender is null)
@@ -111,7 +120,7 @@ public class ChatMessageService(
             return Result<ChatMessageDto>.Fail("Sender user not found.");
         }
 
-        Conversation? conversation = await applicationDbContext.Conversations
+        Conversation? conversation = await dbContext.Conversations
             .Where(c => c.Id == createChatMessageDto.ConversationId)
             .Where(c => c.CreatorId == createChatMessageDto.CreatorUserId ||
                         c.Participants.Any(p => p.Id == createChatMessageDto.CreatorUserId))
@@ -125,8 +134,8 @@ public class ChatMessageService(
         conversation.LastMessageAtUtc = DateTime.UtcNow;
         ChatMessage chatMessage = createChatMessageDto.ToEntity();
 
-        await applicationDbContext.ChatMessages.AddAsync(chatMessage, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.ChatMessages.AddAsync(chatMessage, ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetChatMessageByIdAsync(chatMessage.Id, createChatMessageDto.CreatorUserId, ct);
     }
@@ -134,9 +143,14 @@ public class ChatMessageService(
     public async Task<Result<ChatMessageDto>> UpdateChatMessageAsync(UpdateChatMessageDto updateChatMessageDto,
         CancellationToken ct = default)
     {
-        await updateChatMessageValidator.ValidateAndThrowAsync(updateChatMessageDto, ct);
+        ValidationResult? validationResult = await updateChatMessageValidator.ValidateAsync(updateChatMessageDto, ct);
+        if (!validationResult.IsValid)
+        {
+            return Result<ChatMessageDto>.Fail(validationResult.ToString());
+        }
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        ApplicationUser? sender = await applicationDbContext.Users
+        ApplicationUser? sender = await dbContext.Users
             .Where(u => u.Id == updateChatMessageDto.CreatorUserId)
             .FirstOrDefaultAsync(ct);
         if (sender is null)
@@ -144,7 +158,7 @@ public class ChatMessageService(
             return Result<ChatMessageDto>.Fail("Sender user not found.");
         }
 
-        ChatMessage? chatMessage = await applicationDbContext.ChatMessages
+        ChatMessage? chatMessage = await dbContext.ChatMessages
             .Where(m => m.Id == updateChatMessageDto.ChatMessageId && m.DeletedAtUtc == null)
             .Where(m => m.SenderId == updateChatMessageDto.CreatorUserId)
             .Include(m => m.ReplyToMessage)
@@ -157,7 +171,7 @@ public class ChatMessageService(
             return Result<ChatMessageDto>.Fail("Chat message not found or user is not the sender.");
         }
 
-        Conversation? conversation = await applicationDbContext.Conversations
+        Conversation? conversation = await dbContext.Conversations
             .Where(c => c.Id == chatMessage.ConversationId)
             .Include(c => c.Messages)
             .FirstOrDefaultAsync(ct);
@@ -171,7 +185,7 @@ public class ChatMessageService(
         chatMessage.Content = updateChatMessageDto.Content;
         chatMessage.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Result<ChatMessageDto>.Ok(chatMessage.ToDto());
     }
@@ -179,7 +193,8 @@ public class ChatMessageService(
     public async Task<Result<bool>> DeleteChatMessageAsync(string chatMessageId, string userId,
         CancellationToken ct = default)
     {
-        ChatMessage? chatMessage = await applicationDbContext.ChatMessages
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        ChatMessage? chatMessage = await dbContext.ChatMessages
             .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
             .Where(c => c.SenderId == userId)
             .FirstOrDefaultAsync(ct);
@@ -189,7 +204,7 @@ public class ChatMessageService(
             return Result<bool>.Fail("Chat message not found or user is not the sender.");
         }
 
-        Conversation? conversation = await applicationDbContext.Conversations
+        Conversation? conversation = await dbContext.Conversations
             .Where(c => c.Id == chatMessage.ConversationId)
             .Include(c => c.Messages)
             .FirstOrDefaultAsync(ct);
@@ -208,7 +223,7 @@ public class ChatMessageService(
             : conversation.Messages.Last(m => m.Id != chatMessageId).Content;
 
         // only the sender can delete their message
-        bool canDelete = await applicationDbContext.ChatMessages
+        bool canDelete = await dbContext.ChatMessages
             .AnyAsync(c => c.Id == chatMessageId && c.SenderId == userId && c.DeletedAtUtc == null, ct);
 
         if (!canDelete)
@@ -216,7 +231,7 @@ public class ChatMessageService(
             return Result<bool>.Fail("User is not authorized to delete this message.");
         }
 
-        int affected = await applicationDbContext.ChatMessages
+        int affected = await dbContext.ChatMessages
             .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
         
@@ -227,7 +242,7 @@ public class ChatMessageService(
             msg.ReplyToMessage = null;
         }
         
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return affected > 0 ? Result<bool>.Ok(true) : Result<bool>.Fail("Failed to delete chat message.");
     }
