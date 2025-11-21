@@ -1,20 +1,26 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
 using MatchBy.Data;
+using MatchBy.DTOs.Notification;
 using MatchBy.DTOs.TeamInvite;
+using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.TeamInvites;
 
 public class TeamsInvitesService(
-    ApplicationDbContext applicationDbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateTeamInviteDto> createInviteValidator,
-    IValidator<UpdateTeamInviteDto> updateInviteValidator) : ITeamsInvitesService
+    IValidator<UpdateTeamInviteDto> updateInviteValidator,
+    INotificationService notificationService) : ITeamsInvitesService
 {
     public async Task<Result<TeamInviteDto>> GetInviteById(string inviteId, CancellationToken ct = default)
     {
-        TeamInvite? invite = await applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        TeamInvite? invite = await dbContext
             .TeamInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -33,7 +39,9 @@ public class TeamsInvitesService(
     public async Task<Result<PaginationResponse<List<TeamInviteDto>>>> GetReceivedInvites(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<TeamInvite> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<TeamInvite> query = dbContext
             .TeamInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -70,7 +78,9 @@ public class TeamsInvitesService(
     public async Task<Result<PaginationResponse<List<TeamInviteDto>>>> GetSentInvites(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<TeamInvite> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<TeamInvite> query = dbContext
             .TeamInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -107,14 +117,16 @@ public class TeamsInvitesService(
     public async Task<Result<PaginationResponse<List<TeamInviteDto>>>> GetInvitesForTeam(
         string teamId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         // First, check if the team exists
-        bool teamExists = await applicationDbContext.Teams.AnyAsync(t => t.Id == teamId, ct);
+        bool teamExists = await dbContext.Teams.AnyAsync(t => t.Id == teamId, ct);
         if (!teamExists)
         {
             return Result<PaginationResponse<List<TeamInviteDto>>>.Fail($"Team with id {teamId} not found.");
         }
 
-        IQueryable<TeamInvite> query = applicationDbContext
+        IQueryable<TeamInvite> query = dbContext
             .TeamInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -156,22 +168,24 @@ public class TeamsInvitesService(
             return Result<TeamInviteDto>.Fail(validationResult.ToString());
         }
 
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         // Check if sender exists
-        bool senderExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
+        bool senderExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
         if (!senderExists)
         {
             return Result<TeamInviteDto>.Fail($"Sender with id {createDto.SenderId} not found.");
         }
 
         // Check if receiver exists
-        bool receiverExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
+        bool receiverExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
         if (!receiverExists)
         {
             return Result<TeamInviteDto>.Fail($"Receiver with id {createDto.ReceiverId} not found.");
         }
 
         // Check if team exists
-        Team? team = await applicationDbContext.Teams
+        Team? team = await dbContext.Teams
             .Include(t => t.Members)
             .FirstOrDefaultAsync(t => t.Id == createDto.TeamId, ct);
         
@@ -193,7 +207,7 @@ public class TeamsInvitesService(
         }
 
         // Check if there's already a pending invite
-        bool existingInvite = await applicationDbContext.TeamInvites
+        bool existingInvite = await dbContext.TeamInvites
             .AnyAsync(i => i.TeamId == createDto.TeamId 
                         && i.ReceiverId == createDto.ReceiverId 
                         && i.Status == InviteStatus.Pending && i.ExpiresAtUtc > DateTime.UtcNow, ct);
@@ -204,8 +218,28 @@ public class TeamsInvitesService(
         }
 
         TeamInvite invite = createDto.ToEntity();
-        await applicationDbContext.TeamInvites.AddAsync(invite, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.TeamInvites.AddAsync(invite, ct);
+        await dbContext.SaveChangesAsync(ct);
+
+        // Send notification to the receiver
+        string? sender = await dbContext.Users
+            .Where(u => u.Id == createDto.SenderId)
+            .Select(u => u.DisplayName ?? u.UserName!)
+            .FirstOrDefaultAsync(ct);
+        
+        var notification = new CreateNotificationDto
+        {
+            Type = NotificationType.TeamInviteReceived,
+            ReceiverUserId = createDto.ReceiverId,
+            SenderUserId = createDto.SenderId,
+            RelatedEntityId = team.Id,
+            RelatedEntityName = team.Name,
+            Title = "Team invite",
+            Message = $"{sender} invited you to the team {team.Name}",
+            ActionUrl = $"/teams/{team.Id}"
+        };
+
+        await notificationService.SendNotificationAsync(notification, ct);
 
         return await GetInviteById(invite.Id, ct);
     }
@@ -217,8 +251,10 @@ public class TeamsInvitesService(
         {
             return Result<TeamInviteDto>.Fail(validationResult.ToString());
         }
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        TeamInvite? invite = await applicationDbContext.TeamInvites
+
+        TeamInvite? invite = await dbContext.TeamInvites
             .FirstOrDefaultAsync(i => i.Id == updateDto.Id, ct);
 
         if (invite == null)
@@ -233,14 +269,16 @@ public class TeamsInvitesService(
         }
 
         invite.UpdateEntity(updateDto);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }
 
     public async Task<Result<bool>> DeleteInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        TeamInvite? invite = await applicationDbContext.TeamInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        TeamInvite? invite = await dbContext.TeamInvites
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
 
         if (invite == null)
@@ -255,14 +293,16 @@ public class TeamsInvitesService(
         }
 
         invite.DeletedAtUtc = DateTime.UtcNow;
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<TeamInviteDto>> AcceptInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        TeamInvite? invite = await applicationDbContext.TeamInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        TeamInvite? invite = await dbContext.TeamInvites
             .Include(i => i.Team)
                 .ThenInclude(t => t!.Members)
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
@@ -286,7 +326,7 @@ public class TeamsInvitesService(
         if (invite.IsExpired)
         {
             invite.Status = InviteStatus.Expired;
-            await applicationDbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync(ct);
             return Result<TeamInviteDto>.Fail("The invite has expired.");
         }
 
@@ -297,25 +337,28 @@ public class TeamsInvitesService(
         }
 
         // Add user to team members
-        ApplicationUser? user = await applicationDbContext.Users.FindAsync([userId], ct);
+        ApplicationUser? user = await dbContext.Users.FindAsync([userId], ct);
         if (user == null)
         {
             return Result<TeamInviteDto>.Fail($"User with id {userId} not found.");
         }
 
         invite.Team.Members.Add(user);
+        invite.Team.UpdatedAtUtc = DateTime.UtcNow;
         invite.Status = InviteStatus.Accepted;
         invite.AcceptedAtUtc = DateTime.UtcNow;
         invite.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }
 
     public async Task<Result<TeamInviteDto>> DeclineInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        TeamInvite? invite = await applicationDbContext.TeamInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        TeamInvite? invite = await dbContext.TeamInvites
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
 
         if (invite == null)
@@ -338,14 +381,16 @@ public class TeamsInvitesService(
         invite.DeclinedAtUtc = DateTime.UtcNow;
         invite.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }
 
     public async Task<Result<TeamInviteDto>> CancelInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        TeamInvite? invite = await applicationDbContext.TeamInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        TeamInvite? invite = await dbContext.TeamInvites
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
 
         if (invite == null)
@@ -367,7 +412,7 @@ public class TeamsInvitesService(
         invite.Status = InviteStatus.Cancelled;
         invite.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }

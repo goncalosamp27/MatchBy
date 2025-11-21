@@ -8,13 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace MatchBy.Services.Friends;
 
 public class FriendService(
-    ApplicationDbContext applicationDbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateFriendDto> createFriendValidator,
     IValidator<UpdateFriendDto> updateFriendValidator) : IFriendService
 {
     public async Task<Result<FriendDto>> GetFriendshipById(string friendshipId, CancellationToken ct = default)
     {
-        Friend? friend = await applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        Friend? friend = await dbContext
             .Friends
             .AsNoTracking()
             .Include(f => f.Sender)
@@ -29,7 +30,9 @@ public class FriendService(
     public async Task<Result<PaginationResponse<List<FriendDto>>>> GetUserFriends(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<Friend> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Friend> query = dbContext
             .Friends
             .AsNoTracking()
             .Include(f => f.Sender)
@@ -62,7 +65,9 @@ public class FriendService(
     public async Task<Result<PaginationResponse<List<FriendDto>>>> GetFriendRequestsSent(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<Friend> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Friend> query = dbContext
             .Friends
             .AsNoTracking()
             .Include(f => f.Sender)
@@ -95,7 +100,9 @@ public class FriendService(
     public async Task<Result<PaginationResponse<List<FriendDto>>>> GetFriendRequestsReceived(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<Friend> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Friend> query = dbContext
             .Friends
             .AsNoTracking()
             .Include(f => f.Sender)
@@ -132,23 +139,25 @@ public class FriendService(
         {
             return Result<FriendDto>.Fail(validationResult.ToString());
         }
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
 
         // Check if sender exists
-        bool senderExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
+        bool senderExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
         if (!senderExists)
         {
             return Result<FriendDto>.Fail($"Sender with id {createDto.SenderId} not found.");
         }
 
         // Check if receiver exists
-        bool receiverExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
+        bool receiverExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
         if (!receiverExists)
         {
             return Result<FriendDto>.Fail($"Receiver with id {createDto.ReceiverId} not found.");
         }
 
         // Check if friendship already exists (in either direction)
-        bool existingFriendship = await applicationDbContext.Friends
+        bool existingFriendship = await dbContext.Friends
             .AnyAsync(f => f.SenderId == createDto.SenderId && f.ReceiverId == createDto.ReceiverId ||
                           f.SenderId == createDto.ReceiverId && f.ReceiverId == createDto.SenderId, ct);
 
@@ -158,8 +167,8 @@ public class FriendService(
         }
 
         Friend friend = createDto.ToEntity();
-        await applicationDbContext.Friends.AddAsync(friend, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.Friends.AddAsync(friend, ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetFriendshipById(friend.Id, ct);
     }
@@ -171,8 +180,10 @@ public class FriendService(
         {
             return Result<FriendDto>.Fail(validationResult.ToString());
         }
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        Friend? friend = await applicationDbContext.Friends
+
+        Friend? friend = await dbContext.Friends
             .FirstOrDefaultAsync(f => f.Id == updateDto.Id, ct);
 
         if (friend == null)
@@ -187,14 +198,16 @@ public class FriendService(
         }
 
         friend.UpdateEntity();
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetFriendshipById(friend.Id, ct);
     }
 
     public async Task<Result<bool>> RemoveFriend(string friendshipId, string userId, CancellationToken ct = default)
     {
-        Friend? friend = await applicationDbContext.Friends
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        Friend? friend = await dbContext.Friends
             .FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
 
         if (friend == null)
@@ -209,20 +222,25 @@ public class FriendService(
         }
 
         friend.DeletedAtUtc = DateTime.UtcNow;
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<bool>> CheckFriendship(string userId1, string userId2, CancellationToken ct = default)
     {
-        bool areFriends = await applicationDbContext.Friends
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        bool areFriends = await dbContext.Friends
             .AnyAsync(f => f.SenderId == userId1 && f.ReceiverId == userId2 ||
                           f.SenderId == userId2 && f.ReceiverId == userId1, ct);
 
         return Result<bool>.Ok(areFriends);
     }
 }
+
+
+
 
 
 

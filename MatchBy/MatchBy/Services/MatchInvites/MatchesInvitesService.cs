@@ -2,19 +2,25 @@
 using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.MatchInvite;
+using MatchBy.DTOs.Notification;
+using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.MatchInvites;
 
 public class MatchesInvitesService(
-    ApplicationDbContext applicationDbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateMatchInviteDto> createInviteValidator,
-    IValidator<UpdateMatchInviteDto> updateInviteValidator) : IMatchesInvitesService
+    IValidator<UpdateMatchInviteDto> updateInviteValidator,
+    INotificationService notificationService) : IMatchesInvitesService
 {
     public async Task<Result<MatchInviteDto>> GetInviteById(string inviteId, CancellationToken ct = default)
     {
-        MatchInvite? invite = await applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        MatchInvite? invite = await dbContext
             .MatchInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -33,7 +39,9 @@ public class MatchesInvitesService(
     public async Task<Result<PaginationResponse<List<MatchInviteDto>>>> GetReceivedInvites(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<MatchInvite> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<MatchInvite> query = dbContext
             .MatchInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -70,7 +78,9 @@ public class MatchesInvitesService(
     public async Task<Result<PaginationResponse<List<MatchInviteDto>>>> GetSentInvites(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
-        IQueryable<MatchInvite> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<MatchInvite> query = dbContext
             .MatchInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -107,14 +117,16 @@ public class MatchesInvitesService(
     public async Task<Result<PaginationResponse<List<MatchInviteDto>>>> GetInvitesForMatch(
         string matchId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
         // First, check if the match exists
-        bool matchExists = await applicationDbContext.Matches.AnyAsync(m => m.Id == matchId, ct);
+        bool matchExists = await dbContext.Matches.AnyAsync(m => m.Id == matchId, ct);
         if (!matchExists)
         {
             return Result<PaginationResponse<List<MatchInviteDto>>>.Fail($"Match with id {matchId} not found.");
         }
 
-        IQueryable<MatchInvite> query = applicationDbContext
+        IQueryable<MatchInvite> query = dbContext
             .MatchInvites
             .AsNoTracking()
             .Include(i => i.Sender)
@@ -155,23 +167,24 @@ public class MatchesInvitesService(
         {
             return Result<MatchInviteDto>.Fail(validationResult.ToString());
         }
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
         // Check if sender exists
-        bool senderExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
+        bool senderExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
         if (!senderExists)
         {
             return Result<MatchInviteDto>.Fail($"Sender with id {createDto.SenderId} not found.");
         }
 
         // Check if receiver exists
-        bool receiverExists = await applicationDbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
+        bool receiverExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
         if (!receiverExists)
         {
             return Result<MatchInviteDto>.Fail($"Receiver with id {createDto.ReceiverId} not found.");
         }
 
         // Check if match exists
-        Match? match = await applicationDbContext.Matches
+        Match? match = await dbContext.Matches
             .Include(m => m.Participants)
             .FirstOrDefaultAsync(m => m.Id == createDto.MatchId, ct);
         
@@ -187,7 +200,7 @@ public class MatchesInvitesService(
         }
 
         // Check if there's already a pending invite
-        bool existingInvite = await applicationDbContext.MatchInvites
+        bool existingInvite = await dbContext.MatchInvites
             .AnyAsync(i => i.MatchId == createDto.MatchId 
                         && i.ReceiverId == createDto.ReceiverId 
                         && i.Status == InviteStatus.Pending, ct);
@@ -198,8 +211,30 @@ public class MatchesInvitesService(
         }
 
         MatchInvite invite = createDto.ToEntity();
-        await applicationDbContext.MatchInvites.AddAsync(invite, ct);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.MatchInvites.AddAsync(invite, ct);
+        await dbContext.SaveChangesAsync(ct);
+
+        // Send notification to the receiver
+        string matchName = $"{match.Sport} em {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}";
+        
+        string? sender = await dbContext.Users
+            .Where(u => u.Id == createDto.SenderId)
+            .Select(u => u.DisplayName ?? u.UserName!)
+            .FirstOrDefaultAsync(ct);
+        
+        var notification = new CreateNotificationDto
+        {
+            Type = NotificationType.MatchInviteReceived,
+            ReceiverUserId = createDto.ReceiverId,
+            SenderUserId = createDto.SenderId,
+            RelatedEntityId = match.Id,
+            RelatedEntityName = matchName,
+            Title = "Match invite",
+            Message = $"{sender} invited you to the match {matchName}",
+            ActionUrl = $"/matches/{match.Id}"
+        };
+
+        await notificationService.SendNotificationAsync(notification, ct);
 
         return await GetInviteById(invite.Id, ct);
     }
@@ -212,7 +247,9 @@ public class MatchesInvitesService(
             return Result<MatchInviteDto>.Fail(validationResult.ToString());
         }
 
-        MatchInvite? invite = await applicationDbContext.MatchInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        MatchInvite? invite = await dbContext.MatchInvites
             .FirstOrDefaultAsync(i => i.Id == updateDto.Id, ct);
 
         if (invite == null)
@@ -227,14 +264,16 @@ public class MatchesInvitesService(
         }
 
         invite.UpdateEntity(updateDto);
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }
 
     public async Task<Result<bool>> DeleteInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        MatchInvite? invite = await applicationDbContext.MatchInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        MatchInvite? invite = await dbContext.MatchInvites
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
 
         if (invite == null)
@@ -249,14 +288,16 @@ public class MatchesInvitesService(
         }
 
         invite.DeletedAtUtc = DateTime.UtcNow;
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<MatchInviteDto>> AcceptInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        MatchInvite? invite = await applicationDbContext.MatchInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        MatchInvite? invite = await dbContext.MatchInvites
             .Include(i => i.Match)
                 .ThenInclude(m => m!.Participants)
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
@@ -280,7 +321,7 @@ public class MatchesInvitesService(
         if (invite.IsExpired)
         {
             invite.Status = InviteStatus.Expired;
-            await applicationDbContext.SaveChangesAsync(ct);
+            await dbContext.SaveChangesAsync(ct);
             return Result<MatchInviteDto>.Fail("The invite has expired.");
         }
 
@@ -291,7 +332,7 @@ public class MatchesInvitesService(
         }
 
         // Add user to match participants
-        ApplicationUser? user = await applicationDbContext.Users.FindAsync([userId], ct);
+        ApplicationUser? user = await dbContext.Users.FindAsync([userId], ct);
         if (user == null)
         {
             return Result<MatchInviteDto>.Fail($"User with id {userId} not found.");
@@ -302,14 +343,16 @@ public class MatchesInvitesService(
         invite.AcceptedAtUtc = DateTime.UtcNow;
         invite.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }
 
     public async Task<Result<MatchInviteDto>> DeclineInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        MatchInvite? invite = await applicationDbContext.MatchInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        MatchInvite? invite = await dbContext.MatchInvites
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
 
         if (invite == null)
@@ -332,14 +375,16 @@ public class MatchesInvitesService(
         invite.DeclinedAtUtc = DateTime.UtcNow;
         invite.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }
 
     public async Task<Result<MatchInviteDto>> CancelInvite(string inviteId, string userId, CancellationToken ct = default)
     {
-        MatchInvite? invite = await applicationDbContext.MatchInvites
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        MatchInvite? invite = await dbContext.MatchInvites
             .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
 
         if (invite == null)
@@ -361,7 +406,7 @@ public class MatchesInvitesService(
         invite.Status = InviteStatus.Cancelled;
         invite.UpdatedAtUtc = DateTime.UtcNow;
 
-        await applicationDbContext.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
 
         return await GetInviteById(invite.Id, ct);
     }

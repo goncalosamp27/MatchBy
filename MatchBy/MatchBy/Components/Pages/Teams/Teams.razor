@@ -3,7 +3,7 @@
 @using MatchBy.DTOs.Team
 @using MatchBy.Services.Teams
 @using Blazorise
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
 @inject ITeamService TeamService
 @attribute [StreamRendering]
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -13,7 +13,8 @@
         <nav class="flex mb-4" aria-label="Breadcrumb">
             <ol class="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
                 <li class="inline-flex items-center">
-                    <a href="/" class="inline-flex items-center text-sm font-medium text-[var(--text)] hover:text-fg-brand">
+                    <a href="/"
+                       class="inline-flex items-center text-sm font-medium text-[var(--text)] hover:text-fg-brand">
                         <svg class="w-4 h-4 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
                              height="24" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -234,13 +235,36 @@
                     </Button>
                 </div>
 
-                <!-- Results -->
                 <div>
-                    <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Results (@(_searchedTeamsPagination.TotalCount))</h2>
+                    <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Results
+                        (@(_searchedTeamsPagination.TotalCount))</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         @if (SearchedTeams is null)
                         {
                             <Loading></Loading>
+                        }
+                        else if (SearchedTeams.Count == 0)
+                        {
+                            <div class="col-span-full">
+                                <div
+                                    class="flex flex-col items-center justify-center py-16 px-4 rounded-lg bg-[var(--section)]/50 border border-dashed border-[var(--main)]/20">
+                                    <svg class="w-16 h-16 text-[var(--main)]/40 mb-4" aria-hidden="true"
+                                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                              stroke-width="1.5"
+                                              d="M18.5 4h-13m13 16h-13M9 9h6m-6 4h6m-11-9v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
+                                    </svg>
+                                    <h3 class="text-xl font-semibold text-[var(--text)] mb-2">No teams found</h3>
+                                    <p class="text-center text-[var(--text)]/70 mb-6 max-w-md">
+                                        We couldn't find any teams matching your search. Try adjusting your filters or
+                                        search criteria.
+                                    </p>
+                                    <NavLink href="/teams"
+                                             class="px-6 py-2 bg-[var(--main)] text-[var(--text-contrast)] rounded-lg hover:bg-[var(--main-hover)] transition-colors font-medium">
+                                        Browse all teams
+                                    </NavLink>
+                                </div>
+                            </div>
                         }
                         else
                         {
@@ -250,44 +274,21 @@
                             }
                         }
                     </div>
-                    <div class="flex justify-center mt-8">
-                        <OffsetPagination CurrentPage="@_currentPageSearchedTeams"
-                                          OnPageChanged="@OnPageChangedSearchedTeams" PageSize="6"
-                                          TotalItems="@_searchedTeamsPagination.TotalCount"></OffsetPagination>
-                    </div>
+                    @if (SearchedTeams?.Count > 0)
+                    {
+                        <div class="flex justify-center mt-8">
+                            <OffsetPagination CurrentPage="@_currentPageSearchedTeams"
+                                              OnPageChanged="@OnPageChangedSearchedTeams" PageSize="6"
+                                              TotalItems="@_searchedTeamsPagination.TotalCount"></OffsetPagination>
+                        </div>
+                    }
                 </div>
             </div>
         }
     </div>
 </div>
-<style>
-    /* Example 1: Basic Slider with Green Thumb */
-    .slider-green {
-        background: var(--main);
-    }
 
-    .slider-green::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--background);
-        cursor: pointer;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .slider-green::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--main);
-        cursor: pointer;
-        border: 2px solid var(--main);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-</style>
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 
 @code {
 
@@ -340,7 +341,7 @@
             UserId = _isAuthenticated ? _userId ?? "" : ""
         };
 
-        var teamsYouSearchedResult = await TeamService.GetTeamsAsync(TeamQueryParameters, CancellationToken.None);
+        var teamsYouSearchedResult = await TeamService.GetAvailableTeamsAsync(TeamQueryParameters, CancellationToken.None);
         if (!teamsYouSearchedResult.Success)
         {
             Console.WriteLine("Error fetching user own teams: " + teamsYouSearchedResult.ErrorMessages);
@@ -428,7 +429,7 @@
             UserId = _isAuthenticated ? _userId ?? "" : ""
         };
 
-        var teamsYouSearchedResult = await TeamService.GetTeamsAsync(TeamQueryParameters, CancellationToken.None);
+        var teamsYouSearchedResult = await TeamService.GetAvailableTeamsAsync(TeamQueryParameters, CancellationToken.None);
         if (!teamsYouSearchedResult.Success)
         {
             Console.WriteLine("Error fetching user own teams: " + teamsYouSearchedResult.ErrorMessages);

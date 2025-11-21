@@ -12,16 +12,14 @@ namespace MatchBy.UnitTests.Services.ImageRefresh;
 public class ImageRefreshServiceTests
 {
     private readonly Mock<IS3Service> _s3ServiceMock;
-    private readonly Mock<IOptions<S3Settings>> _s3SettingsMock;
     private readonly ImageRefreshService _imageRefreshService;
-    private readonly S3Settings _s3Settings;
 
     public ImageRefreshServiceTests()
     {
         _s3ServiceMock = new Mock<IS3Service>();
-        _s3SettingsMock = new Mock<IOptions<S3Settings>>();
+        var s3SettingsMock = new Mock<IOptions<S3Settings>>();
         
-        _s3Settings = new S3Settings
+        var s3Settings = new S3Settings
         {
             DefaultUrlExpiry = 30,
             BucketName = "test-bucket",
@@ -30,9 +28,9 @@ public class ImageRefreshServiceTests
             SecretKey = "test-secret"
         };
         
-        _s3SettingsMock.Setup(x => x.Value).Returns(_s3Settings);
+        s3SettingsMock.Setup(x => x.Value).Returns(s3Settings);
         
-        _imageRefreshService = new ImageRefreshService(_s3ServiceMock.Object, _s3SettingsMock.Object);
+        _imageRefreshService = new ImageRefreshService(_s3ServiceMock.Object, s3SettingsMock.Object);
     }
 
     #region RefreshUserProfileImageAsync Tests

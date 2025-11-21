@@ -1,14 +1,20 @@
 ﻿using System.Collections.Concurrent;
 using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.DTOs.Chat.Messages;
+using MatchBy.DTOs.Notification;
+using MatchBy.Enums;
 using MatchBy.Models;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
+using MatchBy.Services.Notifications;
 using Microsoft.AspNetCore.SignalR;
 
 namespace MatchBy.Hubs;
 
-public class ChatHub(IChatMessageService chatMessageService, IConversationService conversationService) : Hub
+public class ChatHub(
+    IChatMessageService chatMessageService, 
+    IConversationService conversationService,
+    INotificationService notificationService) : Hub
 {
     private static readonly ConcurrentDictionary<string, HashSet<string>> UserConnections = new();
     private static readonly ConcurrentDictionary<string, string> ConnectionUsers = new();
@@ -56,7 +62,7 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
     private string EnsureUser()
         => ConnectionUsers.TryGetValue(Context.ConnectionId, out string? uid)
             ? uid
-            : throw new HubException("Ligação não registada.");
+            : throw new HubException("Connection not registered.");
 
     private IEnumerable<string> GetUserConnections(string userId)
     {
@@ -119,6 +125,29 @@ public class ChatHub(IChatMessageService chatMessageService, IConversationServic
 
         await Clients.Clients(participantConnections)
             .SendAsync("MessageCreated", newMsg);
+
+        // Send notification if this is a reply to someone's message
+        if (!string.IsNullOrEmpty(newMsg.Data!.ReplyToMessageId) && 
+            newMsg.Data.ReplyToMessage != null && 
+            newMsg.Data.ReplyToMessage.SenderId != userId)
+        {
+            string senderName = newMsg.Data.Sender?.DisplayName ?? "Someone";
+            string conversationTitle = conv.Data?.Title ?? "conversation";
+            
+            var replyNotification = new CreateNotificationDto
+            {
+                Type = NotificationType.MessageReply,
+                ReceiverUserId = newMsg.Data.ReplyToMessage.SenderId,
+                SenderUserId = userId,
+                RelatedEntityId = newMsg.Data.ConversationId,
+                RelatedEntityName = conversationTitle,
+                Title = "New reply",
+                Message = $"{senderName} replied to your message in {conversationTitle}",
+                ActionUrl = $"/chat/{newMsg.Data.ConversationId}"
+            };
+
+            await notificationService.SendNotificationAsync(replyNotification, CancellationToken.None);
+        }
     }
 
     public async Task UpdateMessage(UpdateChatMessageDto updateChatMessageDto)

@@ -6,13 +6,15 @@ using Microsoft.EntityFrameworkCore;
 namespace MatchBy.Services.Users;
 
 public class UsersService(
-    ApplicationDbContext applicationDbContext,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IImageRefreshService imageRefreshService) : IUsersService
 {
     public async Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
         string q, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        IQueryable<ApplicationUser> query = applicationDbContext.Users
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<ApplicationUser> query = dbContext.Users
             .AsNoTracking()
             .Where(u =>
                 u.UserName!.ToLower().Contains(q.ToLower()) ||
@@ -45,7 +47,9 @@ public class UsersService(
 
     public async Task<ApplicationUser?> GetUser(string userId, CancellationToken cancellationToken)
     {
-        ApplicationUser? user = await applicationDbContext.Users
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        ApplicationUser? user = await dbContext.Users
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user == null)
         {
@@ -53,7 +57,7 @@ public class UsersService(
         }
         
         await imageRefreshService.RefreshUserProfileImageAsync(user);
-        await applicationDbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return user;
     }
     

@@ -2,6 +2,7 @@ using FluentValidation;
 using MatchBy.Data;
 using MatchBy.DTOs.TeamInvite;
 using MatchBy.Models;
+using MatchBy.Services.Notifications;
 using MatchBy.Services.TeamInvites;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -11,6 +12,8 @@ namespace MatchBy.UnitTests.Services.TeamInvites;
 public class TeamsInvitesServiceTests : IDisposable
 {
     private readonly Mock<IValidator<CreateTeamInviteDto>> _createValidatorMock;
+    private readonly Mock<IDbContextFactory<ApplicationDbContext>> _dbContextFactoryMock;
+    private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
     private readonly ApplicationDbContext _dbContext;
     private readonly TeamsInvitesService _teamsInvitesService;
 
@@ -18,22 +21,45 @@ public class TeamsInvitesServiceTests : IDisposable
     {
         _createValidatorMock = new Mock<IValidator<CreateTeamInviteDto>>();
         var updateValidatorMock = new Mock<IValidator<UpdateTeamInviteDto>>();
+        var notificationServiceMock = new Mock<INotificationService>();
+        _dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
-        DbContextOptions<ApplicationDbContext> options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        // Setup in-memory database with a unique name per test class
+        // All contexts created with these options will share the same database
+        string databaseName = Guid.NewGuid().ToString();
+        _dbContextOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
-        _dbContext = new ApplicationDbContext(options);
+        // Create a test context for setup and verification
+        // This context will share the same in-memory database as contexts created by the factory
+        _dbContext = new ApplicationDbContext(_dbContextOptions);
+
+        // Setup the factory to return a new instance each time
+        // This prevents the service from disposing the test's context instance
+        _dbContextFactoryMock
+            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
 
         _teamsInvitesService = new TeamsInvitesService(
-            _dbContext,
+            _dbContextFactoryMock.Object,
             _createValidatorMock.Object,
-            updateValidatorMock.Object);
+            updateValidatorMock.Object,
+            notificationServiceMock.Object);
     }
 
     public void Dispose()
     {
         _dbContext.Dispose();
+    }
+
+    /// <summary>
+    /// Helper method to create a fresh DbContext for verification.
+    /// This ensures we're querying the database directly rather than using cached entities from the change tracker.
+    /// </summary>
+    private ApplicationDbContext CreateFreshDbContext()
+    {
+        return new ApplicationDbContext(_dbContextOptions);
     }
 
     #region GetInviteById Tests
@@ -282,8 +308,11 @@ public class TeamsInvitesServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.Equal(InviteStatus.Accepted, result.Data!.Status);
         
-        Team? updatedTeam = await _dbContext.Teams.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == "team1");
-        Assert.Contains(updatedTeam!.Members, m => m.Id == "receiver1");
+        // Use a fresh context to verify the changes were persisted
+        await using ApplicationDbContext freshContext = CreateFreshDbContext();
+        Team? updatedTeam = await freshContext.Teams.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == "team1");
+        Assert.NotNull(updatedTeam);
+        Assert.Contains(updatedTeam.Members, m => m.Id == "receiver1");
     }
 
     [Fact]

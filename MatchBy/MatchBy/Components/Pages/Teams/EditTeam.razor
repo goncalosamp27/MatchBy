@@ -1,6 +1,7 @@
 ﻿@page "/teams/edit/{id}"
 @attribute [Authorize]
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
 @inject ITeamService TeamService
 @inject IUsersService UsersService
 @inject ITeamsInvitesService TeamInvitesService
@@ -18,7 +19,6 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IValidator<UpdateTeamDto> UpdateTeamDtoValidator
 @inject IToastService ToastService
-@using Microsoft.AspNetCore.Components.Forms
 
 @if (_model is null || _isLoading)
 {
@@ -538,10 +538,10 @@ else
         try
         {
             var result = await TeamInvitesService.GetInvitesForTeam(Id, 1, 100, CancellationToken.None);
-            if (result.Success && result.Data != null)
+            if (result is { Success: true, Data: not null })
             {
                 _pendingInvites = result.Data.Data
-                    .Where(i => i.Status == InviteStatus.Pending && i.DeletedAtUtc == null)
+                    .Where(i => i is { Status: InviteStatus.Pending, DeletedAtUtc: null })
                     .ToList();
             }
             else

@@ -19,7 +19,3 @@ public class UpdatePlayerRatingDtoValidator : AbstractValidator<UpdatePlayerRati
             .MaximumLength(500).WithMessage("SentById cannot exceed 500 characters.");
     }
 }
-
-
-
-

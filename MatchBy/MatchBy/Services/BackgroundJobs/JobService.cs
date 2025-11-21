@@ -11,7 +11,7 @@ namespace MatchBy.Services.BackgroundJobs;
 /// Service responsible for processing background jobs related to match state management.
 /// Handles automatic match status updates, email notifications, and match completion.
 /// </summary>
-public class JobService(ILogger<JobService> logger, IServiceProvider serviceProvider, IMemoryCache memoryCache, IEmailSender emailSender): IJobService
+public class JobService(ILogger<JobService> logger, IDbContextFactory<ApplicationDbContext> dbContextFactory, IMemoryCache memoryCache, IEmailSender emailSender): IJobService
 {
     private const string ThreeDayWarningCacheKeyPrefix = "3day_warning_sent_";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromDays(4);
@@ -26,8 +26,7 @@ public class JobService(ILogger<JobService> logger, IServiceProvider serviceProv
     {
         logger.LogInformation("Starting match state processing...");
         
-        using IServiceScope scope = serviceProvider.CreateScope();
-        ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync();
         
         DateTime now = DateTime.UtcNow;
         var oneDay = TimeSpan.FromDays(1);

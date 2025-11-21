@@ -34,5 +34,25 @@ public class PlayerRatingConfiguration : IEntityTypeConfiguration<PlayerRating>
 
         builder.Property(r => r.CreatedAtUtc)
             .IsRequired();
+        
+        builder.HasOne(r => r.SentBy)
+            .WithMany()
+            .HasForeignKey(r => r.SentById)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.HasOne(r => r.ReceivedBy)
+            .WithMany()
+            .HasForeignKey(r => r.ReceivedById)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.HasOne(r => r.Match)
+            .WithMany()
+            .HasForeignKey(r => r.MatchId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        
+        builder.Property(t => t.UpdatedAtUtc);
+        builder.Property(t => t.DeletedAtUtc);
+        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

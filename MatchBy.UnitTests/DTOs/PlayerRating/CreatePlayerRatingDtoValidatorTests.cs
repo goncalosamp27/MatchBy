@@ -22,7 +22,7 @@ public class CreatePlayerRatingDtoValidatorTests
 
     [Theory]
     [InlineData(-1)]
-    [InlineData(5)]
+    [InlineData(6)]
     [InlineData(10)]
     public void Validate_RatingOutOfRange_ShouldHaveValidationError(int rating)
     {

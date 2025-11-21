@@ -65,9 +65,9 @@ public class UpdatePlayerRatingDtoValidatorTests
     #region Rating Validation Tests
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(5)]
-    [InlineData(10)]
+    [InlineData(-1)]
+    [InlineData(6)]
+    [InlineData(11)]
     public void Validate_RatingOutOfRange_ShouldHaveValidationError(int rating)
     {
         // Arrange

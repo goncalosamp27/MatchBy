@@ -4,34 +4,55 @@ using MatchBy.Models;
 using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.Users;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace MatchBy.UnitTests.Services.Users;
 
 public class UsersServiceTests : IDisposable
 {
+    private readonly Mock<IDbContextFactory<ApplicationDbContext>> _dbContextFactory;
     private readonly Mock<IImageRefreshService> _imageRefreshServiceMock;
+    private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
     private readonly ApplicationDbContext _dbContext;
     private readonly UsersService _usersService;
 
     public UsersServiceTests()
     {
         _imageRefreshServiceMock = new Mock<IImageRefreshService>();
+        _dbContextFactory = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
-        // Setup in-memory database
-        DbContextOptions<ApplicationDbContext> options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        // Setup in-memory database with a unique name per test class
+        // All contexts created with these options will share the same database
+        string databaseName = Guid.NewGuid().ToString();
+        _dbContextOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
-        _dbContext = new ApplicationDbContext(options);
+        // Create a test context for setup and verification
+        // This context will share the same in-memory database as contexts created by the factory
+        _dbContext = new ApplicationDbContext(_dbContextOptions);
 
-        _usersService = new UsersService(_dbContext, _imageRefreshServiceMock.Object);
+        // Setup the factory to return a new instance each time
+        // This prevents the service from disposing the test's context instance
+        _dbContextFactory
+            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
+
+        _usersService = new UsersService(_dbContextFactory.Object, _imageRefreshServiceMock.Object);
     }
 
     public void Dispose()
     {
         _dbContext.Dispose();
+    }
+
+    /// <summary>
+    /// Helper method to create a fresh DbContext for verification.
+    /// This ensures we're querying the database directly rather than using cached entities from the change tracker.
+    /// </summary>
+    private ApplicationDbContext CreateFreshDbContext()
+    {
+        return new ApplicationDbContext(_dbContextOptions);
     }
 
     #region GetUsers Tests

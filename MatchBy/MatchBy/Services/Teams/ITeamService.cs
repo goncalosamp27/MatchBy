@@ -6,6 +6,7 @@ namespace MatchBy.Services.Teams;
 public interface ITeamService
 {
     Task<Result<PaginationResponse<List<TeamDto>>>> GetTeamsAsync(TeamQueryParametersDto teamQueryParametersDto, CancellationToken ct = default);
+    Task<Result<PaginationResponse<List<TeamDto>>>> GetAvailableTeamsAsync(TeamQueryParametersDto teamQueryParametersDto, CancellationToken ct = default);
     Task<Result<PaginationResponse<List<TeamDto>>>> GetTeamsUserOwnAsync(string userId, int page, int pageSize, string q, CancellationToken ct = default);
     Task<Result<PaginationResponse<List<TeamDto>>>> GetTeamsUserParticipateAsync(string userId, int page, int pageSize, string q, CancellationToken ct = default);
     Task<Result<TeamDto>> GetTeamByIdAsync(string teamId, string userId, CancellationToken ct = default);

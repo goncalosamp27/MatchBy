@@ -17,7 +17,7 @@ public class JobServiceTests : IDisposable
     private readonly Mock<ILogger<JobService>> _loggerMock;
     private readonly Mock<IEmailSender> _emailSenderMock;
     private readonly Mock<IMemoryCache> _memoryCacheMock;
-    private readonly ServiceProvider _serviceProvider;
+    private readonly Mock<IDbContextFactory<ApplicationDbContext>> _dbContextFactoryMock;
     private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
     private readonly ApplicationDbContext _dbContext;
     private readonly JobService _jobService;
@@ -27,6 +27,7 @@ public class JobServiceTests : IDisposable
         _loggerMock = new Mock<ILogger<JobService>>();
         _emailSenderMock = new Mock<IEmailSender>();
         _memoryCacheMock = new Mock<IMemoryCache>();
+        _dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
         // Setup in-memory database with a unique name per test class
         // All contexts created with these options will share the same database
@@ -36,18 +37,17 @@ public class JobServiceTests : IDisposable
             .Options;
 
         // Create a test context for setup and verification
-        // This context will share the same in-memory database as contexts created by the service provider
+        // This context will share the same in-memory database as contexts created by the factory
         _dbContext = new ApplicationDbContext(_dbContextOptions);
 
-        // Setup service provider with a factory that creates a new DbContext per scope
-        // This allows each scope to manage its own DbContext lifecycle while sharing the same database
-        var services = new ServiceCollection();
-        services.AddScoped<ApplicationDbContext>(_ => new ApplicationDbContext(_dbContextOptions));
-        _serviceProvider = services.BuildServiceProvider();
+        // Setup the factory to return our in-memory context
+        _dbContextFactoryMock
+            .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
 
         _jobService = new JobService(
             _loggerMock.Object,
-            _serviceProvider,
+            _dbContextFactoryMock.Object,
             _memoryCacheMock.Object,
             _emailSenderMock.Object
         );
@@ -56,8 +56,6 @@ public class JobServiceTests : IDisposable
     public void Dispose()
     {
         _dbContext.Dispose();
-        // Dispose the service provider, which will dispose all scoped services
-        _serviceProvider.Dispose();
     }
 
     /// <summary>

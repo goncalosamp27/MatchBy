@@ -17,7 +17,3 @@ public sealed record PlayerRatingDto
     public DateTime? UpdatedAtUtc { get; init; }
     public DateTime? DeletedAtUtc { get; init; }
 }
-
-
-
-
