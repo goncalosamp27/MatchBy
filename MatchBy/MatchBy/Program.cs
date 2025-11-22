@@ -69,10 +69,11 @@ builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("Upl
 builder.Services.AddOptions();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<ResendClient>();
-builder.Services.Configure<ResendClientOptions>( o =>
+builder.Services.Configure<ResendClientOptions>(o =>
 {
-    o.ApiToken = builder.Configuration["Resend:ApiKey"] ?? throw new InvalidOperationException("Resend ApiKey not found in configuration.");
-} );
+    o.ApiToken = builder.Configuration["Resend:ApiKey"] ??
+                 throw new InvalidOperationException("Resend ApiKey not found in configuration.");
+});
 builder.Services.AddTransient<IResend, ResendClient>();
 
 /*builder.WebHost.UseSentry(options =>
@@ -98,8 +99,35 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
+builder.Services.AddAuthentication()
+    .AddGoogle(googleOptions =>
+    {
+        googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"] ??
+                                 throw new InvalidOperationException("Google ClientId not found in configuration.");
+        googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ??
+                                     throw new InvalidOperationException(
+                                         "Google ClientSecret not found in configuration.");
+    })
+    .AddGitHub(githubOptions =>
+    {
+        githubOptions.ClientId = builder.Configuration["Authentication:Github:ClientId"] ??
+                                 throw new InvalidOperationException("Github ClientId not found in configuration.");
+        githubOptions.ClientSecret = builder.Configuration["Authentication:Github:ClientSecret"] ??
+                                     throw new InvalidOperationException(
+                                         "Github ClientSecret not found in configuration.");
+    })
+    .AddDiscord(discordOptions =>
+    {
+        discordOptions.ClientId = builder.Configuration["Authentication:Discord:ClientId"] ??
+                                  throw new InvalidOperationException("Discord ClientId not found in configuration.");
+        discordOptions.ClientSecret = builder.Configuration["Authentication:Discord:ClientSecret"] ??
+                                      throw new InvalidOperationException(
+                                          "Discord ClientSecret not found in configuration.");
+    });
+
 string connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                          throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+                          throw new InvalidOperationException(
+                              "Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -129,17 +157,21 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+builder.Services.AddAntiforgery();
+
 builder.Services
     .AddBlazorise(options =>
     {
         options.Immediate = true;
-        options.ProductToken = builder.Configuration["Blazorise:ProductToken"] ?? throw new InvalidOperationException("Blazorise product token not found in configuration.");
+        options.ProductToken = builder.Configuration["Blazorise:ProductToken"] ??
+                               throw new InvalidOperationException(
+                                   "Blazorise product token not found in configuration.");
     })
     .AddTailwindProviders()
     .AddFontAwesomeIcons()
     .AddBlazoriseFluentValidation();
 
-builder.Services.AddValidatorsFromAssembly( typeof( App ).Assembly );
+builder.Services.AddValidatorsFromAssembly(typeof(App).Assembly);
 
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
@@ -159,7 +191,7 @@ builder.Services.AddScoped<ChatState>();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddCors(options => 
+builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewPolicy", corsPolicyBuilder =>
         corsPolicyBuilder.AllowAnyOrigin()
@@ -172,7 +204,7 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
-    //await app.RecreateDatabase();
+    await app.RecreateDatabase();
     //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
@@ -191,11 +223,12 @@ using (IServiceScope scope = app.Services.CreateScope())
         "*/1 * * * *" // Every minute
     );
 }
+
 app.UseHttpsRedirection();
 app.UseCors("NewPolicy");
 app.MapStaticAssets();
 app.MapControllers();
-app.UseStatusCodePagesWithReExecute( "/error-page/{0}" );
+app.UseStatusCodePagesWithReExecute("/error-page/{0}");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
