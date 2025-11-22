@@ -1,154 +1,182 @@
 ﻿@page "/Account/Register"
 @using System.ComponentModel.DataAnnotations
-@using System.Text
-@using System.Text.Encodings.Web
 @using MatchBy.Extensions
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.WebUtilities
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
-@inject IEmailSender<ApplicationUser> EmailSender
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Register</PageTitle>
 
-<section class="bg-[var(--background)]">
-    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        @*<a href="#" class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
-            <img class="w-8 h-8 mr-2" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg" alt="logo">
-            MatchBy
-        </a>*@
-
-        <div class="w-full bg-[var(--section)] rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 ring-1 ring-[var(--main)]">
-            <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
-                <h1 class="text-xl font-bold leading-tight tracking-tight text-[var(--text)] md:text-2xl">
-                    Create an account
-                </h1>
-
-                <StatusMessage Message="@Message" UseCookieMessage="false" />
-
-                <EditForm Model="InputRegister" method="post" OnValidSubmit="RegisterUser" FormName="register" class="space-y-4 md:space-y-6">
-                    <DataAnnotationsValidator />
-                    <!-- Username -->
-                    <div>
-                        <label for="InputRegister.Username" class="block mb-2 text-sm font-medium text-[var(--text)]">Username</label>
-                        <InputText @bind-Value="InputRegister.Username"
-                                   id="InputRegister.Username"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none"
-                                   placeholder="john" />
-                        <ValidationMessage For="() => InputRegister.Username" class="text-danger" />
-                    </div>
-
-                    <!-- Display Name -->
-                    <div>
-                        <label for="InputRegister.DisplayName" class="block mb-2 text-sm font-medium text-[var(--text)]">Display Name</label>
-                        <InputText @bind-Value="InputRegister.DisplayName"
-                                   id="InputRegister.DisplayName"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none"
-                                   placeholder="john doe" />
-                        <ValidationMessage For="() => InputRegister.DisplayName" class="text-danger" />
-                    </div>
-
-                    <!-- Email -->
-                    <div>
-                        <label for="InputRegister.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
-                        <InputText @bind-Value="InputRegister.Email"
-                                   id="InputRegister.Email"
-                                   type="email"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                   placeholder="john@email.com"
-                                   autocomplete="email" />
-                        <ValidationMessage For="() => InputRegister.Email" class="text-danger" />
-                    </div>
-
-                    <!-- Password -->
-                    <div>
-                        <label for="InputRegister.Password" class="block mb-2 text-sm font-medium text-[var(--text)]">Password</label>
-                        <InputText @bind-Value="InputRegister.Password"
-                                   id="InputRegister.Password"
-                                   type="password"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                   placeholder="••••••••"
-                                   autocomplete="new-password" />
-                        <ValidationMessage For="() => InputRegister.Password" class="text-danger" />
-                    </div>
-
-                    <!-- Confirm Password -->
-                    <div>
-                        <label for="InputRegister.ConfirmPassword" class="block mb-2 text-sm font-medium text-[var(--text)]">Confirm Password</label>
-                        <InputText @bind-Value="InputRegister.ConfirmPassword"
-                                   id="InputRegister.ConfirmPassword"
-                                   type="password"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                    
-                                   placeholder="••••••••"
-                                   autocomplete="new-password" />
-                        <ValidationMessage For="() => InputRegister.ConfirmPassword" class="text-danger" />
-                    </div>
-
-                    <!-- Accept Terms -->
-                    <div class="flex items-start">
-                        <div class="flex items-center h-5">
-                            <InputCheckbox @bind-Value="InputRegister.AcceptTerms"
-                                           id="InputRegister.AcceptTerms"
-                                           class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
-                        </div>
-                        <div class="ml-3 text-sm">
-                            <label for="InputRegister.AcceptTerms" class="text-[var(--text)]">
-                                I accept the
-                                <a href="/TermsAndConditions" class="font-medium text-[var(--main)] hover:underline">Terms and Conditions</a>
-                            </label>
-                        </div>
-                        <ValidationMessage For="() => InputRegister.AcceptTerms" class="text-danger block" />
-                    </div>
-
-                    <!-- Submit -->
-                    <div>
-                        <button type="submit"
-                                class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-                            Register
-                        </button>
-                    </div>
-
-                    <!-- Footer links -->
-                    <p class="text-sm font-light text-gray-500 dark:text-gray-400">
+<section class="bg-[var(--background)] min-h-screen flex items-center">
+    <div class="flex flex-col lg:flex-row items-center justify-center px-6 py-8 mx-auto lg:py-0 lg:px-0">
+        <!-- Left Column: Register Form -->
+        <div class="w-full lg:w-1/2 flex items-center justify-center lg:px-8 xl:px-16">
+            <div class="w-full max-w-md">
+                <div class="bg-[var(--section)] rounded-lg shadow-lg p-8 ring-1 ring-[var(--main)]">
+                    <h1 class="text-2xl font-bold leading-tight tracking-tight text-[var(--text)] mb-2">
+                        Create an account
+                    </h1>
+                    <p class="text-sm text-[var(--text)] mb-6">
                         Already have an account?
                         <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
-                           class="font-medium text-[var(--main)] hover:underline">Login here</a>
+                           class="font-medium text-[var(--main)] hover:underline">Login here</a>.
                     </p>
-                </EditForm>
+
+                    <StatusMessage Message="@Message" UseCookieMessage="false"/>
+
+                    <EditForm Model="InputRegister" method="post" OnValidSubmit="RegisterUser" FormName="register"
+                              class="space-y-3">
+                        <DataAnnotationsValidator/>
+
+                        <!-- Email -->
+                        <div>
+                            <label for="InputRegister.Email"
+                                   class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
+                            <InputText @bind-Value="InputRegister.Email"
+                                       id="InputRegister.Email"
+                                       type="email"
+                                       class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                       placeholder="john@email.com"
+                                       autocomplete="email"/>
+                            <ValidationMessage For="() => InputRegister.Email" class="text-danger"/>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Username -->
+                            <div>
+                                <label for="InputRegister.Username"
+                                       class="block mb-2 text-sm font-medium text-[var(--text)]">Username</label>
+                                <InputText @bind-Value="InputRegister.Username"
+                                           id="InputRegister.Username"
+                                           class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                           placeholder="john"/>
+                                <ValidationMessage For="() => InputRegister.Username" class="text-danger"/>
+                            </div>
+
+                            <!-- Display Name -->
+                            <div>
+                                <label for="InputRegister.DisplayName"
+                                       class="block mb-2 text-sm font-medium text-[var(--text)]">Display Name</label>
+                                <InputText @bind-Value="InputRegister.DisplayName"
+                                           id="InputRegister.DisplayName"
+                                           class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                           placeholder="john doe"/>
+                                <ValidationMessage For="() => InputRegister.DisplayName" class="text-danger"/>
+                            </div>
+
+                            <!-- Password -->
+                            <div>
+                                <label for="InputRegister.Password"
+                                       class="block mb-2 text-sm font-medium text-[var(--text)]">Password</label>
+                                <InputText @bind-Value="InputRegister.Password"
+                                           id="InputRegister.Password"
+                                           type="password"
+                                           class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                           placeholder="••••••••"
+                                           autocomplete="new-password"/>
+                                <ValidationMessage For="() => InputRegister.Password" class="text-danger"/>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div>
+                                <label for="InputRegister.ConfirmPassword"
+                                       class="block mb-2 text-sm font-medium text-[var(--text)]">Confirm
+                                    Password</label>
+                                <InputText @bind-Value="InputRegister.ConfirmPassword"
+                                           id="InputRegister.ConfirmPassword"
+                                           type="password"
+                                           class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                           placeholder="••••••••"
+                                           autocomplete="new-password"/>
+                                <ValidationMessage For="() => InputRegister.ConfirmPassword" class="text-danger"/>
+                            </div>
+                        </div>
+
+                        <!-- Accept Terms -->
+                        <div class="mt-4">
+                            <div class="w-full flex flex-row h-5">
+                                <InputCheckbox @bind-Value="InputRegister.AcceptTerms"
+                                               id="InputRegister.AcceptTerms"
+                                               class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                                <div class="ml-3 text-sm">
+                                    <label for="InputRegister.AcceptTerms" class="text-[var(--text)]">
+                                        I accept the
+                                        <a href="/TermsAndConditions"
+                                           class="font-medium text-[var(--main)] hover:underline">Terms and
+                                            Conditions</a>
+                                    </label>
+                                </div>
+                            </div>
+                            <ValidationMessage For="() => InputRegister.AcceptTerms" class="text-danger block"/>
+                        </div>
+
+                        <!-- Submit -->
+                        <div>
+                            <button type="submit"
+                                    class="mt-2 w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                                Create account
+                            </button>
+                        </div>
+                    </EditForm>
+
+                    <div class="mt-6">
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-[var(--section)] text-[var(--text)]">or</span>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <ExternalLoginPicker/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Illustration -->
+        <div class="hidden lg:flex lg:w-1/2 items-center justify-center p-8">
+            <div class="w-full max-w-lg">
+                <img src="https://flowbite.com/application-ui/demo/images/sign-in.svg"
+                     alt="Registration illustration"
+                     class="w-full h-auto"/>
             </div>
         </div>
     </div>
@@ -158,7 +186,7 @@
 @code {
     private IEnumerable<IdentityError>? _identityErrors;
     private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
-    
+
     [SupplyParameterFromForm] private InputModel InputRegister { get; set; } = new();
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
@@ -167,16 +195,16 @@
         var user = CreateUser().InitializeNewUser(InputRegister.DisplayName);
 
         await UserStore.SetUserNameAsync(user, InputRegister.Username, CancellationToken.None);
-        
+
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, InputRegister.Email, CancellationToken.None);
-        
+
         if (await UserManager.FindByEmailAsync(InputRegister.Email) is not null)
         {
             _identityErrors = [new IdentityError { Code = "DuplicateEmail", Description = "Email address is already in use." }];
             return;
         }
-        
+
         var result = await UserManager.CreateAsync(user, InputRegister.Password);
         if (!result.Succeeded)
         {
@@ -187,7 +215,7 @@
         Logger.LogInformation("User created a new account with password.");
 
         await UserManager.AddToRoleAsync(user, Roles.Member);
-        
+
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
             RedirectManager.RedirectTo(
@@ -221,7 +249,7 @@
 
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }
-    
+
     private sealed class InputModel
     {
         [Required]
@@ -240,15 +268,15 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
-        
+
         [Required]
         [MaxLength(50, ErrorMessage = "Username cannot exceed 50 characters.")]
         public string Username { get; set; } = "";
-        
+
         [Required]
         [MaxLength(50, ErrorMessage = "Display Name cannot exceed 50 characters.")]
         public string DisplayName { get; set; } = "";
-        
+
         [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the terms and conditions.")]
         public bool AcceptTerms { get; set; }
     }

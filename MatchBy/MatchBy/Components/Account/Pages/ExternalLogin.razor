@@ -6,8 +6,7 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
-@using MatchBy.Models
-@using MatchBy.Data
+@using MatchBy.Extensions
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
@@ -19,37 +18,108 @@
 
 <PageTitle>Register</PageTitle>
 
-<StatusMessage Message="@message"/>
-<h1>Register</h1>
-<h2>Associate your @ProviderDisplayName account.</h2>
-<hr/>
+<section class="bg-[var(--background)]">
+    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+        <div class="w-full bg-[var(--section)] rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 ring-1 ring-[var(--main)]">
+            <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+                <h1 class="text-xl font-bold leading-tight tracking-tight text-[var(--text)] md:text-2xl">
+                    Complete your registration
+                </h1>
+                
+                <div class="text-sm text-[var(--text)] bg-[var(--section-secondary)] p-3 rounded-lg">
+                    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
+                    Please complete the form below to finish creating your account.
+                </div>
 
-<div class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
-</div>
+                <StatusMessage Message="@Message" UseCookieMessage="false" />
 
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post">
-            <DataAnnotationsValidator/>
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email."/>
-                <label for="Input.Email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email"/>
+                <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post" class="space-y-4 md:space-y-6">
+                    <DataAnnotationsValidator />
+                    <!-- Username -->
+                    <div>
+                        <label for="Input.Username" class="block mb-2 text-sm font-medium text-[var(--text)]">Username</label>
+                        <InputText @bind-Value="Input.Username"
+                                   id="Input.Username"
+                                   class="block w-full p-2.5 rounded-lg
+                                    bg-[var(--section-secondary)]
+                                    text-[var(--text)]
+                                    focus:border-[var(--main)]
+                                    focus:ring-1 focus:ring-[var(--main)]
+                                    focus:outline-none
+                                    border-0"
+                                   placeholder="john" />
+                        <ValidationMessage For="() => Input.Username" class="text-danger" />
+                    </div>
+
+                    <!-- Display Name -->
+                    <div>
+                        <label for="Input.DisplayName" class="block mb-2 text-sm font-medium text-[var(--text)]">Display Name</label>
+                        <InputText @bind-Value="Input.DisplayName"
+                                   id="Input.DisplayName"
+                                   class="block w-full p-2.5 rounded-lg
+                                    bg-[var(--section-secondary)]
+                                    text-[var(--text)]
+                                    focus:border-[var(--main)]
+                                    focus:ring-1 focus:ring-[var(--main)]
+                                    focus:outline-none
+                                    border-0"
+                                   placeholder="john doe" />
+                        <ValidationMessage For="() => Input.DisplayName" class="text-danger" />
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="Input.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
+                        <InputText @bind-Value="Input.Email"
+                                   id="Input.Email"
+                                   type="email"
+                                   class="block w-full p-2.5 rounded-lg
+                                    bg-[var(--section-secondary)]
+                                    text-[var(--text)]
+                                    focus:border-[var(--main)]
+                                    focus:ring-1 focus:ring-[var(--main)]
+                                    focus:outline-none
+                                    border-0"
+                                   placeholder="john@email.com"
+                                   autocomplete="email" />
+                        <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+
+                    <!-- Accept Terms -->
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <InputCheckbox @bind-Value="Input.AcceptTerms"
+                                           id="Input.AcceptTerms"
+                                           class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="Input.AcceptTerms" class="text-[var(--text)]">
+                                I accept the
+                                <a href="/TermsAndConditions" class="font-medium text-[var(--main)] hover:underline">Terms and Conditions</a>
+                            </label>
+                        </div>
+                        <ValidationMessage For="() => Input.AcceptTerms" class="text-danger block" />
+                    </div>
+
+                    <!-- Submit -->
+                    <div>
+                        <button type="submit"
+                                class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            Register
+                        </button>
+                    </div>
+                </EditForm>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
+        </div>
     </div>
-</div>
+</section>
 
 @code {
     public const string LoginCallbackAction = "LoginCallback";
 
-    private string? message;
-    private ExternalLoginInfo? externalLoginInfo;
+    private IEnumerable<IdentityError>? _identityErrors;
+    private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+    private ExternalLoginInfo? _externalLoginInfo;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -61,7 +131,7 @@
 
     [SupplyParameterFromQuery] private string? Action { get; set; }
 
-    private string? ProviderDisplayName => externalLoginInfo?.ProviderDisplayName;
+    private string? ProviderDisplayName => _externalLoginInfo?.ProviderDisplayName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,7 +146,7 @@
             RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
         }
 
-        externalLoginInfo = info;
+        _externalLoginInfo = info;
 
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
@@ -94,15 +164,15 @@
 
     private async Task OnLoginCallbackAsync()
     {
-        if (externalLoginInfo is null)
+        if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
         }
 
         // Sign in the user with this external login provider if the user already has a login.
         var result = await SignInManager.ExternalLoginSignInAsync(
-            externalLoginInfo.LoginProvider,
-            externalLoginInfo.ProviderKey,
+            _externalLoginInfo.LoginProvider,
+            _externalLoginInfo.ProviderKey,
             isPersistent: false,
             bypassTwoFactor: true);
 
@@ -110,8 +180,8 @@
         {
             Logger.LogInformation(
                 "{Name} logged in with {LoginProvider} provider.",
-                externalLoginInfo.Principal.Identity?.Name,
-                externalLoginInfo.LoginProvider);
+                _externalLoginInfo.Principal.Identity?.Name,
+                _externalLoginInfo.LoginProvider);
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
@@ -120,54 +190,87 @@
         }
 
         // If the user does not have an account, then ask the user to create an account.
-        if (externalLoginInfo.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
+        // Pre-populate email and display name from external provider if available
+        if (_externalLoginInfo.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
         {
-            Input.Email = externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
+            Input.Email = _externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
+        }
+        
+        // Try to get display name from external provider (Google, etc. might provide this)
+        var nameClaim = _externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Name) 
+                        ?? _externalLoginInfo.Principal.FindFirstValue("name")
+                        ?? _externalLoginInfo.Principal.Identity?.Name;
+        if (!string.IsNullOrEmpty(nameClaim))
+        {
+            Input.DisplayName = nameClaim;
         }
     }
 
     private async Task OnValidSubmitAsync()
     {
-        if (externalLoginInfo is null)
+        if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information during confirmation.", HttpContext);
+            return;
         }
 
         var emailStore = GetEmailStore();
-        var user = CreateUser();
+        var user = CreateUser().InitializeNewUser(Input.DisplayName);
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        await UserStore.SetUserNameAsync(user, Input.Username, CancellationToken.None);
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
 
-        var result = await UserManager.CreateAsync(user);
-        if (result.Succeeded)
+        // Check for duplicate email
+        if (await UserManager.FindByEmailAsync(Input.Email) is not null)
         {
-            result = await UserManager.AddLoginAsync(user, externalLoginInfo);
-            if (result.Succeeded)
-            {
-                Logger.LogInformation("User created an account using {Name} provider.", externalLoginInfo.LoginProvider);
-
-                var userId = await UserManager.GetUserIdAsync(user);
-                var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-
-                var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-                    NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-                    new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-                await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-                // If account confirmation is required, we need to show the link if we don't have a real email sender
-                if (UserManager.Options.SignIn.RequireConfirmedAccount)
-                {
-                    RedirectManager.RedirectTo("Account/RegisterConfirmation", new() { ["email"] = Input.Email });
-                }
-
-                await SignInManager.SignInAsync(user, isPersistent: false, externalLoginInfo.LoginProvider);
-                RedirectManager.RedirectTo(ReturnUrl);
-            }
+            _identityErrors = [new IdentityError { Code = "DuplicateEmail", Description = "Email address is already in use." }];
+            return;
         }
 
-        message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+        // Check for duplicate username
+        if (await UserManager.FindByNameAsync(Input.Username) is not null)
+        {
+            _identityErrors = [new IdentityError { Code = "DuplicateUserName", Description = "Username is already taken." }];
+            return;
+        }
+
+        var result = await UserManager.CreateAsync(user);
+        if (!result.Succeeded)
+        {
+            _identityErrors = result.Errors;
+            return;
+        }
+
+        result = await UserManager.AddLoginAsync(user, _externalLoginInfo);
+        if (!result.Succeeded)
+        {
+            _identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created an account using {Name} provider.", _externalLoginInfo.LoginProvider);
+
+        // Add user to Member role
+        await UserManager.AddToRoleAsync(user, Roles.Member);
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        // If account confirmation is required, we need to show the link if we don't have a real email sender
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        {
+            RedirectManager.RedirectTo("Account/RegisterConfirmation", new Dictionary<string, object?> { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+            return;
+        }
+
+        await SignInManager.SignInAsync(user, isPersistent: false, _externalLoginInfo.LoginProvider);
+        RedirectManager.RedirectTo(ReturnUrl);
     }
 
     private static ApplicationUser CreateUser()
@@ -195,7 +298,23 @@
 
     private sealed class InputModel
     {
-        [Required] [EmailAddress] public string Email { get; set; } = "";
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [MaxLength(50, ErrorMessage = "Username cannot exceed 50 characters.")]
+        [Display(Name = "Username")]
+        public string Username { get; set; } = "";
+
+        [Required]
+        [MaxLength(50, ErrorMessage = "Display Name cannot exceed 50 characters.")]
+        [Display(Name = "Display Name")]
+        public string DisplayName { get; set; } = "";
+
+        [Range(typeof(bool), "true", "true", ErrorMessage = "You must accept the terms and conditions.")]
+        public bool AcceptTerms { get; set; }
     }
 
 }
