@@ -1,4 +1,5 @@
 ﻿using MatchBy.Enums;
+
 namespace MatchBy.Models;
 
 public sealed class Match
@@ -18,8 +19,11 @@ public sealed class Match
     public string? ConversationId { get; set; }
     public Conversation? Conversation { get; set; }
     public ICollection<ApplicationUser> Participants { get; set; } = new List<ApplicationUser>();
-
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
-    public DateTime? DeletedAtUtc { get; set; }
+    public DateTime? DeletedAtUtc { get; set; }  // ← Esta estava a faltar!
+
+    // Adiciona estas duas novas:
+    public bool Reminder3DaysSent { get; set; }
+    public bool Reminder30MinSent { get; set; }
 }
