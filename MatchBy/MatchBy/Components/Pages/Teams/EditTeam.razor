@@ -1,0 +1,806 @@
+﻿@page "/teams/edit/{id}"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
+@inject ITeamService TeamService
+@inject IUsersService UsersService
+@inject ITeamsInvitesService TeamInvitesService
+@inject NavigationManager NavigationManager
+@using Blazorise
+@using System.Security.Claims
+@using FluentValidation
+@using MatchBy.DTOs.Team
+@using MatchBy.DTOs.TeamInvite
+@using MatchBy.DTOs.User
+@using MatchBy.Services.Teams
+@using MatchBy.Services.TeamInvites
+@using MatchBy.Services.Users
+@using Microsoft.AspNetCore.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IValidator<UpdateTeamDto> UpdateTeamDtoValidator
+@inject IToastService ToastService
+
+@if (_model is null || _isLoading)
+{
+    <Loading></Loading>
+}
+else
+{
+    <div class="min-h-screen bg-[var(--background)] px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Back Button -->
+            <button @onclick="@(() => NavigationManager.NavigateTo($"/teams/{Id}"))"
+                    class="flex items-center gap-2 text-[var(--text)] hover:text-[var(--main)] mb-6 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Team
+            </button>
+
+            <!-- Main Card -->
+            <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow-sm p-6 md:p-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-[var(--main)] mb-6">Edit Team</h1>
+
+                <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
+                    <Validation Validator="@ValidateName">
+                        <Field>
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Name</FieldLabel>
+                            <FieldBody>
+                                <TextEdit Placeholder="Enter team name"
+                                          Text="@_model.Name"
+                                          TextChanged="@(v => _model = _model with { Name = v })"
+                                          Class="w-full"
+                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </TextEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+
+                    <Validation Validator="@ValidateDescription">
+                        <Field class="mt-4">
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description</FieldLabel>
+                            <FieldBody>
+                                <TextEdit Placeholder="Type a description for your team"
+                                          Text="@_model.Description"
+                                          TextChanged="@(v => _model = _model with { Description = v })"
+                                          Class="w-full"
+                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                    <Feedback>
+                                        <ValidationError/>
+                                    </Feedback>
+                                </TextEdit>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+
+                    <Validation Validator="@ValidatePrivacy">
+                        <Field class="mt-4">
+                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Privacy</FieldLabel>
+                            <FieldBody>
+                                <Select TValue="TeamPrivacy"
+                                        SelectedValue="@_model.Privacy"
+                                        SelectedValueChanged="@(v => _model = _model with { Privacy = v })"
+                                        Class="w-full"
+                                        Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
+                                    @foreach (var item in Enum.GetValues<TeamPrivacy>())
+                                    {
+                                        <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                    }
+                                </Select>
+                            </FieldBody>
+                        </Field>
+                    </Validation>
+
+                    <Field class="mt-6">
+                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Image</FieldLabel>
+                        <FieldBody>
+                            <div class="flex items-center gap-3">
+                                <InputFile OnChange="@OnImageSelected"
+                                           accept="image/*"
+                                           class="block w-full text-sm text-[var(--text)] border-2 border-[var(--main)] rounded-lg cursor-pointer bg-[var(--background)] focus:outline-none focus:border-[var(--main)] file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--main)] file:text-[var(--text-contrast)] hover:file:opacity-80"/>
+                                @if (_selectedImage != null || !string.IsNullOrEmpty(_currentTeamImageUrl))
+                                {
+                                    <button type="button" @onclick="RemoveImage"
+                                            class="shrink-0 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-[var(--error)] hover:opacity-80 text-white transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                }
+                            </div>
+                            <div class="text-xs text-[var(--text)] opacity-70 mt-2">
+                                Supported formats: JPG, PNG, GIF. Max size: 5MB
+                            </div>
+                        </FieldBody>
+                    </Field>
+
+                    <Field class="mt-6">
+                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Manage Team Members</FieldLabel>
+                        <FieldBody>
+                            <div class="mb-3">
+                                <TextEdit @bind-Text="_memberSearch"
+                                          Placeholder="Search for users to add"
+                                          Role="TextRole.Search"
+                                          KeyDown="@OnMemberSearchKeyDown"
+                                          Class="w-full"
+                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;"/>
+                            </div>
+
+                            @if (_isLoadingMembers)
+                            {
+                                <Loading></Loading>
+                            }
+                            else
+                            {
+                                if (_model.MembersIds.Any(m => m != _userId))
+                                {
+                                    <div
+                                        class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-lg p-2 thin-scroll"
+                                        style="background-color: var(--background);">
+                                        @if ((_availableUsers.Data?.Count ?? 0) == 0)
+                                        {
+                                            <div class="py-3 text-center opacity-60" style="color: var(--text);">
+                                                No users found
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var user in _availableUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                            {
+                                                var isSelected = _selectedMemberIds.Contains(user.Id);
+                                                var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                <div
+                                                    class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-all hover:opacity-70 @(isSelected ? "bg-[var(--main)]" : "")"
+                                                    @onclick="@(() => ToggleMember(user.Id))"
+                                                    style="color: var(--text);">
+                                                    <img src="@photoUrl" alt="@user.UserName"
+                                                         class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
+                                                    <span class="fw-500 truncate flex-1">@user.DisplayName</span>
+                                                    @if (isSelected)
+                                                    {
+                                                        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor"
+                                                             viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd"
+                                                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                  clip-rule="evenodd"/>
+                                                        </svg>
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+
+                                    @if (_availableUsers is { Data: not null, TotalCount: > 0 })
+                                    {
+                                        <div class="flex justify-center mt-2 mb-3">
+                                            <OffsetPagination CurrentPage="@_currentMemberPage"
+                                                              OnPageChanged="OnMemberPageChanged"
+                                                              PageSize="10"
+                                                              TotalItems="@_availableUsers.TotalCount"/>
+                                        </div>
+                                    }
+
+                                    @if (_selectedMemberIds.Count > 0)
+                                    {
+                                        <div class="mb-3">
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Members
+                                                (@_selectedMemberIds.Count)
+                                            </FieldLabel>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach (var memberId in _selectedMemberIds.Where(s => s != _userId))
+                                                {
+                                                    var member = _availableUsers.Data?.FirstOrDefault(u => u.Id == memberId);
+                                                    var currentMember = _currentTeamMembers.FirstOrDefault(m => m.Id == memberId);
+
+                                                    if (member != null)
+                                                    {
+                                                        var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                        <div
+                                                            class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                            <img src="@photoUrl" alt="@member.UserName"
+                                                                 class="rounded-full w-6 h-6 object-cover"/>
+                                                            <span class="text-sm">@member.DisplayName</span>
+                                                            <button @onclick="@(() => RemoveMember(memberId))"
+                                                                    @onclick:stopPropagation="true"
+                                                                    class="ml-1 hover:opacity-70 transition">
+                                                                <svg class="w-4 h-4" fill="currentColor"
+                                                                     viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd"
+                                                                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                          clip-rule="evenodd"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                    else if (currentMember != null)
+                                                    {
+                                                        var photoUrl = currentMember.AvatarUrl ?? "/images/user-avatar.png";
+                                                        <div
+                                                            class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                            <img src="@photoUrl" alt="@currentMember.DisplayName"
+                                                                 class="rounded-full w-6 h-6 object-cover"/>
+                                                            <span class="text-sm">@currentMember.DisplayName</span>
+                                                            <button @onclick="@(() => RemoveMember(memberId))"
+                                                                    @onclick:stopPropagation="true"
+                                                                    class="ml-1 hover:opacity-70 transition">
+                                                                <svg class="w-4 h-4" fill="currentColor"
+                                                                     viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd"
+                                                                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                          clip-rule="evenodd"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            }
+                        </FieldBody>
+                    </Field>
+
+                    <!-- Pending Invites Section -->
+                    <Field class="mt-6">
+                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Pending Invites
+                            (@(_pendingInvites?.Count ?? 0))
+                        </FieldLabel>
+                        <FieldBody>
+                            @if (_isLoadingInvites)
+                            {
+                                <Loading></Loading>
+                            }
+                            else if (_pendingInvites != null && _pendingInvites.Count > 0)
+                            {
+                                <div
+                                    class="space-y-2 max-h-60 overflow-y-auto border-2 border-[var(--main)] rounded-lg p-3 thin-scroll"
+                                    style="background-color: var(--background);">
+                                    @foreach (var invite in _pendingInvites)
+                                    {
+                                        var photoUrl = invite.Receiver?.AvatarUrl ?? "/images/user-avatar.png";
+                                        <div
+                                            class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--main)]/10 transition-all"
+                                            style="color: var(--text);">
+                                            <div class="flex items-center gap-3">
+                                                <img src="@photoUrl" alt="@invite.Receiver?.DisplayName"
+                                                     class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
+                                                <div>
+                                                    <span class="font-medium">@invite.Receiver?.DisplayName</span>
+                                                    <div class="text-xs opacity-70">
+                                                        Invited @invite.CreatedAtUtc.ToLocalTime().ToString("MMM dd, yyyy")</div>
+                                                </div>
+                                            </div>
+                                            <button @onclick="@(() => RemoveInvite(invite.Id))"
+                                                    class="px-3 py-1 bg-[var(--error)] hover:opacity-80 text-white rounded-lg text-sm font-medium transition">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="py-4 text-center opacity-60 border-2 border-[var(--main)] rounded-lg"
+                                     style="color: var(--text); background-color: var(--background);">
+                                    No pending invites
+                                </div>
+                            }
+                        </FieldBody>
+                    </Field>
+
+                    <!-- Invite New Members Section -->
+                    <Field class="mt-6">
+                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Invite New Members</FieldLabel>
+                        <FieldBody>
+                            <div class="mb-3">
+                                <TextEdit @bind-Text="_inviteSearch"
+                                          Placeholder="Search for users to invite"
+                                          Role="TextRole.Search"
+                                          KeyDown="@OnInviteSearchKeyDown"
+                                          Class="w-full"
+                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;"/>
+                            </div>
+
+                            @if (_isLoadingInviteUsers)
+                            {
+                                <Loading></Loading>
+                            }
+                            else
+                            {
+                                <div
+                                    class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-lg p-2 thin-scroll"
+                                    style="background-color: var(--background);">
+                                    @if ((_availableInviteUsers.Data?.Count ?? 0) == 0)
+                                    {
+                                        <div class="py-3 text-center opacity-60" style="color: var(--text);">
+                                            No users found
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var user in _availableInviteUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                        {
+                                            var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                            var isAlreadyMember = _selectedMemberIds.Contains(user.Id);
+                                            var isAlreadyInvited = _pendingInvites?.Any(i => i.ReceiverId == user.Id) ?? false;
+
+                                            <div
+                                                class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg transition-all hover:opacity-70 @(isAlreadyMember || isAlreadyInvited ? "opacity-50" : "")"
+                                                style="color: var(--text);">
+                                                <div class="flex items-center gap-3 flex-1">
+                                                    <img src="@photoUrl" alt="@user.UserName"
+                                                         class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
+                                                    <span class="fw-500 truncate">@user.DisplayName</span>
+                                                </div>
+                                                @if (isAlreadyMember)
+                                                {
+                                                    <span
+                                                        class="text-xs px-2 py-1 bg-[var(--main)] rounded-full">Member</span>
+                                                }
+                                                else if (isAlreadyInvited)
+                                                {
+                                                    <span
+                                                        class="text-xs px-2 py-1 bg-yellow-500 text-white rounded-full">Invited</span>
+                                                }
+                                                else
+                                                {
+                                                    <button @onclick="@(() => SendInviteToUser(user.Id))"
+                                                            class="px-3 py-1 bg-[var(--main)] hover:opacity-80 text-[var(--text-contrast)] rounded-lg text-sm font-medium transition">
+                                                        Invite
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                </div>
+
+                                @if (_availableInviteUsers is { Data: not null, TotalCount: > 0 })
+                                {
+                                    <div class="flex justify-center mt-2 mb-3">
+                                        <OffsetPagination CurrentPage="@_currentInvitePage"
+                                                          OnPageChanged="OnInvitePageChanged"
+                                                          PageSize="10"
+                                                          TotalItems="@_availableInviteUsers.TotalCount"/>
+                                    </div>
+                                }
+                            }
+                        </FieldBody>
+                    </Field>
+
+                    <Field class="mt-6">
+                        <Button Color="Color.Primary"
+                                Clicked="@SubmitTeam"
+                                Loading="@_isSubmitting"
+                                Class="w-full md:w-auto"
+                                Style="background-color: var(--main); color: var(--text-contrast); padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s;">
+                            Update Team
+                        </Button>
+                    </Field>
+                </Validations>
+            </div>
+        </div>
+    </div>
+}
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
+@code {
+    Validations _validations = null!;
+    UpdateTeamDto? _model;
+    private string? _userId;
+    private bool _isLoading = true;
+    private bool _isSubmitting = false;
+    private bool _isLoadingMembers = false;
+    private bool _isLoadingInvites = false;
+    private bool _isLoadingInviteUsers = false;
+    private string _memberSearch = "";
+    private string _inviteSearch = "";
+    private int _currentMemberPage = 1;
+    private int _currentInvitePage = 1;
+    private HashSet<string> _selectedMemberIds = new();
+    private PaginationResponse<List<ApplicationUser>> _availableUsers = new();
+    private PaginationResponse<List<ApplicationUser>> _availableInviteUsers = new();
+    private List<UserDto> _currentTeamMembers = new();
+    private List<TeamInviteDto>? _pendingInvites;
+    private IBrowserFile? _selectedImage;
+    private string? _currentTeamImageUrl;
+
+    [Parameter] public string? Id { get; set; }
+
+    private void ValidateProperty(ValidatorEventArgs e, string propertyPath)
+    {
+        if (_model is null) return;
+
+        var errors = UpdateTeamDtoValidator.Validate(_model).Errors
+            .Where(x => x.PropertyName == propertyPath)
+            .ToList();
+
+        if (errors.Any())
+        {
+            e.Status = ValidationStatus.Error;
+            e.ErrorText = errors[0].ErrorMessage;
+        }
+        else
+        {
+            e.Status = ValidationStatus.Success;
+        }
+    }
+
+    void ValidateName(ValidatorEventArgs e) => ValidateProperty(e, nameof(UpdateTeamDto.Name));
+    void ValidateDescription(ValidatorEventArgs e) => ValidateProperty(e, nameof(UpdateTeamDto.Description));
+    void ValidatePrivacy(ValidatorEventArgs e) => ValidateProperty(e, nameof(UpdateTeamDto.Privacy));
+
+    private void ToggleMember(string userId)
+    {
+        if (!_selectedMemberIds.Add(userId))
+        {
+            _selectedMemberIds.Remove(userId);
+        }
+
+        StateHasChanged();
+    }
+
+    private void RemoveMember(string userId)
+    {
+        _selectedMemberIds.Remove(userId);
+        StateHasChanged();
+    }
+
+    private void OnImageSelected(InputFileChangeEventArgs e) => _selectedImage = e.File;
+
+    private async Task RemoveImage()
+    {
+        if (Id is null || _userId is null)
+        {
+            return;
+        }
+
+        // If there's a current team image, delete it from the server
+        if (!string.IsNullOrEmpty(_currentTeamImageUrl))
+        {
+            try
+            {
+                var result = await TeamService.DeleteTeamImageAsync(Id, _userId, CancellationToken.None);
+                
+                if (result.Success)
+                {
+                    await ToastService.Success("Team image deleted successfully!", "Delete Image");
+                    _currentTeamImageUrl = null;
+                }
+                else
+                {
+                    await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Failed to delete team image.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await ToastService.Error($"Error deleting image: {ex.Message}");
+            }
+        }
+
+        // Clear the selected image preview
+        _selectedImage = null;
+        StateHasChanged();
+    }
+
+    private async Task LoadMembers()
+    {
+        if (_isLoadingMembers) return;
+        _isLoadingMembers = true;
+        try
+        {
+            var response = await UsersService.GetUsers(_memberSearch, _currentMemberPage, 10);
+            if (response.Success)
+            {
+                _availableUsers = response.Data!;
+                // Filter out current user
+                if (_userId != null)
+                {
+                    _availableUsers.Data = _availableUsers.Data.Where(u => u.Id != _userId).ToList();
+                }
+            }
+            else
+            {
+                await ToastService.Error(response.ErrorMessages.ToString());
+            }
+        }
+        finally
+        {
+            _isLoadingMembers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnMemberSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentMemberPage = 1;
+            await LoadMembers();
+        }
+    }
+
+    private async Task OnMemberPageChanged(int page)
+    {
+        _currentMemberPage = page;
+        await LoadMembers();
+    }
+
+    private async Task LoadPendingInvites()
+    {
+        if (Id is null) return;
+
+        _isLoadingInvites = true;
+        try
+        {
+            var result = await TeamInvitesService.GetInvitesForTeam(Id, 1, 100, CancellationToken.None);
+            if (result is { Success: true, Data: not null })
+            {
+                _pendingInvites = result.Data.Data
+                    .Where(i => i is { Status: InviteStatus.Pending, DeletedAtUtc: null })
+                    .ToList();
+            }
+            else
+            {
+                _pendingInvites = new List<TeamInviteDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading invites: {ex.Message}");
+            _pendingInvites = new List<TeamInviteDto>();
+        }
+        finally
+        {
+            _isLoadingInvites = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadInviteUsers()
+    {
+        if (_isLoadingInviteUsers) return;
+        _isLoadingInviteUsers = true;
+        try
+        {
+            var response = await UsersService.GetUsers(_inviteSearch, _currentInvitePage, 10);
+            if (response.Success)
+            {
+                _availableInviteUsers = response.Data!;
+                // Filter out current user
+                if (_userId != null)
+                {
+                    _availableInviteUsers.Data = _availableInviteUsers.Data.Where(u => u.Id != _userId).ToList();
+                }
+            }
+            else
+            {
+                await ToastService.Error(response.ErrorMessages.ToString());
+            }
+        }
+        finally
+        {
+            _isLoadingInviteUsers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnInviteSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentInvitePage = 1;
+            await LoadInviteUsers();
+        }
+    }
+
+    private async Task OnInvitePageChanged(int page)
+    {
+        _currentInvitePage = page;
+        await LoadInviteUsers();
+    }
+
+    private async Task SendInviteToUser(string receiverId)
+    {
+        if (Id is null || _userId is null || _model is null) return;
+
+        try
+        {
+            var teamInviteDto = new CreateTeamInviteDto
+            {
+                Content = $"You've been invited to join {_model.Name}!",
+                SenderId = _userId,
+                ReceiverId = receiverId,
+                TeamId = Id
+            };
+
+            var result = await TeamInvitesService.CreateInvite(teamInviteDto, CancellationToken.None);
+
+            if (result.Success)
+            {
+                await ToastService.Success("Invite sent successfully!", "Invite User");
+                await LoadPendingInvites();
+                StateHasChanged();
+            }
+            else
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Failed to send invite.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ToastService.Error($"Error sending invite: {ex.Message}");
+        }
+    }
+
+    private async Task RemoveInvite(string inviteId)
+    {
+        if (_userId is null) return;
+
+        try
+        {
+            var result = await TeamInvitesService.DeleteInvite(inviteId, _userId, CancellationToken.None);
+
+            if (result.Success)
+            {
+                await ToastService.Success("Invite cancelled successfully!", "Cancel Invite");
+                await LoadPendingInvites();
+                StateHasChanged();
+            }
+            else
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Failed to cancel invite.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ToastService.Error($"Error cancelling invite: {ex.Message}");
+        }
+    }
+
+    private async Task SubmitTeam()
+    {
+        if (_model is null || !await _validations.ValidateAll()) return;
+
+        _isSubmitting = true;
+        try
+        {
+            // Get current member IDs from the team
+            var currentMemberIds = _currentTeamMembers.Select(m => m.Id).ToHashSet();
+            var newMemberIds = _selectedMemberIds.ToHashSet();
+
+            // Find new members to invite
+            var usersToInvite = newMemberIds.Except(currentMemberIds).ToList();
+
+            // Update team with current members (including new ones that will be added)
+            var updateDto = _model with
+            {
+                MembersIds = _selectedMemberIds.ToList(),
+                File = _selectedImage
+            };
+
+            var result = await TeamService.UpdateTeamAsync(updateDto, CancellationToken.None);
+
+            if (!result.Success)
+            {
+                await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error updating team.");
+                return;
+            }
+
+            // Send invites to new members
+            int invitesSent = 0;
+            if (usersToInvite.Any() && Id != null && _userId != null)
+            {
+                foreach (var receiverId in usersToInvite)
+                {
+                    var teamInviteDto = new CreateTeamInviteDto
+                    {
+                        Content = $"You've been invited to join {_model.Name}!",
+                        SenderId = _userId,
+                        ReceiverId = receiverId,
+                        TeamId = Id
+                    };
+
+                    var inviteResult = await TeamInvitesService.CreateInvite(teamInviteDto, CancellationToken.None);
+                    if (inviteResult.Success)
+                    {
+                        invitesSent++;
+                    }
+                }
+            }
+
+            if (invitesSent > 0)
+            {
+                await ToastService.Success($"Team updated successfully! Invites sent to {invitesSent} user(s).", "Update Team");
+            }
+            else
+            {
+                await ToastService.Success("Team updated successfully!", "Update Team");
+            }
+
+            NavigationManager.NavigateTo($"/teams/{Id}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (_userId == null)
+        {
+            NavigationManager.NavigateTo("/Account/Login");
+            return;
+        }
+
+        // Run sequentially to avoid DbContext concurrency issues
+        await LoadMembers();
+        await LoadInviteUsers();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_userId is null)
+        {
+            return;
+        }
+
+        if (Id is null)
+        {
+            NavigationManager.NavigateTo("/404", forceLoad: true);
+            return;
+        }
+
+        var result = await TeamService.GetTeamByIdAsync(Id, _userId, CancellationToken.None);
+
+        if (!result.Success || result.Data is null)
+        {
+            NavigationManager.NavigateTo("/404", forceLoad: true);
+            return;
+        }
+
+        var team = result.Data;
+
+        // Check if user is the owner
+        if (team.OwnerId != _userId)
+        {
+            await ToastService.Error("You don't have permission to edit this team.");
+            NavigationManager.NavigateTo($"/teams/{Id}");
+            return;
+        }
+
+        _model = new UpdateTeamDto
+        {
+            Id = Id,
+            Name = team.Name,
+            Description = team.Description,
+            OwnerId = team.OwnerId,
+            MembersIds = team.Members.Select(m => m.Id).ToList(),
+            MaxMembers = team.MaxMembers,
+            Privacy = team.Privacy
+        };
+
+        _selectedMemberIds = team.Members.Select(m => m.Id).ToHashSet();
+
+        // Store current team members for display
+        _currentTeamMembers = team.Members.ToList();
+        
+        // Store current team image URL
+        _currentTeamImageUrl = team.ImageUrl;
+
+        // Load pending invites
+        await LoadPendingInvites();
+
+        _isLoading = false;
+    }
+
+}

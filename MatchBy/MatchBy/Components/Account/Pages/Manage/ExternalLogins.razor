@@ -12,28 +12,28 @@
 <PageTitle>Manage your external logins</PageTitle>
 
 <section class="space-y-6">
-    <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-6">Manage your external logins</h2>
+    <h2 class="text-lg font-medium text-[var(--text)] mb-6">Manage your external logins</h2>
 
     <StatusMessage />
 
     @if (_currentLogins?.Count > 0)
     {
         <div>
-            <h3 class="text-md font-medium text-gray-900 dark:text-white mb-3">Registered logins</h3>
+            <h3 class="text-md font-medium text-[var(--text)] mb-3">Registered logins</h3>
 
-            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-800">
+            <div class="overflow-x-auto rounded-lg border border-gray-300">
+                <table class="min-w-full divide-y divide-gray-300">
+                    <thead class="bg-[var(--section-secondary)]">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Provider</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Action</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--text)] uppercase tracking-wider">Provider</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--text)] uppercase tracking-wider">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody class="bg-[var(--section)] divide-y divide-gray-300">
                         @foreach (var login in _currentLogins)
                         {
                             <tr>
-                                <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">@login.ProviderDisplayName</td>
+                                <td class="px-4 py-3 text-sm text-[var(--text)]">@login.ProviderDisplayName</td>
                                 <td class="px-4 py-3">
                                     @if (_showRemoveButton)
                                     {
@@ -45,9 +45,8 @@
                                             <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider" />
                                             <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey" />
                                             <button type="submit"
-                                                    class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white
-                                                           bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300
-                                                           dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+                                                    class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-contrast)]
+                                                           bg-[var(--reset)] hover:bg-[#b30000] focus:outline-none focus:ring-2 focus:ring-[var(--reset)]"
                                                     title="Remove this @login.ProviderDisplayName login from your account">
                                                 Remove
                                             </button>
@@ -55,7 +54,7 @@
                                     }
                                     else
                                     {
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">—</span>
+                                        <span class="text-sm text-[var(--text)]">—</span>
                                     }
                                 </td>
                             </tr>
@@ -69,7 +68,7 @@
     @if (_otherLogins?.Count > 0)
     {
         <div class="pt-4">
-            <h4 class="text-md font-medium text-gray-900 dark:text-white mb-3">Add another service to sign in</h4>
+            <h4 class="text-md font-medium text-[var(--text)] mb-3">Add another service to sign in</h4>
 
             <form class="space-y-3"
                   action="Account/Manage/LinkExternalLogin"
@@ -82,9 +81,8 @@
                                 name="Provider"
                                 value="@provider.Name"
                                 title="Log in using your @provider.DisplayName account"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white
-                                       bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-4
-                                       focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-contrast)]
+                                       bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
                             @provider.DisplayName
                         </button>
                     }

@@ -30,10 +30,12 @@ public class UpdateMatchDtoValidator : AbstractValidator<UpdateMatchDto>
             .NotNull().WithMessage("Location is required.");
 
         RuleFor(x => x.Location.Latitude)
-            .InclusiveBetween(-90, 90).WithMessage("Latitude must be between -90 and 90.");
+            .InclusiveBetween(-90, 90).WithMessage("Latitude must be between -90 and 90.")
+            .When(x => x.Location != null);
 
         RuleFor(x => x.Location.Longitude)
-            .InclusiveBetween(-180, 180).WithMessage("Longitude must be between -180 and 180.");
+            .InclusiveBetween(-180, 180).WithMessage("Longitude must be between -180 and 180.")
+            .When(x => x.Location != null);
 
         RuleFor(x => x.Address)
             .NotEmpty().WithMessage("Address is required.")

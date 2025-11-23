@@ -10,7 +10,8 @@ public static class UserMappings
         {
             Id = user.Id,
             DisplayName = user.UserName!,
-            AvatarUrl = user.ProfileImage?.Url
+            AvatarUrl = user.ProfileImage?.Url,
+            PlayerRating = user.Rating > 0 ? user.Rating : null
         };
     }
 }

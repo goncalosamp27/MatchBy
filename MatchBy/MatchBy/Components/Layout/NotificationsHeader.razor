@@ -1,0 +1,287 @@
+﻿@rendermode InteractiveServer
+@using MatchBy.DTOs.Notification
+@using Microsoft.AspNetCore.SignalR.Client
+@using INotificationService = MatchBy.Services.Notifications.INotificationService
+@inject NavigationManager NavigationManager
+@inject INotificationService NotificationService
+@using Blazorise
+@implements IAsyncDisposable
+
+<Dropdown Display="Display.InlineBlock">
+    <DropdownToggle ToggleIconVisible="false" class="p-2 mr-1 text-[var(--text)] rounded-lg hover:text-[var(--main)]">
+        <span class="sr-only">View notifications</span>
+        <!-- Bell icon -->
+        <svg
+            aria-hidden="true"
+            class="w-6 h-6"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
+        </svg>
+        @if (_unreadCount > 0)
+        {
+            <span
+                class="absolute top-2 right-4 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                @if (_unreadCount > 9)
+                {
+                    @:9+
+                }
+                else
+                {
+                    @_unreadCount
+                }
+            </span>
+        }
+    </DropdownToggle>
+    <DropdownMenu
+        Class="!absolute !top-full !left-1/2 !-translate-x-1/2 !mt-4 overflow-hidden max-w-sm text-base list-none bg-[var(--section-secondary)] divide-y divide-[var(--main)]/20 shadow-lg rounded-xl border border-[var(--main)]/10 block">
+        <div
+            class="block py-3 px-4 text-base font-semibold text-[var(--text)] bg-[var(--section)] border-b border-[var(--main)]/20 flex items-center justify-between">
+            <span>Notifications</span>
+            @if (_unreadCount > 0)
+            {
+                <Button Loading="@_isMarkingAllAsRead"
+                        Clicked="@MarkAllNotificationsAsRead"
+                        Disabled="@_isMarkingAllAsRead"
+                        class="!px-3 !py-1 !text-xs !h-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         class="lucide lucide-mail-check-icon lucide-mail-check">
+                        <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/>
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        <path d="m16 19 2 2 4-4"/>
+                    </svg>
+                </Button>
+            }
+        </div>
+        <div class="thin-scroll max-h-96 overflow-y-auto">
+            @if (_notifications.Any())
+            {
+                @foreach (var notification in _notifications.Take(10))
+                {
+                    <NotificationHeaderItem
+                        Notification="notification"
+                        OnClick="() => NavigateToNotification(notification)"
+                        OnMarkAsRead="() => MarkNotificationAsRead(notification)"/>
+                }
+            }
+            else
+            {
+                <div class="py-8 px-4 text-center text-[var(--text)]/60">
+                    <p>No notifications</p>
+                </div>
+            }
+        </div>
+        <NavLink
+            href="#"
+            class="block py-3 px-4 text-sm font-semibold text-center text-[var(--main)] bg-[var(--section)] hover:bg-[var(--main)]/10 hover:text-[var(--main-hover)] transition-colors duration-150 border-t border-[var(--main)]/20">
+            <div class="inline-flex items-center justify-center w-full">
+                <svg
+                    aria-hidden="true"
+                    class="mr-2 w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                    <path
+                        fill-rule="evenodd"
+                        d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                View more
+            </div>
+        </NavLink>
+    </DropdownMenu>
+</Dropdown>
+
+@code
+{
+    [Parameter] public required string UserId { get; set; }
+    private HubConnection? _notificationHubConnection;
+    private readonly List<NotificationDto> _notifications = new();
+    private int _unreadCount;
+    private bool _isInitializing;
+    private bool _isInitialized;
+    private bool _isMarkingAllAsRead;
+    private string? _lastUserId;
+
+    protected override async Task OnInitializedAsync() => await LoadNotificationsAsync();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Only reload if UserId actually changed
+        if (_isInitialized && !string.IsNullOrEmpty(UserId) && UserId != _lastUserId)
+        {
+            _lastUserId = UserId;
+            await LoadNotificationsAsync();
+        }
+    }
+
+    private async Task LoadNotificationsAsync()
+    {
+        if (_isInitializing || string.IsNullOrEmpty(UserId))
+            return;
+
+        _isInitializing = true;
+        _lastUserId = UserId;
+
+        try
+        {
+            if (!_isInitialized)
+            {
+                var resultNotifications = await NotificationService.GetNotifications(10, UserId, null, CancellationToken.None);
+                if (resultNotifications.Success)
+                {
+                    _notifications.Clear();
+                    _notifications.AddRange(resultNotifications.Data!.Data);
+                    _unreadCount = _notifications.Count(n => !n.IsRead);
+                }
+
+                await InitializeNotificationHub();
+                _isInitialized = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading notifications: {ex.Message}");
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
+    }
+
+    private async Task InitializeNotificationHub()
+    {
+        _notificationHubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/notifications"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _notificationHubConnection.On<NotificationDto>("NotificationReceived", notification =>
+        {
+            return InvokeAsync(() =>
+            {
+                _notifications.Insert(0, notification);
+                _unreadCount++;
+                StateHasChanged();
+            });
+        });
+
+        _notificationHubConnection.On<object>("Registered", _ =>
+        {
+            return InvokeAsync(() =>
+            {
+                Console.WriteLine("Registered with notification hub");
+                StateHasChanged();
+            });
+        });
+
+        _notificationHubConnection.Closed += error =>
+        {
+            Console.WriteLine($"Notification hub connection closed: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _notificationHubConnection.Reconnecting += error =>
+        {
+            Console.WriteLine($"Notification hub reconnecting: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _notificationHubConnection.Reconnected += async connectionId =>
+        {
+            Console.WriteLine($"Notification hub reconnected: {connectionId}");
+            await _notificationHubConnection.InvokeAsync("Register", UserId);
+        };
+
+        try
+        {
+            await _notificationHubConnection.StartAsync();
+            await _notificationHubConnection.InvokeAsync("Register", UserId);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to notification hub: {ex.Message}");
+        }
+    }
+
+    private async Task MarkNotificationAsRead(NotificationDto notification)
+    {
+        var resultMarkRead = await NotificationService.ReadNotification(notification.Id, UserId, CancellationToken.None);
+        if (!resultMarkRead.Success)
+        {
+            Console.WriteLine($"Error marking notification as read: {resultMarkRead.ErrorMessages}");
+            return;
+        }
+
+        var index = _notifications.FindIndex(n => n.Id == notification.Id);
+        if (index < 0) return;
+        _notifications[index] = notification with { IsRead = true };
+        if (_unreadCount > 0)
+            _unreadCount--;
+        StateHasChanged();
+    }
+
+    private async Task MarkAllNotificationsAsRead()
+    {
+        if (_isMarkingAllAsRead || _unreadCount == 0 || string.IsNullOrEmpty(UserId))
+            return;
+
+        _isMarkingAllAsRead = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await NotificationService.MarkAllNotificationsAsReadAsync(UserId, CancellationToken.None);
+
+            if (result.Success)
+            {
+                // Update all notifications in the list to mark them as read
+                for (int i = 0; i < _notifications.Count; i++)
+                {
+                    if (!_notifications[i].IsRead)
+                    {
+                        _notifications[i] = _notifications[i] with { IsRead = true };
+                    }
+                }
+
+                _unreadCount = 0;
+            }
+            else
+            {
+                Console.WriteLine($"Error marking all notifications as read: {string.Join(", ", result.ErrorMessages)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error marking all notifications as read: {ex.Message}");
+        }
+        finally
+        {
+            _isMarkingAllAsRead = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateToNotification(NotificationDto notification)
+    {
+        await MarkNotificationAsRead(notification);
+        if (!string.IsNullOrEmpty(notification.ActionUrl))
+        {
+            NavigationManager.NavigateTo(notification.ActionUrl);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_notificationHubConnection is not null)
+        {
+            await _notificationHubConnection.DisposeAsync();
+        }
+    }
+}

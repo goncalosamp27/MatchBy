@@ -20,7 +20,7 @@ public class PlayerRatingSeeder: ISeeder
         db.PlayerRatings.Add(new PlayerRating
             {
                 Id = $"playerRating_{Guid.CreateVersion7()}",
-                Rating = 4.5f,
+                Rating = 4,
                 SentById = users[1].Id,
                 ReceivedById = users[2].Id,
                 MatchId = match.Id,

@@ -13,95 +13,123 @@
 
 <PageTitle>Log in</PageTitle>
 
-<section class="bg-[var(--background)]">
-    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-        @*<a href="#" class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
-            <img class="w-8 h-8 mr-2" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg" alt="logo">
-            MatchBy
-        </a>*@
-        <div
-            class="w-full bg-[var(--section)] rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 ring-1 ring-[var(--main)]">
-            <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
-                <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                    Sign in to your account
-                </h1>
-                <StatusMessage Message="@errorMessage"/>
-                <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login"
-                          class="space-y-4 md:space-y-6">
-                    <DataAnnotationsValidator/>
-                    <div>
+<section class="bg-[var(--background)] min-h-screen flex items-center">
+    <div class="flex flex-col lg:flex-row items-center justify-center px-6 py-8 mx-auto lg:py-0 lg:px-0">
+        <!-- Left Column: Login Form -->
+        <div class="w-full lg:w-1/2 flex items-center justify-center lg:px-8 xl:px-16">
+            <div class="w-full max-w-md">
+                <div class="bg-[var(--section)] rounded-lg shadow-lg p-8 ring-1 ring-[var(--main)]">
+                    <h1 class="text-2xl font-bold leading-tight tracking-tight text-[var(--text)] mb-2">
+                        Welcome back
+                    </h1>
+                    <p class="text-sm text-[var(--text)] mb-6">
+                        Don't have an account? 
+                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
+                           class="font-medium text-[var(--main)] hover:underline">Sign up</a>.
+                    </p>
+                    
+                    <StatusMessage Message="@_errorMessage" UseCookieMessage="false"/>
+                    
+                    <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login"
+                              class="space-y-4 md:space-y-6">
+                        <DataAnnotationsValidator/>
+                        
+                        <div>
+                            <label for="Input.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">
+                                Your email
+                            </label>
+                            <InputText @bind-Value="Input.Email" id="Input.Email"
+                                       class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                       autocomplete="username" aria-required="true" placeholder="name@example.com"/>
+                            <ValidationMessage For="() => Input.Email" class="text-danger"/>
+                        </div>
 
-                        <label for="Input.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">Your
-                            email</label>
-                        <InputText @bind-Value="Input.Email" id="Input.Email"
-                                    class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                   autocomplete="username" aria-required="true" placeholder="name@example.com"/>
-                        <ValidationMessage For="() => Input.Email" class="text-danger"/>
-                    </div>
+                        <div>
+                            <label for="Input.Password"
+                                   class="block mb-2 text-sm font-medium text-[var(--text)]">Password</label>
+                            <InputText type="password" @bind-Value="Input.Password" id="Input.Password"
+                                       class="block w-full p-2.5 rounded-lg
+                                        bg-[var(--section-secondary)]
+                                        text-[var(--text)]
+                                        focus:border-[var(--main)]
+                                        focus:ring-1 focus:ring-[var(--main)]
+                                        focus:outline-none
+                                        border-0"
+                                       autocomplete="current-password" aria-required="true" placeholder="••••••••"/>
+                            <ValidationMessage For="() => Input.Password" class="text-danger"/>
+                        </div>
 
-                    <div>
-                        <label for="Input.Password"
-                               class="block mb-2 text-sm font-medium text-[var(--text)]">Password</label>
-                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password"
-                        class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                   autocomplete="current-password" aria-required="true" placeholder="password"/>
-                        <ValidationMessage For="() => Input.Password" class="text-danger"/>
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-start">
-                            <div class="flex items-center h-5">
-                                <InputCheckbox @bind-Value="Input.RememberMe"
-                                           class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <InputCheckbox @bind-Value="Input.RememberMe"
+                                                   id="remember"
+                                                   class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="remember" class="text-[var(--text)]">Remember me</label>
+                                </div>
                             </div>
-                            <div class="ml-3 text-sm">
-                                <label for="remember" class="text-[var(--text)]">Remember me</label>
+                            <a href="Account/ForgotPassword"
+                               class="text-sm font-medium hover:underline text-[var(--main)]">
+                                Forgot password?
+                            </a>
+                        </div>
+                        
+                        <div>
+                            <button type="submit"
+                                    class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                                Sign in to your account
+                            </button>
+                        </div>
+                    </EditForm>
+                    
+                    <div class="mt-6">
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-[var(--section)] text-[var(--text)]">or</span>
                             </div>
                         </div>
-                        <a href="Account/ForgotPassword"
-                           class="text-sm font-medium hover:underline text-[var(--main)]">Forgot
-                            your password?</a>
+                        <div class="mt-6">
+                            <ExternalLoginPicker />
+                        </div>
                     </div>
-                    <div>
-                        <button type="submit"
-                                class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-                            Log in
-                        </button>
-                    </div>
-                    <div>
+                    
+                    <div class="mt-6">
                         <p class="text-sm font-light text-gray-500 dark:text-gray-400">
-                            Don’t have an account yet? <a
-                                href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
-                                class="font-medium text-[var(--main)] hover:underline">Register</a>
-                        </p>
-                        <p class="text-sm font-light text-gray-500 dark:text-gray-400">
-                            Didn’t receive a confirmation email?
+                            Didn't receive a confirmation email?
                             <a href="Account/ResendEmailConfirmation"
                                class="font-medium text-[var(--main)] hover:underline">
                                 Resend
                             </a>
                         </p>
                     </div>
-                </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Illustration -->
+        <div class="hidden lg:flex lg:w-1/2 items-center justify-center p-8">
+            <div class="w-full max-w-lg">
+                <img src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/authentication/illustration.svg" 
+                     alt="Authentication illustration" 
+                     class="w-full h-auto"/>
             </div>
         </div>
     </div>
 </section>
 
 @code {
-    private string? errorMessage;
+    private string? _errorMessage;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -126,7 +154,7 @@
         var user = await emailStore.FindByEmailAsync(UserManager.NormalizeName(Input.Email), CancellationToken.None);
         if(user?.UserName == null)
         {
-            errorMessage = "Error: Invalid login attempt.";
+            _errorMessage = "Error: Invalid login attempt.";
             return;
         }
         
@@ -149,7 +177,7 @@
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            _errorMessage = "Error: Invalid login attempt.";
         }
     }
 

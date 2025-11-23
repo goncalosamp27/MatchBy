@@ -10,58 +10,63 @@
 
 <PageTitle>Confirm email</PageTitle>
 
-<section class="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-6">
-    <div class="flex flex-col items-center space-y-4">
-        @if (_statusMessage?.StartsWith("Thank you") == true)
-        {
-            <!-- Success icon -->
-            <div class="flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-green-600 dark:text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
+<section class="bg-[var(--background)] min-h-screen flex items-center">
+    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto w-full">
+        <div class="w-full bg-[var(--section)] rounded-lg shadow-lg md:mt-0 sm:max-w-md xl:p-0 ring-1 ring-[var(--main)]">
+            <div class="p-6 space-y-4 md:space-y-6 sm:p-8 text-center">
+                <div class="flex flex-col items-center space-y-4">
+                    @if (_statusMessage?.StartsWith("Thank you") == true)
+                    {
+                        <!-- Success icon -->
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--section-secondary)] border-2 border-[var(--success)]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[var(--success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+
+                        <h1 class="text-2xl font-bold text-[var(--success)]">Email confirmed</h1>
+                        <p class="text-sm text-[var(--text)] max-w-md">@_statusMessage</p>
+                    }
+                    else if (_statusMessage is not null)
+                    {
+                        <!-- Error icon -->
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--section-secondary)] border-2 border-[var(--error)]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[var(--error)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+
+                        <h1 class="text-2xl font-bold text-[var(--error)]">Email confirmation failed</h1>
+                        <p class="text-sm text-[var(--text)] max-w-md">@_statusMessage</p>
+                    }
+                    else
+                    {
+                        <!-- Loading state -->
+                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--section-secondary)] animate-pulse">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-[var(--text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+
+                        <h1 class="text-2xl font-bold text-[var(--text)]">Confirming your email...</h1>
+                    }
+                </div>
+
+                @if (_statusMessage is not null)
+                {
+                    <div class="pt-4">
+                        <a href="/"
+                           class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--text-contrast)]
+                                  bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--main)]">
+                            Return to home
+                        </a>
+                    </div>
+                }
             </div>
-
-            <h1 class="text-3xl font-semibold text-[var(--success)]">Email confirmed</h1>
-            <p class="text-[var(--text)] max-w-md">@_statusMessage</p>
-        }
-        else if (_statusMessage is not null)
-        {
-            <!-- Error icon -->
-            <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--error)]">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-
-            <h1 class="text-3xl font-semibold text-[var(--error)]">Email confirmation failed</h1>
-            <p class="text-[var(--text)] max-w-md">@_statusMessage</p>
-        }
-        else
-        {
-            <!-- Loading state -->
-            <div class="flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 animate-pulse">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-
-            <h1 class="text-2xl font-semibold text-gray-700 dark:text-gray-200">Confirming your email...</h1>
-        }
-    </div>
-
-    @if (_statusMessage is not null)
-    {
-        <div class="pt-4">
-            <a href="/"
-               class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--text-contrast)]
-                      bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none
-                      ">
-                Return to home
-            </a>
         </div>
-    }
+    </div>
 </section>
 
 @code {
@@ -107,7 +112,7 @@
 
         if (result.Succeeded)
         {
-            // Mantém a sessão atual coerente caso o utilizador esteja autenticado.
+            // Keep the current session consistent if the user is authenticated.
             await SignInManager.RefreshSignInAsync(user);
             _statusMessage = "Thank you for confirming your email. Your account is now verified.";
         }

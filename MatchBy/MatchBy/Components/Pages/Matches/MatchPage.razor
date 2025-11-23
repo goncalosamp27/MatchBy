@@ -4,11 +4,15 @@
 @using System.Security.Claims
 @using MatchBy.DTOs.Match
 @using MatchBy.Services.Matches
+@using MatchBy.DTOs.User
+@using MatchBy.DTOs.PlayerRating
+@using MatchBy.Services.PlayerRatings
 @rendermode InteractiveServer
 @using Blazorise
-@inject IToastService ToastService 
+@inject IToastService ToastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject IPlayerRatingService PlayerRatingService
 
 @if (_match == null)
 {
@@ -55,25 +59,37 @@ else
                     <label for="address" class="block mb-2 text-m font-medium text-[var(--main)]">
                         Participants
                     </label>
-                    <div class="bg-[var(--section-secondary)] flex items-center justify-between gap-4 text-[var(--text)] p-2.5 rounded-lg border-2 border-[var(--main)] ">
+                    <div
+                        class="bg-[var(--section-secondary)] flex items-center justify-between gap-4 text-[var(--text)] p-2.5 rounded-lg border-2 border-[var(--main)] ">
                         <div class="flex items-center gap-4">
-                            <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                <path fill-rule="evenodd" d="M12 6a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm-1.5 8a4 4 0 0 0-4 4 2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 4 4 0 0 0-4-4h-3Zm6.82-3.096a5.51 5.51 0 0 0-2.797-6.293 3.5 3.5 0 1 1 2.796 6.292ZM19.5 18h.5a2 2 0 0 0 2-2 4 4 0 0 0-4-4h-1.1a5.503 5.503 0 0 1-.471.762A5.998 5.998 0 0 1 19.5 18ZM4 7.5a3.5 3.5 0 0 1 5.477-2.889 5.5 5.5 0 0 0-2.796 6.293A3.501 3.501 0 0 1 4 7.5ZM7.1 12H6a4 4 0 0 0-4 4 2 2 0 0 0 2 2h.5a5.998 5.998 0 0 1 3.071-5.238A5.505 5.505 0 0 1 7.1 12Z" clip-rule="evenodd"/>
+                            <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                <path fill-rule="evenodd"
+                                      d="M12 6a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm-1.5 8a4 4 0 0 0-4 4 2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 4 4 0 0 0-4-4h-3Zm6.82-3.096a5.51 5.51 0 0 0-2.797-6.293 3.5 3.5 0 1 1 2.796 6.292ZM19.5 18h.5a2 2 0 0 0 2-2 4 4 0 0 0-4-4h-1.1a5.503 5.503 0 0 1-.471.762A5.998 5.998 0 0 1 19.5 18ZM4 7.5a3.5 3.5 0 0 1 5.477-2.889 5.5 5.5 0 0 0-2.796 6.293A3.501 3.501 0 0 1 4 7.5ZM7.1 12H6a4 4 0 0 0-4 4 2 2 0 0 0 2 2h.5a5.998 5.998 0 0 1 3.071-5.238A5.505 5.505 0 0 1 7.1 12Z"
+                                      clip-rule="evenodd"/>
                             </svg>
                             <span class="text-xl font-medium text-[var(--text)]">
                                 @($"{_match.Participants?.Count ?? 0} / {_match.MaxPlayers}")
                             </span>
                         </div>
                         <div class="cursor-pointer" @onclick="ToggleParticipantsModal">
-                            @if (!showParticipantsModal) {
-                                <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/>
+                            @if (!_showParticipantsModal)
+                            {
+                                <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true"
+                                     xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                     viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2" d="m19 9-7 7-7-7"/>
                                 </svg>
                             }
-                            else {
-                                <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 15 7-7 7 7"/>
+                            else
+                            {
+                                <svg class="w-8 h-8 text-[var(--text)]" aria-hidden="true"
+                                     xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                     viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2" d="m5 15 7-7 7 7"/>
                                 </svg>
                             }
                         </div>
@@ -164,7 +180,7 @@ else
                     </Button>
                 </div>
             </div>
-            
+
             <div class="w-full mt-0 lg-mt-10">
                 @if (_match.Participants != null)
                 {   
@@ -188,12 +204,15 @@ else
                             <span class="text-lg">Join Match!</span>
                         </Button>
                     }
-                    else if (_match.Participants.Any(p => p.Id == _userId)) {
-                        <Button Class="!py-5 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)]" Clicked="@(() => LeaveMatch(_match.Id))">
+                    else if (_match.Participants.Any(p => p.Id == _userId))
+                    {
+                        <Button Class="!py-5 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)]"
+                                Clicked="@(() => LeaveMatch(_match.Id))">
                             <span class="text-lg">Leave Match</span>
                         </Button>
                     }
-                    else {
+                    else
+                    {
                         <Button Class="!py-5 !w-full !justify-center !bg-[var(--section)]" Disabled="@true">
                             <span class="text-lg">Match Full</span>
                         </Button>
@@ -202,7 +221,8 @@ else
             </div>
         </div>
     </div>
-    @if (showParticipantsModal) {
+    @if (_showParticipantsModal)
+    {
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center">
             <div class="w-[90%] max-w-xl bg-[var(--section)] rounded-xl border-2 border-[var(--main)] shadow-xl p-6">
                 <h2 class="text-2xl font-semibold text-[var(--main)] mb-4">
@@ -214,21 +234,51 @@ else
                     {
                         @foreach (var p in _match.Participants)
                         {
-                            <div class="flex items-center gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)] cursor-pointer">
-                                <div class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
-                                    @if (!string.IsNullOrEmpty(p.AvatarUrl)) {
-                                        <img src="@p.AvatarUrl" class="w-full h-full object-cover" />
-                                    }
-                                    else {
-                                        <img src="images/user-avatar.png" class="w-full h-full object-cover" />
-                                    }
+                            <div
+                                class="flex items-center justify-between gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)]">
+                                <div class="flex items-center gap-3 cursor-pointer">
+                                    <div
+                                        class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
+                                        @if (!string.IsNullOrEmpty(p.AvatarUrl))
+                                        {
+                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover"/>
+                                        }
+                                        else
+                                        {
+                                            <img src="images/user-avatar.png" class="w-full h-full object-cover"/>
+                                        }
+                                    </div>
+
+                                    <div class="flex flex-col">
+                                        <div
+                                            class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
+                                            @p.DisplayName
+                                        </div>
+                                        @if (p.PlayerRating is > 0)
+                                        {
+                                            <div class="flex items-center gap-1 text-sm text-[var(--text)]">
+                                                <svg class="w-4 h-4 text-yellow-400" fill="currentColor"
+                                                     viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                </svg>
+                                                <span>@p.PlayerRating.Value.ToString("F1")</span>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
 
-                                <div class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
-                                    @p.DisplayName
-                                </div>
+                                @if (p.Id != _userId && _match.Participants.Any(participant => participant.Id == _userId))
+                                {
+                                    <button @onclick="@(() => OpenRatingModal(p))"
+                                            class="px-3 py-1.5 rounded-md border border-[var(--main)] text-sm font-medium text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] transition">
+                                        Rate
+                                    </button>
+                                }
                             </div>
                         }
+
+
                     }
                     else
                     {
@@ -244,7 +294,60 @@ else
                 </div>
             </div>
         </div>
-    }   
+    }
+    @if (_showRatingModal && _selectedParticipant != null)
+    {
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center">
+            <div class="w-[90%] max-w-md bg-[var(--section)] rounded-xl border-2 border-[var(--main)] shadow-xl p-6">
+                <h2 class="text-2xl font-semibold text-[var(--main)] mb-4">
+                    Rate @_selectedParticipant.DisplayName
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-2 text-m font-medium text-[var(--text)]">
+                            Rating (1-5)
+                        </label>
+                        <div class="flex gap-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                int rating = i;
+                                <button @onclick="@(() => _selectedRating = rating)"
+                                        class="w-12 h-12 rounded-md border-2 transition-colors @(_selectedRating == rating ? "bg-[var(--main)] border-[var(--main)] text-[var(--text-contrast)]" : "border-[var(--text)] text-[var(--text)] hover:border-[var(--main)]")">
+                                    @i
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-m font-medium text-[var(--text)]">
+                            Comment (Optional)
+                        </label>
+                        <textarea @bind="_ratingComment"
+                                  rows="4"
+                                  maxlength="500"
+                                  class="w-full bg-[var(--section-secondary)] text-[var(--text)] rounded-lg p-2.5 border-2 border-[var(--main)] focus:ring-[var(--main)] focus:border-[var(--main)]"
+                                  placeholder="Share your experience..."></textarea>
+                        <p class="text-sm text-[var(--text)] mt-1">@(_ratingComment?.Length ?? 0) / 500</p>
+                    </div>
+
+                    <div class="flex gap-3 mt-6">
+                        <button @onclick="CloseRatingModal"
+                                class="flex-1 px-4 py-2 rounded-md border-2 border-[var(--text)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)]">
+                            Cancel
+                        </button>
+                        <button @onclick="SubmitRating"
+                                disabled="@(_selectedRating == 0)"
+                                class="flex-1 px-4 py-2 rounded-md bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)] disabled:opacity-50 disabled:cursor-not-allowed">
+                            Submit Rating
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
 
 }
 
@@ -254,17 +357,69 @@ else
     [Parameter] public string MatchId { get; set; } = string.Empty;
     private MatchDto? _match;
     private bool _shouldInitMap;
-    
+    private bool _showRatingModal = false;
+    private UserDto? _selectedParticipant;
+    private int _selectedRating = 0;
+    private string? _ratingComment;
+
+    private void OpenRatingModal(UserDto participant)
+    {
+        _selectedParticipant = participant;
+        _selectedRating = 0;
+        _ratingComment = string.Empty;
+        _showRatingModal = true;
+    }
+
+    private void CloseRatingModal()
+    {
+        _showRatingModal = false;
+        _selectedParticipant = null;
+        _selectedRating = 0;
+        _ratingComment = string.Empty;
+    }
+
+    private async Task SubmitRating()
+    {
+        if (_userId is null)
+        {
+            await ToastService.Error("You must be logged in to submit a rating.");
+            return;
+        }
+        if (_selectedParticipant is null || _selectedRating == 0)
+        {
+            await ToastService.Error("Please select a participant and rating before submitting.");
+            return;
+        }
+        CreatePlayerRatingDto request = new()
+        {
+            SentById = _userId,
+            ReceivedById = _selectedParticipant.Id,
+            MatchId = MatchId,
+            Rating = _selectedRating,
+            Comment = string.IsNullOrWhiteSpace(_ratingComment) ? null : _ratingComment
+        };
+        Result<PlayerRatingDto> result = await PlayerRatingService.CreatePlayerRatingAsync(request);
+
+        if (!result.Success)
+        {
+            await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error submitting rating.");
+            return;
+        }
+        await ToastService.Success("Rating submitted successfully!", "Submit Rating");
+        CloseRatingModal();
+
+
+    }
+
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
 
-    private bool showParticipantsModal = false;
+    private bool _showParticipantsModal;
 
-    private void ToggleParticipantsModal() {
-        showParticipantsModal = !showParticipantsModal;
-    }
+    private void ToggleParticipantsModal() => _showParticipantsModal = !_showParticipantsModal;
 
-    private void GoToLogin() {
+    private void GoToLogin()
+    {
         var currentUrl = NavigationManager.Uri;
         var returnUrl = Uri.EscapeDataString(currentUrl);
         NavigationManager.NavigateTo($"/Account/Login?returnUrl={returnUrl}", forceLoad: true);
@@ -276,7 +431,7 @@ else
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
+
         var result = await MatchesService.GetMatchById(MatchId, _userId, CancellationToken.None);
         if (!result.Success)
         {
@@ -284,7 +439,7 @@ else
             return;
         }
         _match = result.Data!;
-        
+
         _shouldInitMap = true;
         StateHasChanged();
     }
@@ -302,12 +457,12 @@ else
             _shouldInitMap = false;
 
             await Js.InvokeVoidAsync("initMatchPageMap",
-                _match.Location.Latitude,
-                _match.Location.Longitude
+            _match.Location.Latitude,
+            _match.Location.Longitude
             );
         }
     }
-    
+
     private async Task JoinMatch(string matchId)
     {
         if (_userId is not null)
@@ -322,7 +477,7 @@ else
             _match = result.Data!;
         }
     }
-    
+
     private async Task LeaveMatch(string matchId)
     {
         if (_userId is not null)
@@ -335,7 +490,6 @@ else
                 return;
             }
             await ToastService.Success("Successfully left the match!", "Leave Match");
-            _match = result.Data!;
         }
     }
 }
