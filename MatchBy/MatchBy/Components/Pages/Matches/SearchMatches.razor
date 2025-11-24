@@ -1,0 +1,153 @@
+@page "/SearchMatches"
+@using Blazorise
+@using MatchBy.Services.Matches
+@inject IMatchesService MatchesService
+@inject NavigationManager NavigationManager
+@using MatchBy.DTOs.Match
+@using MatchBy.Enums
+@rendermode InteractiveServer
+
+<section class="bg-[var(--background)]">
+    <div class="grid max-w-screen-xl h-auto mx-auto py-4 px-6 bg-[var(--section-secondary)] text-[var(--text)] rounded-lg mt-8 border border-[var(--main)]">
+
+        <!-- SPORTS FILTER -->
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+            <span class="font-medium text-lg ">
+                Filter Matches by Sport:
+            </span>
+
+            <div class="flex flex-wrap gap-5 lg:ml-2">
+                @foreach (var sport in Enum.GetValues<Sports>()) {
+                    var isSelected = SelectedSport == sport;
+                    <button type="button"
+                            class="@(
+                                isSelected
+                                ? "px-4 py-2 bg-[var(--main)] text-[var(--text-contrast)] rounded-xl font-bold hover:bg-[var(--main-hover)]"
+                                : "px-4 py-2  text-[var(--text)] rounded-xl border-1 hover:border-1 hover:border-[var(--main)] hover:text-[var(--main)]"
+                            )"
+                            @onclick="@(() => SelectSport(sport))">
+                        @sport
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class=" mt-4 border-1 border-[var(--main)]"></div>
+
+        
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-4 w-full">
+            <!-- COUNTRY DROPDOWN -->
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium mb-2">Country:</label>
+
+                <Select TValue="string"
+                        SelectedValue="@SelectedCountry"
+                        SelectedValueChanged="OnCountryChanged"
+                        Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                    <SelectItem Value="@string.Empty">Select match country</SelectItem>
+
+                    @foreach (var c in Countries)
+                    {
+                        <SelectItem Value="@c">@c</SelectItem>
+                    }
+                </Select>
+            </div>
+
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium mb-2">City:</label>
+
+                <Select TValue="string"
+                        SelectedValue="@SelectedCity"
+                        SelectedValueChanged="OnCityChanged"
+                        Disabled="@(!Cities.Any())"
+                        Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                    <SelectItem Value="@string.Empty">
+                        @(Cities.Any() ? "Select match city" : "Select country first")
+                    </SelectItem>
+
+                    @foreach (var city in Cities)
+                    {
+                        <SelectItem Value="@city">@city</SelectItem>
+                    }
+                </Select>
+            </div>
+
+            <div class="flex flex-col w-full lg:w-1/3 -mt-4">
+                <label class="font-medium">Max Distance: @MaxDistanceKm km</label>
+
+                <Slider Min="0" Max="@MaxDistanceKm"
+                        Step="5"
+                        TValue="int"
+                        Value="0"
+                        ValueChanged="OnDistanceChanged"
+                        Class="w-full !mt-5" />
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+@code {
+    private Sports? SelectedSport { get; set; }
+    private string? SelectedCountry;
+    private string? SelectedCity;
+    private int MaxDistanceKm { get; set; } = 50;
+
+    private void SelectSport(Sports sport) { SelectedSport = SelectedSport == sport ? null : sport; }
+
+    private List<MatchDto> AllMatches = new();
+
+    private List<string> Countries = new();
+    private List<string> Cities = new();
+
+    protected override async Task OnInitializedAsync() {
+        var result = await MatchesService.GetMatches(
+            matchStatus: null,
+            q: null,
+            userId: null,
+            page: 1,
+            pageSize: 5000,
+            CancellationToken.None
+        );
+
+        if (result.Success) {
+            AllMatches = result.Data!.Data;
+
+            Countries = AllMatches
+                .Select(m => m.Location.Country)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+        }
+    }
+
+    private Task OnCountryChanged(string? value)
+    {
+        SelectedCountry = value;
+
+        Cities = AllMatches
+            .Where(m => m.Location.Country == SelectedCountry)
+            .Select(m => m.Location.City)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnCityChanged(string? value)
+    {
+        SelectedCity = value;
+        return Task.CompletedTask;
+    }
+
+    private Task OnDistanceChanged(int value)
+    {
+        MaxDistanceKm = value;
+        return Task.CompletedTask;
+    }
+}

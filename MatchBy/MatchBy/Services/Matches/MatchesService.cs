@@ -298,7 +298,9 @@ public class MatchesService(
     }
 
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default) {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .AsSplitQuery()
@@ -374,7 +376,9 @@ public class MatchesService(
     }
 
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesUserAttending(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default) {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .AsSplitQuery()
@@ -424,63 +428,5 @@ public class MatchesService(
         double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
 
         return R * c;
-    }
-
-    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetRecommendedMatches(
-        string userId,
-        ICollection<Sports> preferredSports,
-        Location? baseLocation,
-        string? q,
-        int page = 1,
-        int pageSize = 5,
-        CancellationToken ct = default)
-    {
-        IQueryable<Match> query = applicationDbContext
-            .Matches
-            .AsNoTracking()
-            .Include(m => m.Participants)
-            .Include(m => m.Creator)
-            .Where(m =>
-                m.CreatorId != userId && m.Participants.Count < m.maxPlayers &&
-                (m.Status == MatchStatus.Confirmed || m.Status == MatchStatus.Pendent)
-            );
-
-        if (!string.IsNullOrEmpty(q)) { query = query.Where(m => m.Description.ToLower().Contains(q.ToLower())); }
-
-        var matches = await query.ToListAsync(ct);
-
-        var ranked = matches
-            .Select(m => new
-            {
-                Match = m,
-                HasPreferredSport = preferredSports.Contains(m.Sport),
-                Distance = baseLocation is null
-                    ? 0
-                    : HaversineDistance(
-                        baseLocation.Latitude,
-                        baseLocation.Longitude,
-                        m.Location.Latitude,
-                        m.Location.Longitude
-                    )
-            })
-            .OrderByDescending(x => x.HasPreferredSport)
-            .ThenBy(x => x.Distance)
-            .Take(pageSize)
-            .Select(x => x.Match)
-            .ToList();
-
-        var dtos = ranked.Select(m => m.ToDto()).ToList();
-
-        return Result<PaginationResponse<List<MatchDto>>>.Ok(
-            new PaginationResponse<List<MatchDto>>
-            {
-                Data = dtos,
-                Page = page,
-                PageSize = pageSize,
-                TotalCount = ranked.Count,
-                NextPageAvailable = false,
-                PreviousPageAvailable = false
-            }
-        );
     }
 }

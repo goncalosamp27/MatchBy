@@ -16,6 +16,5 @@ public interface IMatchesService
     Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default);
     Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesExceptUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default);
     Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesUserAttending(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default);
-    Task<Result<PaginationResponse<List<MatchDto>>>> GetRecommendedMatches(string userId, ICollection<Sports> preferredSports, Location? baseLocation, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default);
 }
 
