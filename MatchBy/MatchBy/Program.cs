@@ -188,7 +188,7 @@ builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ChatState>();
-
+builder.Services.AddScoped<IMatchReminderJob, MatchReminderJob>();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCors(options =>
@@ -221,6 +221,11 @@ using (IServiceScope scope = app.Services.CreateScope())
         "process-match-states",
         Job.FromExpression<IJobService>(service => service.ProcessMatchStatesAsync()),
         "*/1 * * * *" // Every minute
+    );
+    recurringJobManager.AddOrUpdate(
+        "send-match-reminders",
+        Job.FromExpression<IMatchReminderJob>(job => job.SendRemindersAsync()),
+        "*/30 * * * *" // A cada 30 minutos
     );
 }
 

@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MatchBy.Data.Migrations
+namespace MatchBy.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -302,6 +302,12 @@ namespace MatchBy.Data.Migrations
 
                     b.Property<int>("Privacy")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("Reminder30MinSent")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Reminder3DaysSent")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Sport")
                         .HasColumnType("integer");

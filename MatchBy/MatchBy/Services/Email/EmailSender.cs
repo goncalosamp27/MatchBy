@@ -209,4 +209,25 @@ public class EmailSender(IResend resend) : IEmailSender
         await resend.EmailSendAsync(emailMessage);
         await resend.EmailSendAsync(confirmationMessage);
     }
+    public async Task SendMatchReminderAsync(string email, string userName, Match match, string timeframe)
+    {
+        var message = new EmailMessage
+        {
+            From = "MatchBy <matchby@uniqueue.site>",
+            Subject = $"Match Reminder - {timeframe}!",
+            HtmlBody = $@"
+            <h2>Hello {userName}!</h2>
+            <p>Your match is coming up in <strong>{timeframe}</strong>!</p>
+            <h3>{match.Description}</h3>
+            <p><strong>Date:</strong> {match.MatchDateTimeUtc:dddd, MMM d yyyy hh:mm tt}</p>
+            <p><strong>Location:</strong> {match.Address}</p>
+            <p><strong>Sport:</strong> {match.Sport}</p>
+            <p>Don't forget to attend!</p>
+            <br>
+            <p>Best regards,<br>MatchBy Team</p>"
+        };
+
+        message.To.Add(email);
+        await resend.EmailSendAsync(message);
+    }
 }
