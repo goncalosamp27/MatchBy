@@ -6,9 +6,10 @@
 @using MatchBy.DTOs.Match
 @using MatchBy.Enums
 @rendermode InteractiveServer
+@inject IJSRuntime JS
 
-<section class="bg-[var(--background)]">
-    <div class="grid max-w-screen-xl h-auto mx-auto py-4 px-6 bg-[var(--section-secondary)] text-[var(--text)] rounded-lg mt-8 border border-[var(--main)]">
+<section class="bg-[var(--background)] px-4 sm:px-6">
+    <div class="grid max-w-screen-xl h-auto mx-auto py-4 px-6 bg-[var(--section)] text-[var(--text)] rounded-lg mt-8 border border-[var(--main)]">
 
         <!-- SPORTS FILTER -->
         <div class="flex flex-col lg:flex-row lg:items-center gap-3">
@@ -35,10 +36,10 @@
         <div class=" mt-4 border-1 border-[var(--main)]"></div>
 
         
-        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-4 w-full">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full">
             <!-- COUNTRY DROPDOWN -->
             <div class="flex flex-col w-full lg:w-1/3">
-                <label class="font-medium mb-2">Country:</label>
+                <label class="font-medium mb-2 text-[var(--text)]">Country:</label>
 
                 <Select TValue="string"
                         SelectedValue="@SelectedCountry"
@@ -55,7 +56,7 @@
             </div>
 
             <div class="flex flex-col w-full lg:w-1/3">
-                <label class="font-medium mb-2">City:</label>
+                <label class="font-medium mb-2 text-[var(--text)]">City:</label>
 
                 <Select TValue="string"
                         SelectedValue="@SelectedCity"
@@ -74,18 +75,103 @@
                 </Select>
             </div>
 
+            
             <div class="flex flex-col w-full lg:w-1/3 -mt-4">
-                <label class="font-medium">Max Distance: @MaxDistanceKm km</label>
-
-                <Slider Min="0" Max="@MaxDistanceKm"
-                        Step="5"
-                        TValue="int"
-                        Value="0"
-                        ValueChanged="OnDistanceChanged"
-                        Class="w-full !mt-5" />
+                @if (IsGeolocationEnabled) {
+                    <label class="font-medium text-[var(--text)]">@(DistanceFilterUsed ? $"Max Distance: {MaxDistanceKm} km" : "Max Distance: ∞")</label>
+                    <Slider Min="5" Max="55"
+                            Step="5"
+                            TValue="int"
+                            Value="@MaxDistanceKm"
+                            ValueChanged="OnDistanceChanged"
+                            Disabled="@(!IsGeolocationEnabled)"
+                            Class="w-full !mt-5" />
+                } 
+                else {
+                    <label class="font-medium text-[var(--error)]">Geolocation Disabled - Distance Filter Unavailable</label> 
+                    <Slider Min="5" Max="55"
+                            Step="5"
+                            TValue="int"
+                            Value="55"
+                            ValueChanged="OnDistanceChanged"
+                            Disabled="@(!IsGeolocationEnabled)"
+                            Class="w-full !mt-5" />
+                }                    
             </div>
-
         </div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full mt-4 mb-2">
+            <div class="flex flex-col w-full lg:w-1/3"></div>
+            <div class="flex flex-col w-full lg:w-1/3"></div>
+            <div class="flex flex-col w-full lg:w-1/3">
+                <button @onclick="ApplyFilters" class="bg-[var(--main)] text-[var(--text-contrast)] font-medium rounded py-2 px-8">
+                    Apply filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-screen-xl mt-8 mb-8 mx-auto">
+        <h1 class="text-3xl font-semibold text-[var(--text)] mb-8 text-left">
+            Showing available matches (@FilteredMatches.Count):
+        </h1>
+
+        <div class="flex flex-wrap justify-center gap-8 mx-auto">
+            @foreach (var match in PagedMatches)
+            {
+                <div class="max-w-[405px]">
+                    <MatchCard Match="@match" />
+                </div>
+            }
+        </div>
+
+       @if (TotalPages > 1)
+        {
+            <div class="flex justify-center gap-3 mt-10 items-center">
+
+                <!-- First -->
+                <button @onclick="@(() => ChangePage(1))"
+                        disabled="@(CurrentPage == 1)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    « First
+                </button>
+
+                <!-- Previous -->
+                <button @onclick="@(() => ChangePage(CurrentPage - 1))"
+                        disabled="@(CurrentPage == 1)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    ‹ Prev
+                </button>
+
+                <!-- Info -->
+                <span class="text-sm text-[var(--text)]">
+                    Page @CurrentPage of @TotalPages
+                </span>
+
+                <!-- Next -->
+                <button @onclick="@(() => ChangePage(CurrentPage + 1))"
+                        disabled="@(CurrentPage == TotalPages)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    Next ›
+                </button>
+
+                <!-- Last -->
+                <button @onclick="@(() => ChangePage(TotalPages))"
+                        disabled="@(CurrentPage == TotalPages)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    Last »
+                </button>
+            </div>
+        }
+
     </div>
 </section>
 
@@ -94,16 +180,27 @@
     private Sports? SelectedSport { get; set; }
     private string? SelectedCountry;
     private string? SelectedCity;
-    private int MaxDistanceKm { get; set; } = 50;
-
-    private void SelectSport(Sports sport) { SelectedSport = SelectedSport == sport ? null : sport; }
-
     private List<MatchDto> AllMatches = new();
-
+    private List<MatchDto> FilteredMatches = new();
     private List<string> Countries = new();
     private List<string> Cities = new();
+    private int MaxDistanceKm { get; set; } = 55;
+    private bool IsGeolocationEnabled { get; set; } = false;
+    private double? UserLatitude { get; set; }
+    private double? UserLongitude { get; set; }
+    private void SelectSport(Sports sport) { SelectedSport = SelectedSport == sport ? null : sport; }
+    private bool DistanceFilterUsed = false;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 6; 
+    private int TotalPages => (int)Math.Ceiling(FilteredMatches.Count / (double)PageSize);
+    private IEnumerable<MatchDto> PagedMatches =>
+    FilteredMatches
+        .Skip((CurrentPage - 1) * PageSize)
+        .Take(PageSize);
 
     protected override async Task OnInitializedAsync() {
+        await TryGetGeolocationAsync();
+
         var result = await MatchesService.GetMatches(
             matchStatus: null,
             q: null,
@@ -115,6 +212,7 @@
 
         if (result.Success) {
             AllMatches = result.Data!.Data;
+            FilteredMatches = AllMatches.ToList();
 
             Countries = AllMatches
                 .Select(m => m.Location.Country)
@@ -146,8 +244,86 @@
     }
 
     private Task OnDistanceChanged(int value)
-    {
+    {   
+        DistanceFilterUsed = value < 55;
         MaxDistanceKm = value;
         return Task.CompletedTask;
+    }
+
+    private async Task TryGetGeolocationAsync()
+    {
+        try
+        {
+            var pos = await JS.InvokeAsync<PositionResult>("getCurrentPosition");
+
+            UserLatitude = pos.Latitude;
+            UserLongitude = pos.Longitude;
+
+            IsGeolocationEnabled = true;
+        }
+        catch
+        {
+            IsGeolocationEnabled = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        FilteredMatches = AllMatches
+            .Where(m => SelectedSport == null || m.Sport == SelectedSport)
+            .Where(m => string.IsNullOrEmpty(SelectedCountry) || m.Location.Country == SelectedCountry)
+            .Where(m => string.IsNullOrEmpty(SelectedCity) || m.Location.City == SelectedCity)
+            .Where(m => !IsGeolocationEnabled || !DistanceFilterUsed || IsWithinDistance(m))
+            .ToList();
+        
+        CurrentPage = 1;
+    }
+
+    private bool IsWithinDistance(MatchDto match)
+    {
+        if (!UserLatitude.HasValue || !UserLongitude.HasValue) return true; 
+
+        if (!DistanceFilterUsed) return true; 
+
+        var distance = HaversineDistance(
+            UserLatitude.Value,
+            UserLongitude.Value,
+            match.Location.Latitude,
+            match.Location.Longitude
+        );
+
+        return distance <= MaxDistanceKm;
+    }
+
+    private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371; // Terra em km
+
+        double dLat = DegreesToRadians(lat2 - lat1);
+        double dLon = DegreesToRadians(lon2 - lon1);
+
+        double a =
+            Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+            Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+            Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return R * c;
+    }
+
+    private static double DegreesToRadians(double deg) => deg * Math.PI / 180;
+
+
+    public class PositionResult
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+        CurrentPage = page;
     }
 }
