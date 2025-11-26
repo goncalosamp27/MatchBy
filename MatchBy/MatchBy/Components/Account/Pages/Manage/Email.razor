@@ -15,89 +15,92 @@
 <section class="space-y-6">
     <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-6">Email</h2>
 
-    <StatusMessage Message="@_message" />
+    <StatusMessage Message="@_message"/>
 
     <!-- Hidden form for resend verification -->
     <form @onsubmit="OnSendEmailVerificationAsync"
           @formname="send-verification"
           id="send-verification-form"
           method="post">
-        <AntiforgeryToken />
+        <AntiforgeryToken/>
     </form>
 
-    <EditForm Model="Input"
-              FormName="change-email"
-              OnValidSubmit="OnValidSubmitAsync"
-              method="post"
-              class="space-y-6">
-        <DataAnnotationsValidator />
-        <ValidationSummary class="text-[var(--error)] text-sm" />
+    @if (Input is not null)
+    {
+        <EditForm Model="Input"
+                  FormName="change-email"
+                  OnValidSubmit="OnValidSubmitAsync"
+                  method="post"
+                  class="space-y-6">
+            <DataAnnotationsValidator/>
+            <ValidationSummary class="text-[var(--error)] text-sm"/>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <!-- Current email (read-only) -->
-            <div class="md:col-span-2">
-                <label for="email" class="block mb-2 text-sm font-medium text-[var(--text)]">
-                    Current email
-                </label>
+                <!-- Current email (read-only) -->
+                <div class="md:col-span-2">
+                    <label for="email" class="block mb-2 text-sm font-medium text-[var(--text)]">
+                        Current email
+                    </label>
 
-                <div class="flex items-center gap-3">
-                    <input id="email"
-                           type="text"
-                           value="@_email"
-                           disabled
-                           aria-readonly="true"
-                           class="bg-[var(--section-secondary)] focus:border-[var(--main)] text-[var(--text)] rounded-lg block w-full p-2.5 cursor-not-allowed" />
+                    <div class="flex items-center gap-3">
+                        <input id="email"
+                               type="text"
+                               value="@_email"
+                               disabled
+                               aria-readonly="true"
+                               class="bg-[var(--section-secondary)] focus:border-[var(--main)] text-[var(--text)] rounded-lg block w-full p-2.5 cursor-not-allowed"/>
 
-                    @if (_isEmailConfirmed)
-                    {
-                        <span class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg
+                        @if (_isEmailConfirmed)
+                        {
+                            <span class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg
                                      bg-[var(--success)] text-[var(--text-contrast)]">
                             Confirmed ✓
                         </span>
-                    }
-                    else
-                    {
-                        <button type="submit"
-                                form="send-verification-form"
-                                class="inline-flex justify-center px-3 py-2 rounded-lg text-sm font-medium
+                        }
+                        else
+                        {
+                            <button type="submit"
+                                    form="send-verification-form"
+                                    class="inline-flex justify-center px-3 py-2 rounded-lg text-sm font-medium
                                        text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none
                                        focus:ring-4 focus:ring-blue-300 dark:text-blue-200 dark:bg-blue-900
                                        dark:hover:bg-blue-800 dark:focus:ring-blue-700">
-                            Send verification
-                        </button>
-                    }
+                                Send verification
+                            </button>
+                        }
+                    </div>
                 </div>
-            </div>
 
-            <!-- New email -->
-            <div class="md:col-span-2">
-                <label for="Input.NewEmail" class="block mb-2 text-sm font-medium text-[var(--text)]">
-                    New email
-                </label>
-                <InputText id="Input.NewEmail"
-                           @bind-Value="Input.NewEmail"
-                           autocomplete="email"
-                           aria-required="true"
-                           placeholder="Enter your new email"
-                           class="block w-full p-2.5 rounded-lg
+                <!-- New email -->
+                <div class="md:col-span-2">
+                    <label for="Input.NewEmail" class="block mb-2 text-sm font-medium text-[var(--text)]">
+                        New email
+                    </label>
+                    <InputText id="Input.NewEmail"
+                               @bind-Value="Input.NewEmail"
+                               autocomplete="email"
+                               aria-required="true"
+                               placeholder="Enter your new email"
+                               class="block w-full p-2.5 rounded-lg
                         bg-[var(--section-secondary)]
                         text-[var(--text)]
                         focus:border-[var(--main)]
                         focus:ring-1 focus:ring-[var(--main)]
                         focus:outline-none"/>
-                <ValidationMessage For="() => Input.NewEmail" class="text-[var(--error)] text-sm mt-1" />
+                    <ValidationMessage For="() => Input.NewEmail" class="text-[var(--error)] text-sm mt-1"/>
+                </div>
             </div>
-        </div>
 
-        <div class="pt-2">
-            <button type="submit"
-                    class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium
+            <div class="pt-2">
+                <button type="submit"
+                        class="w-full sm:w-auto inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium
                            text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none">
-                Save changes
-            </button>
-        </div>
-    </EditForm>
+                    Save changes
+                </button>
+            </div>
+        </EditForm>
+    }
 </section>
 
 @code {
@@ -106,14 +109,14 @@
     private string? _email;
     private bool _isEmailConfirmed;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm(FormName = "change-email")]
-    private InputModel Input { get; set; } = new();
+    private InputModel? Input { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        Input ??= new InputModel();
         _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         _email = await UserManager.GetEmailAsync(_user);
         _isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(_user);
@@ -122,6 +125,11 @@
 
     private async Task OnValidSubmitAsync()
     {
+        if (Input is null)
+        {
+            return;
+        }
+
         if (Input.NewEmail is null || Input.NewEmail == _email)
         {
             _message = "Your email address has not changed.";
@@ -137,8 +145,8 @@
             new Dictionary<string, object?>
             {
                 ["userId"] = userId,
-                ["email"]  = Input.NewEmail,
-                ["code"]   = code
+                ["email"] = Input.NewEmail,
+                ["code"] = code
             });
 
         await EmailSender.SendConfirmationLinkAsync(_user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
@@ -162,7 +170,7 @@
             new Dictionary<string, object?>
             {
                 ["userId"] = userId,
-                ["code"]   = code
+                ["code"] = code
             });
 
         await EmailSender.SendConfirmationLinkAsync(_user, _email, HtmlEncoder.Default.Encode(callbackUrl));
@@ -177,4 +185,5 @@
         [Display(Name = "New email")]
         public string? NewEmail { get; set; }
     }
+
 }

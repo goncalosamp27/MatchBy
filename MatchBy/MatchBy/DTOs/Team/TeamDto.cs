@@ -1,6 +1,5 @@
 ﻿using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.DTOs.User;
-using MatchBy.Enums;
 using MatchBy.Models;
 
 namespace MatchBy.DTOs.Team;

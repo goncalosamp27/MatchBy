@@ -3,9 +3,9 @@
 @using MatchBy.DTOs.Team
 @using MatchBy.Services.Teams
 @using Blazorise
-@rendermode @(new InteractiveServerRenderMode(false))
-@inject ITeamService TeamService
+@rendermode InteractiveServer
 @attribute [StreamRendering]
+@inject ITeamService TeamService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="min-h-screen p-8 bg-[var(--background)]">
@@ -96,11 +96,15 @@
                                 }
                             }
                         </div>
-                        <div class="flex justify-center mt-8">
-                            <OffsetPagination CurrentPage="@_currentPageOwnTeams" OnPageChanged="@OnPageChangedOwnTeams"
-                                              PageSize="@PageSize"
-                                              TotalItems="@_teamsYouOwnPagination.TotalCount"></OffsetPagination>
-                        </div>
+                        if (TeamsYouOwnPagination != null && TeamsYouOwn?.Count > 0)
+                        {
+                            <div class="flex justify-center mt-8">
+                                <OffsetPagination CurrentPage="@_currentPageOwnTeams"
+                                                  OnPageChanged="@OnPageChangedOwnTeams"
+                                                  PageSize="@PageSize"
+                                                  TotalItems="@TeamsYouOwnPagination.TotalCount"></OffsetPagination>
+                            </div>
+                        }
                     }
                 </div>
 
@@ -134,11 +138,14 @@
                                 }
                             }
                         </div>
-                        <div class="flex justify-center mt-8">
-                            <OffsetPagination CurrentPage="@_currentPageParticipatingTeams"
-                                              OnPageChanged="@OnPageChangedParticipatingTeams" PageSize="@PageSize"
-                                              TotalItems="@_teamsYouParticipatePagination.TotalCount"></OffsetPagination>
-                        </div>
+                        if (TeamsYouParticipatePagination != null && TeamsYouParticipate?.Count > 0)
+                        {
+                            <div class="flex justify-center mt-8">
+                                <OffsetPagination CurrentPage="@_currentPageParticipatingTeams"
+                                                  OnPageChanged="@OnPageChangedParticipatingTeams" PageSize="@PageSize"
+                                                  TotalItems="@TeamsYouParticipatePagination.TotalCount"></OffsetPagination>
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -237,7 +244,7 @@
 
                 <div>
                     <h2 class="text-2xl font-bold mb-6 text-[var(--text)]">Results
-                        (@(_searchedTeamsPagination.TotalCount))</h2>
+                        (@(SearchedTeamsPagination?.TotalCount))</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         @if (SearchedTeams is null)
                         {
@@ -274,12 +281,12 @@
                             }
                         }
                     </div>
-                    @if (SearchedTeams?.Count > 0)
+                    @if (SearchedTeamsPagination != null && SearchedTeams?.Count > 0)
                     {
                         <div class="flex justify-center mt-8">
                             <OffsetPagination CurrentPage="@_currentPageSearchedTeams"
                                               OnPageChanged="@OnPageChangedSearchedTeams" PageSize="6"
-                                              TotalItems="@_searchedTeamsPagination.TotalCount"></OffsetPagination>
+                                              TotalItems="@SearchedTeamsPagination.TotalCount"></OffsetPagination>
                         </div>
                     }
                 </div>
@@ -293,9 +300,9 @@
 @code {
 
     private bool _isAuthenticated;
-    private List<TeamDto>? TeamsYouOwn { get; set; }
-    private List<TeamDto>? TeamsYouParticipate { get; set; }
-    private List<TeamDto>? SearchedTeams { get; set; }
+    [PersistentState(AllowUpdates = true)] public List<TeamDto>? TeamsYouOwn { get; set; }
+    [PersistentState(AllowUpdates = true)] public List<TeamDto>? TeamsYouParticipate { get; set; }
+    [PersistentState(AllowUpdates = true)] public List<TeamDto>? SearchedTeams { get; set; }
 
     private TeamQueryParametersDto TeamQueryParameters { get; set; } = new()
     {
@@ -310,9 +317,9 @@
 
     private string _activeTab = "my";
 
-    private PaginationResponse<List<TeamDto>> _teamsYouOwnPagination = new();
-    private PaginationResponse<List<TeamDto>> _teamsYouParticipatePagination = new();
-    private PaginationResponse<List<TeamDto>> _searchedTeamsPagination = new();
+    private PaginationResponse<List<TeamDto>>? TeamsYouOwnPagination { get; set; }
+    private PaginationResponse<List<TeamDto>>? TeamsYouParticipatePagination { get; set; }
+    private PaginationResponse<List<TeamDto>>? SearchedTeamsPagination { get; set; }
     private int _currentPageOwnTeams = 1;
     private int _currentPageParticipatingTeams = 1;
     private int _currentPageSearchedTeams = 1;
@@ -322,61 +329,73 @@
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
 
-    protected override async Task OnInitializedAsync() => await LoadTeams();
-
-    private async Task LoadTeams()
-    {
+    protected override async Task OnInitializedAsync()
+    { 
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
         _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        SearchedTeams = null;
-        TeamsYouOwn = null;
-        TeamsYouParticipate = null;
+        
+        if (TeamsYouOwn is null || TeamsYouParticipate is null || SearchedTeams is null)
+        {
+            await LoadTeams();
+        }
+    }
 
+    private async Task LoadTeams()
+    {
         TeamQueryParameters = TeamQueryParameters with
         {
             Page = _currentPageSearchedTeams,
             PageSize = PageSize,
             UserId = _isAuthenticated ? _userId ?? "" : ""
         };
-
-        var teamsYouSearchedResult = await TeamService.GetAvailableTeamsAsync(TeamQueryParameters, CancellationToken.None);
-        if (!teamsYouSearchedResult.Success)
+        
+        if (SearchedTeams is null)
         {
-            Console.WriteLine("Error fetching user own teams: " + teamsYouSearchedResult.ErrorMessages);
-            return;
-        }
+            var searched = await TeamService.GetAvailableTeamsAsync(TeamQueryParameters, CancellationToken.None);
+            if (!searched.Success)
+            {
+                Console.WriteLine("Error fetching available teams: " + searched.ErrorMessages);
+                return;
+            }
 
-        SearchedTeams = teamsYouSearchedResult.Data!.Data;
-        _searchedTeamsPagination = teamsYouSearchedResult.Data;
+            SearchedTeams = searched.Data!.Data;
+            SearchedTeamsPagination = searched.Data;
+        }
 
         if (!_isAuthenticated || string.IsNullOrEmpty(_userId))
         {
-            TeamsYouOwn = [];
-            TeamsYouParticipate = [];
+            TeamsYouOwn ??= [];
+            TeamsYouParticipate ??= [];
             return;
         }
 
-        var teamsYouOwnResult = await TeamService.GetTeamsUserOwnAsync(_userId, _currentPageOwnTeams, PageSize, "", CancellationToken.None);
-        if (!teamsYouOwnResult.Success)
+        if (TeamsYouOwn is null)
         {
-            Console.WriteLine("Error fetching user own teams: " + teamsYouOwnResult.ErrorMessages);
-            return;
+            var own = await TeamService.GetTeamsUserOwnAsync(_userId, _currentPageOwnTeams, PageSize, "", CancellationToken.None);
+            if (!own.Success)
+            {
+                Console.WriteLine("Error fetching user own teams: " + own.ErrorMessages);
+                return;
+            }
+
+            TeamsYouOwn = own.Data!.Data;
+            TeamsYouOwnPagination = own.Data;
         }
 
-        TeamsYouOwn = teamsYouOwnResult.Data!.Data;
-        _teamsYouOwnPagination = teamsYouOwnResult.Data;
-
-        var teamsYouParticipateResult = await TeamService.GetTeamsUserParticipateAsync(_userId, _currentPageParticipatingTeams, PageSize, "", CancellationToken.None);
-        if (!teamsYouParticipateResult.Success)
+        if (TeamsYouParticipate is null)
         {
-            Console.WriteLine("Error fetching user participating teams: " + teamsYouParticipateResult.ErrorMessages);
-            return;
-        }
+            var part = await TeamService.GetTeamsUserParticipateAsync(_userId, _currentPageParticipatingTeams, PageSize, "", CancellationToken.None);
+            if (!part.Success)
+            {
+                Console.WriteLine("Error fetching user participating teams: " + part.ErrorMessages);
+                return;
+            }
 
-        TeamsYouParticipate = teamsYouParticipateResult.Data!.Data;
-        _teamsYouParticipatePagination = teamsYouParticipateResult.Data;
+            TeamsYouParticipate = part.Data!.Data;
+            TeamsYouParticipatePagination = part.Data;
+        }
     }
 
     private async Task OnPageChangedOwnTeams(int page) => await OnPageChanged(page, TeamPageType.OwnTeams);
@@ -410,16 +429,6 @@
         SearchedTeams
     }
 
-
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return Task.CompletedTask;
-
-        StateHasChanged();
-
-        return Task.CompletedTask;
-    }
-
     public async Task SearchTeams()
     {
         TeamQueryParameters = TeamQueryParameters with
@@ -437,7 +446,7 @@
         }
 
         SearchedTeams = teamsYouSearchedResult.Data!.Data;
-        _searchedTeamsPagination = teamsYouSearchedResult.Data;
+        SearchedTeamsPagination = teamsYouSearchedResult.Data;
         StateHasChanged();
     }
 
