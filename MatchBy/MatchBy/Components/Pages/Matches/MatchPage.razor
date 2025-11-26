@@ -183,20 +183,24 @@ else
 
             <div class="w-full mt-0 lg-mt-10">
                 @if (_match.Participants != null)
-                {
-                    if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers && _userId is null)
-                    {
-                        <Button
-                            Class="!py-5 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] hover:!text-[var(--text)]"
-                            Clicked="GoToLogin">
+                {   
+                    if (_match.Status == MatchStatus.Cancelled) {
+                        <Button Class="!py-5 !w-full !justify-center !border-4 !line-through text-[var(--text)] !border-[var(--section-secondary)]" Disabled="@true">
+                            <span class="text-lg">Match Cancelled</span>
+                        </Button>
+                    }
+                    else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers && _userId is null) {
+                        <Button Class="!py-5 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] hover:!text-[var(--text)]" Clicked="GoToLogin">
                             <span class="text-lg">Login to Join Match!</span>
                         </Button>
                     }
-                    else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers)
-                    {
-                        <Button
-                            Class="!py-5 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] hover:!text-[var(--text)]"
-                            Clicked="@(() => JoinMatch(_match.Id))">
+                    else if (_match.CreatorId == _userId) {
+                        <Button Class="!py-5 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)]" Clicked="@(() => LeaveMatch(_match.Id))">
+                            <span class="text-lg">Cancel Match</span>
+                        </Button>
+                    }
+                    else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers) {
+                        <Button Class="!py-5 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] hover:!text-[var(--text)]" Clicked="@(() => JoinMatch(_match.Id))">
                             <span class="text-lg">Join Match!</span>
                         </Button>
                     }
