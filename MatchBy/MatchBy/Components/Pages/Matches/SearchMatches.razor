@@ -13,32 +13,68 @@
 @inject IJSRuntime JS
 <section class="bg-[var(--background)] px-4 sm:px-6">
     <div class="grid max-w-screen-xl h-auto mx-auto py-4 px-6 bg-[var(--section)] text-[var(--text)] rounded-lg mt-8 border-2 border-[var(--main)] hover:shadow-[0_0px_10px_-4px_var(--main)] transition duration-200 ease-out">
-
-        <div class="flex flex-col lg:flex-row lg:items-center gap-3">
-            <span class="font-medium text-lg ">
+        <div class="flex justify-between items-center mb-4 w-full">
+            <span class="font-medium text-lg">
                 Filter Matches by Sport:
             </span>
 
-            <div class="flex flex-wrap gap-5 lg:ml-2">
-                @foreach (var sport in Enum.GetValues<Sports>()) {
-                    var isSelected = SelectedSports.Contains(sport);
-                    <button type="button"
-                            class="@(
-                                isSelected
-                                ? "px-4 py-2 bg-[var(--main)] text-[var(--text-contrast)] rounded-xl font-bold hover:bg-[var(--main-hover)] hover:text-[var(--text)]"
-                                : "px-4 py-2  text-[var(--text)] rounded-xl border-1 border-[var(--text)] hover:border-1 hover:border-[var(--main)] hover:text-[var(--main)]"
-                            )"
-                            @onclick="@(() => ToggleSport(sport))">
-                        @sport
-                    </button>
+            <button @onclick="ToggleFilters" class="group px-4 py-2 text-sm bg-[var(--main)] text-[var(--text-contrast)] rounded-lg hover:bg-[var(--main-hover)] hover:text-[var(--text)] flex items-center gap-2">
+                <span>
+                    @(FiltersOpen ? "Hide filters" : "Show more filters")
+                </span>
+
+                @if (FiltersOpen)
+                {
+                    <svg class="w-4 h-4 text-[var(--text-contrast)] group-hover:text-[var(--text)]"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24" height="24" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="m5 15 7-7 7 7" />
+                    </svg>
                 }
-            </div>
+                else
+                {
+                    <svg class="w-4 h-4 text-[var(--text-contrast)] group-hover:text-[var(--text)]"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24" height="24" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="m19 9-7 7-7-7" />
+                    </svg>
+                }
+            </button>
         </div>
 
-        <div class=" mt-4 border-1 border-[var(--main)]"></div>
+        <div class="flex flex-wrap gap-4 w-full">
+            @foreach (var sport in Enum.GetValues<Sports>())
+            {
+                var isSelected = SelectedSports.Contains(sport);
+
+                <button type="button"
+                        class="@(
+                            isSelected
+                            ? "px-4 py-2 bg-[var(--main)] text-[var(--text-contrast)] rounded-xl font-bold hover:bg-[var(--main-hover)] hover:text-[var(--text)]"
+                            : "px-4 py-2 text-[var(--text)] rounded-xl border-1 border-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)]"
+                        )"
+                        @onclick="@(() => ToggleSport(sport))">
+                    @sport
+                </button>
+            }
+        </div>
+
+        @if (FiltersOpen) {
+        <div class=" mt-4 bg-[var(--main)] h-[2px] group-hover:shadow-[0_0px_10px_-4px_var(--main)] transition duration-200 ease-out"></div>
     
         <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full">
-            <!-- COUNTRY DROPDOWN -->
             <div class="flex flex-col w-full lg:w-1/3">
                 <label class="font-medium mb-2 text-[var(--text)]">Country:</label>
 
@@ -139,7 +175,6 @@
                 </label>
 
                 <div class="flex gap-4 items-center mt-2">
-                    <!-- Start time -->
                     <div class="flex-1">
                         <Slider Min="0" Max="24"
                                 Step="1"
@@ -149,7 +184,6 @@
                                 Class="dark:!bg-[var(--text)] !bg-[var(--section-secondary)]" />
                     </div>
 
-                    <!-- End time -->
                     <div class="flex-1">
                         <Slider Min="0" Max="24"
                                 Step="1"
@@ -208,6 +242,7 @@
                 </button>
             </div>
         </div>
+        }
     </div>
 
     <div class="max-w-screen-xl mt-8 mb-8 mx-auto">
@@ -257,7 +292,6 @@
                     Next ›
                 </button>
 
-                <!-- Last -->
                 <button @onclick="@(() => ChangePage(TotalPages))"
                         disabled="@(CurrentPage == TotalPages)"
                         class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
@@ -267,7 +301,6 @@
                 </button>
             </div>
         }
-
     </div>
 </section>
 
@@ -294,6 +327,8 @@
             SelectedSports.Remove(sport);
         else
             SelectedSports.Add(sport);
+
+        ApplyFilters();
     }
     private bool DistanceFilterUsed = false;
     private int CurrentPage { get; set; } = 1;
@@ -304,7 +339,7 @@
     private int SelectedSorting { get; set; } = 1;
     private int SelectedSortingOrder { get; set; } = 1;
     private IReadOnlyList<DateTime?> SelectedDates { get; set; } = Array.Empty<DateTime?>();
-
+    private bool FiltersOpen { get; set; } = false;
 
     protected override async Task OnInitializedAsync() 
     {
@@ -610,5 +645,9 @@
     {
         SelectedSortingOrder = value;
         return Task.CompletedTask;
+    }
+    private void ToggleFilters()
+    {
+        FiltersOpen = !FiltersOpen;
     }
 }
