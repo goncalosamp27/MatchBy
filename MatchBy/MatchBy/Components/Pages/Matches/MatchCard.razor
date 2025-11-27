@@ -12,9 +12,16 @@
           hover:-translate-y-1 hover:shadow-[0_0px_10px_-4px_var(--main)]
           focus-visible:-translate-y-1">
 
-    <div class="md:basis-2/5 md:flex-none">
-        <img class="object-cover w-full h-64 md:h-full rounded-t-lg md:rounded-none md:rounded-s-lg" src="@GetMatchImage()" alt="@Match!.Sport.ToString()" />
-    </div>
+        <div class="md:basis-2/5 md:flex-none">
+            <img class="object-cover w-full h-64 md:h-full rounded-t-lg md:rounded-none md:rounded-s-lg dark:hidden"
+                src="@GetMatchImage(false)"
+                alt="@Match!.Sport.ToString()" />
+
+            <img class="object-cover w-full h-64 md:h-full rounded-t-lg md:rounded-none md:rounded-s-lg hidden dark:block"
+                src="@GetMatchImage(true)"
+                alt="@Match!.Sport.ToString()" />
+        </div>
+
 
     <div class="md:basis-3/5 flex flex-col justify-between p-4 leading-normal">
         <h5 class="mb-2 text-xl font-bold tracking-tight text-[var(--main)]">
@@ -36,15 +43,28 @@
 @code {
     [Parameter] public MatchDto? Match { get; set; }
 
-    private string GetMatchImage() =>
-        Match?.Sport switch
+    private string GetMatchImage(bool isDarkMode) =>
+        (Match?.Sport, isDarkMode) switch
         {
-            Sports.Football => "/images/sports/football.jpg",
-            Sports.Basketball => "/images/sports/basketball.jpg",
-            Sports.Tennis => "/images/sports/tennis.jpg",
-            Sports.Volleyball => "/images/sports/volleyball.jpg",
-            Sports.Futsal => "/images/sports/futsal.jpg",
-            Sports.Paddle => "/images/sports/paddle.jpg",
-            _ => "/images/sports/default.jpg"
+            (Sports.Football, false) => "/images/sports/light/football.png",
+            (Sports.Football, true)  => "/images/sports/dark/football.png",
+
+            (Sports.Basketball, false) => "/images/sports/light/basketball.png",
+            (Sports.Basketball, true)  => "/images/sports/dark/basketball.png",
+
+            (Sports.Tennis, false) => "/images/sports/light/tennis.png",
+            (Sports.Tennis, true)  => "/images/sports/dark/tennis.png",
+
+            (Sports.Volleyball, false) => "/images/sports/light/volleyball.png",
+            (Sports.Volleyball, true)  => "/images/sports/dark/volleyball.png",
+
+            (Sports.Paddle, false) => "/images/sports/light/paddle.png",
+            (Sports.Paddle, true)  => "/images/sports/dark/paddle.png",
+
+            (Sports.Rugby, false) => "/images/sports/light/rugby.png",
+            (Sports.Rugby, true)  => "/images/sports/dark/rugby.png",
+
+            (_,_) => "/images/sports/light/default.png"
         };
 }
+
