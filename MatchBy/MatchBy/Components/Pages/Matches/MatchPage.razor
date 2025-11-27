@@ -28,7 +28,7 @@ else
             <span class="text-2xl font-semibold text-[var(--text)]">by:</span>
         </h1>
 
-        <div class="inline-flex items-center gap-3 mt-2 group cursor-pointer">
+        <a class="inline-flex items-center gap-3 mt-2 group cursor-pointer" href="@($"/profile/{_match.CreatorId}")" target="_blank" rel="noopener noreferrer">
             <div
                 class="w-8 h-8 rounded-full overflow-hidden border-2 border-[var(--text)] group-hover:border-[var(--main)] bg-[var(--section-secondary)] flex items-center justify-center">
                 @if (_match.Creator?.AvatarUrl != null)
@@ -47,7 +47,7 @@ else
             <a class="font-semibold text-[var(--text)] group-hover:text-[var(--main)]">
                 @(_match.Creator?.DisplayName ?? "Unknown")
             </a>
-        </div>
+        </a>
         <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,60%)_minmax(0,40%)] gap-8 items-start mt-2">
             <div class="flex flex-col gap-2">
                 <div id="matchPageMap"
@@ -234,7 +234,7 @@ else
                     {
                         @foreach (var p in _match.Participants)
                         {
-                            <div
+                            <a href="@($"/profile/{p.Id}")" target="_blank" rel="noopener noreferrer"
                                 class="flex items-center justify-between gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)]">
                                 <div class="flex items-center gap-3 cursor-pointer">
                                     <div
@@ -268,14 +268,14 @@ else
                                     </div>
                                 </div>
 
-                                @if (p.Id != _userId && _match.Participants.Any(participant => participant.Id == _userId))
-                                {
+                                @if (p.Id != _userId && _match.Participants.Any(participant => participant.Id == _userId) && _match.Status == MatchStatus.Completed)
+                                { 
                                     <button @onclick="@(() => OpenRatingModal(p))"
                                             class="px-3 py-1.5 rounded-md border border-[var(--main)] text-sm font-medium text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] transition">
                                         Rate
                                     </button>
                                 }
-                            </div>
+                            </a>
                         }
 
 
