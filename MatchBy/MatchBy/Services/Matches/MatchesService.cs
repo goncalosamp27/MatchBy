@@ -2,9 +2,11 @@
 using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Match;
+using MatchBy.DTOs.MatchInvite;
 using MatchBy.DTOs.Notification;
 using MatchBy.Models;
 using MatchBy.Enums;
+using MatchBy.Services.MatchInvites;
 using MatchBy.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using IEmailSender = MatchBy.Services.Email.IEmailSender;
@@ -15,46 +17,29 @@ public class MatchesService(
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateMatchDto> createMatchValidator,
     IValidator<UpdateMatchDto> updateMatchValidator, 
+    IMatchesInvitesService matchInvitesService,
     IEmailSender emailSender,
     INotificationService notificationService) : IMatchesService
 {
-    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
-        string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
+    /// <summary>
+    /// Paginates and filters a queryable collection of matches.
+    /// </summary>
+    /// <param name="query">The queryable collection of matches to paginate.</param>
+    /// <param name="q">Optional search query to filter matches by description (case-insensitive).</param>
+    /// <param name="page">The page number to retrieve (1-based, default: 1).</param>
+    /// <param name="pageSize">The number of matches per page (default: 5).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a paginated response with a list of match DTOs, ordered by creation date (newest first).
+    /// </returns>
+    private static async Task<Result<PaginationResponse<List<MatchDto>>>> PaginateMatchesAsync(IQueryable<Match> query, string? q,
+        int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
-        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-
-        IQueryable<Match> query = dbContext
-            .Matches
-            .AsNoTracking()
-            .Include(m => m.Participants)
-            .Include(m => m.Creator);
-
-        List<MatchInvite> invites = await dbContext
-            .MatchInvites
-            .Where(mi => mi.ReceiverId == userId)
-            .ToListAsync(ct);
-
-        // Filter by userId: if provided, get matches where user is creator or participant; else get only public matches
-        query = !string.IsNullOrEmpty(userId)
-            ? query.Where(m =>
-                m.CreatorId == userId || m.Participants.Any(p => p.Id == userId) || m.Privacy == MatchPrivacy.Public ||
-                invites.Any(i => i.MatchId == m.Id))
-            : query.Where(m => m.Privacy == MatchPrivacy.Public);
-
-        query = matchStatus switch
-        {
-            MatchStatus.Pendent => query.Where(m => m.Status == MatchStatus.Pendent),
-            MatchStatus.Cancelled => query.Where(m => m.Status == MatchStatus.Cancelled),
-            MatchStatus.Completed => query.Where(m => m.Status == MatchStatus.Completed),
-            MatchStatus.Confirmed => query.Where(m => m.Status == MatchStatus.Confirmed),
-            _ => query
-        };
-
         if (!string.IsNullOrEmpty(q))
         {
             query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
         }
-
+        
         int total = await query.CountAsync(ct);
         int totalPages = (int)Math.Ceiling((double)total / pageSize);
 
@@ -77,7 +62,70 @@ public class MatchesService(
                 TotalCount = total
             });
     }
+    /// <summary>
+    /// Retrieves a paginated list of matches with optional filtering by status, search query, and user access.
+    /// </summary>
+    /// <param name="matchStatus">Optional match status to filter by (Pendent, Cancelled, Completed, Confirmed).</param>
+    /// <param name="q">Optional search query to filter matches by description (case-insensitive).</param>
+    /// <param name="userId">Optional user ID. If provided, includes matches where user is creator, participant, has invite, or public matches.</param>
+    /// <param name="page">The page number to retrieve (default: 1).</param>
+    /// <param name="pageSize">The number of matches per page (default: 5).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a paginated response with filtered match DTOs, or an error if failed to retrieve user invites.
+    /// </returns>
+    public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q,
+        string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default)
+    {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
+        IQueryable<Match> query = dbContext
+            .Matches
+            .AsNoTracking()
+            .Include(m => m.Participants)
+            .Include(m => m.Creator);
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            Result<PaginationResponse<List<MatchInviteDto>>> receivedUserInvitesResult = await matchInvitesService.GetReceivedInvites(userId, int.MaxValue, 1, ct);
+            if(!receivedUserInvitesResult.Success)
+            {
+                return Result<PaginationResponse<List<MatchDto>>>.Fail(receivedUserInvitesResult.ErrorMessages[0]);
+            }
+            
+            // Filter by userId: if provided, get matches where user is creator or participant; else get only public matches
+            query = query.Where(m =>
+                m.CreatorId == userId || m.Participants.Any(p => p.Id == userId) || m.Privacy == MatchPrivacy.Public ||
+                receivedUserInvitesResult.Data!.Data.Any(i => i.MatchId == m.Id));
+        }
+        else
+        {
+            query = query.Where(m => m.Privacy == MatchPrivacy.Public);   
+        }
+
+        query = matchStatus switch
+        {
+            MatchStatus.Pendent => query.Where(m => m.Status == MatchStatus.Pendent),
+            MatchStatus.Cancelled => query.Where(m => m.Status == MatchStatus.Cancelled),
+            MatchStatus.Completed => query.Where(m => m.Status == MatchStatus.Completed),
+            MatchStatus.Confirmed => query.Where(m => m.Status == MatchStatus.Confirmed),
+            _ => query
+        };
+
+        return await PaginateMatchesAsync(query, q, page, pageSize, ct);
+    }
+    /// <summary>
+    /// Retrieves a specific match by its unique identifier with access control based on privacy settings and invites.
+    /// </summary>
+    /// <param name="matchId">The unique identifier of the match to retrieve.</param>
+    /// <param name="userId">Optional user ID. If provided, checks for user access via participation, creation, invite, or public access.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the match DTO if found and accessible, or an error message if:
+    /// - The match is not found
+    /// - Access is denied (private match and user doesn't have access)
+    /// - Failed to retrieve match invite
+    /// </returns>
     public async Task<Result<MatchDto>> GetMatchById(string matchId, string? userId, CancellationToken ct = default)
     {        
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -85,16 +133,18 @@ public class MatchesService(
         Match? match;
         if (!string.IsNullOrEmpty(userId))
         {
-            bool hasInvite = await dbContext
-                .MatchInvites
-                .AnyAsync(i => i.MatchId == matchId && i.ReceiverId == userId, ct);
+            Result<MatchInviteDto> matchInvite = await matchInvitesService.GetMatchInvite(matchId, userId, ct);
+            if(!matchInvite.Success)
+            {
+                return Result<MatchDto>.Fail(matchInvite.ErrorMessages[0]);
+            }
 
             match = await dbContext
                 .Matches
                 .Include(m => m.Participants)
                 .Include(m => m.Creator)
                 .Where(m => m.Participants.Any(p => p.Id == userId) || m.CreatorId == userId ||
-                            m.Privacy == MatchPrivacy.Public || hasInvite)
+                            m.Privacy == MatchPrivacy.Public || matchInvite.Success)
                 .FirstOrDefaultAsync(m => m.Id == matchId, ct);
 
             return match == null
@@ -113,7 +163,17 @@ public class MatchesService(
             ? Result<MatchDto>.Fail($"Match with id {matchId} not found.")
             : Result<MatchDto>.Ok(match.ToDto());
     }
-
+    /// <summary>
+    /// Creates a new match with the specified details.
+    /// </summary>
+    /// <param name="createMatchDto">DTO containing match creation details (sport, date, location, description, privacy, creator, etc.).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing true if the match was successfully created, or an error message if validation fails.
+    /// </returns>
+    /// <remarks>
+    /// The creator is automatically added as the first participant in the match.
+    /// </remarks>
     public async Task<Result<bool>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default)
     {
         ValidationResult? validationResult = await createMatchValidator.ValidateAsync(createMatchDto, ct);
@@ -131,7 +191,16 @@ public class MatchesService(
 
         return Result<bool>.Ok(true);
     }
-
+    /// <summary>
+    /// Updates an existing match's details. Only the match creator can update the match.
+    /// </summary>
+    /// <param name="updateMatchDto">DTO containing the match update details (id, description, date, location, privacy, userId).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing true if the match was successfully updated, or an error message if:
+    /// - Validation fails
+    /// - Match not found or user is not the creator
+    /// </returns>
     public async Task<Result<bool>> UpdateMatch(UpdateMatchDto updateMatchDto, CancellationToken ct = default)
     {
         ValidationResult? validationResult = await updateMatchValidator.ValidateAsync(updateMatchDto, ct);
@@ -155,7 +224,16 @@ public class MatchesService(
         await dbContext.SaveChangesAsync(ct);
         return Result<bool>.Ok(true);
     }
-
+    /// <summary>
+    /// Soft deletes a match. Only the match creator can delete the match.
+    /// </summary>
+    /// <param name="matchId">The unique identifier of the match to delete.</param>
+    /// <param name="userId">The unique identifier of the user attempting to delete the match.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing true if the match was successfully soft deleted, or an error message if:
+    /// - Match not found or user is not the creator
+    /// </returns>
     public async Task<Result<bool>> DeleteMatch(string matchId, string userId, CancellationToken ct = default)
     {       
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -170,20 +248,39 @@ public class MatchesService(
             ? Result<bool>.Fail($"Match with id {matchId} not found or user {userId} is not the creator.")
             : Result<bool>.Ok(true);
     }
-
+    /// <summary>
+    /// Adds a user to a match. For private matches, the user must have a pending invite that is accepted first.
+    /// </summary>
+    /// <param name="matchId">The unique identifier of the match to join.</param>
+    /// <param name="userId">The unique identifier of the user joining the match.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the match DTO if the user successfully joined, or an error message if:
+    /// - Failed to retrieve match invite
+    /// - Match not found
+    /// - Match is already full
+    /// - User is already a participant
+    /// - User not found
+    /// - Failed to accept match invite (for private matches)
+    /// </returns>
+    /// <remarks>
+    /// For public matches, the user is added directly. For private matches or users with pending invites,
+    /// the invite must be accepted first. A notification is sent to the match creator when a new participant joins.
+    /// </remarks>
     public async Task<Result<MatchDto>> JoinMatch(string matchId, string userId, CancellationToken ct = default)
     {        
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        bool invited = await dbContext
-            .MatchInvites
-            .Where(mi => mi.ReceiverId == userId)
-            .AnyAsync(i => i.MatchId == matchId,ct);
+        Result<MatchInviteDto> matchInvite = await matchInvitesService.GetMatchInvite(matchId, userId, ct);
+        if(!matchInvite.Success)
+        {
+            return Result<MatchDto>.Fail(matchInvite.ErrorMessages[0]);
+        }
 
         Match? match = await dbContext
             .Matches
             .Include(m => m.Participants)
-            .Where(m => m.Privacy == MatchPrivacy.Public || invited)
+            .Where(m => m.Privacy == MatchPrivacy.Public || matchInvite.Success)
             .FirstOrDefaultAsync(m => m.Id == matchId, ct);
 
         if (match is null)
@@ -209,32 +306,28 @@ public class MatchesService(
         {
             return Result<MatchDto>.Fail($"User with id {userId} not found.");
         }
+        
+        if(matchInvite.Success)
+        {
+            Result<MatchInviteDto> aceptInviteResult = await matchInvitesService.AcceptInvite(matchInvite.Data!.Id, userId, ct);
+            if(!aceptInviteResult.Success)
+            {
+                return Result<MatchDto>.Fail(aceptInviteResult.ErrorMessages[0]);
+            }
+        }
 
         match.Participants.Add(user);
         await dbContext.SaveChangesAsync(ct);
 
-        // Notify match creator that someone joined
-        if (match.CreatorId == userId)
-        {
-            return await GetMatchById(matchId, userId, ct);
-        }
-
-        string matchName = $"{match.Sport} em {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}";
-        
-        string? newParticipant = await dbContext.Users
-            .Where(u => u.Id == userId)
-            .Select(u => u.DisplayName)
-            .FirstOrDefaultAsync(ct);
-        
         var notification = new CreateNotificationDto
         {
             Type = NotificationType.MatchJoined,
             ReceiverUserId = match.CreatorId,
             SenderUserId = userId,
             RelatedEntityId = match.Id,
-            RelatedEntityName = matchName,
+            RelatedEntityName = $"{match.Sport} in {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}",
             Title = "New participant",
-            Message = $"{newParticipant} joined the match {matchName}",
+            Message = $"{user.DisplayName} joined the match {match.Sport} in {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}",
             ActionUrl = $"/matches/{match.Id}"
         };
 
@@ -242,7 +335,21 @@ public class MatchesService(
 
         return await GetMatchById(matchId, userId, ct);
     }
-    
+    /// <summary>
+    /// Removes a user from a match. If the user is the creator, the match is cancelled and all participants are notified via email.
+    /// </summary>
+    /// <param name="matchId">The unique identifier of the match to leave.</param>
+    /// <param name="userId">The unique identifier of the user leaving the match.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing true if the user successfully left the match, or an error message if:
+    /// - User not found
+    /// - Match not found or user is not a participant
+    /// </returns>
+    /// <remarks>
+    /// If the creator leaves, the match status is set to Cancelled, the match is soft deleted,
+    /// and cancellation emails are sent to all other participants.
+    /// </remarks>
     public async Task<Result<bool>> LeaveMatch(string matchId, string userId, CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -270,7 +377,6 @@ public class MatchesService(
         {
             match.Status = MatchStatus.Cancelled;
             match.DeletedAtUtc = DateTime.UtcNow;
-            match.Status = MatchStatus.Cancelled;
             
             // Send cancellation emails to all participants
             foreach (ApplicationUser participant in match.Participants.Where(p => p.Id != userId))
@@ -296,9 +402,21 @@ public class MatchesService(
         await dbContext.SaveChangesAsync(ct);
         return Result<bool>.Ok(true);
     }
-
+    /// <summary>
+    /// Retrieves a paginated list of matches created by a specific user that are not full and are in Pendent or Confirmed status.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to get matches for.</param>
+    /// <param name="q">Optional search query to filter matches by description (case-insensitive).</param>
+    /// <param name="page">The page number to retrieve (default: 1).</param>
+    /// <param name="pageSize">The number of matches per page (default: 5).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a paginated response with match DTOs created by the user.
+    /// </returns>
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesForUser(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default) {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .AsSplitQuery()
@@ -306,33 +424,19 @@ public class MatchesService(
             .Include(m => m.Creator)
             .Where(m => m.CreatorId == userId && m.Participants.Count < m.maxPlayers && (m.Status == MatchStatus.Confirmed || m.Status == MatchStatus.Pendent));
 
-        if (!string.IsNullOrEmpty(q))
-        {
-            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
-        }
-
-        int total = await query.CountAsync(ct);
-        int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-        List<Match> matches = await query
-            .OrderByDescending(m => m.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-        var matchesDto = matches.Select(m => m.ToDto()).ToList();
-
-        return Result<PaginationResponse<List<MatchDto>>>.Ok(
-            new PaginationResponse<List<MatchDto>> {
-                Data = matchesDto,
-                NextPageAvailable = page < totalPages,
-                Page = page,
-                PageSize = pageSize,
-                PreviousPageAvailable = page > 1,
-                TotalCount = total
-            });
+        return await PaginateMatchesAsync(query, q, page, pageSize, ct);
     }
-
+    /// <summary>
+    /// Retrieves a paginated list of matches that the user is not involved in (not creator and not participant).
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to exclude matches for.</param>
+    /// <param name="q">Optional search query to filter matches by description (case-insensitive).</param>
+    /// <param name="page">The page number to retrieve (default: 1).</param>
+    /// <param name="pageSize">The number of matches per page (default: 5).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a paginated response with match DTOs that the user can potentially join.
+    /// </returns>
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesExceptUser(string userId, string? q,
         int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
@@ -344,37 +448,24 @@ public class MatchesService(
             .Include(m => m.Participants)
             .Include(m => m.Creator)
             .Where(m => m.CreatorId != userId && m.Participants.All(p => p.Id != userId));
-
-        if (!string.IsNullOrEmpty(q))
-        {
-            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
-        }
-
-        int total = await query.CountAsync(ct);
-        int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-        List<Match> matches = await query
-            .OrderByDescending(m => m.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-        var matchesDto = matches.Select(m => m.ToDto()).ToList();
-
-        return Result<PaginationResponse<List<MatchDto>>>.Ok(
-            new PaginationResponse<List<MatchDto>>
-            {
-                Data = matchesDto,
-                NextPageAvailable = page < totalPages,
-                Page = page,
-                PageSize = pageSize,
-                PreviousPageAvailable = page > 1,
-                TotalCount = total
-            });
+        
+        return await PaginateMatchesAsync(query, q, page, pageSize, ct);
     }
-
+    /// <summary>
+    /// Retrieves a paginated list of matches that a user is attending (as participant, not creator) that are in Pendent or Confirmed status.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to get attending matches for.</param>
+    /// <param name="q">Optional search query to filter matches by description (case-insensitive).</param>
+    /// <param name="page">The page number to retrieve (default: 1).</param>
+    /// <param name="pageSize">The number of matches per page (default: 5).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a paginated response with match DTOs the user is attending.
+    /// </returns>
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetMatchesUserAttending(string userId, string? q, int page = 1, int pageSize = 5, CancellationToken ct = default) {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .AsSplitQuery()
@@ -382,34 +473,19 @@ public class MatchesService(
             .Include(m => m.Creator)
             .Where(m => m.CreatorId != userId && m.Participants.Any(p => p.Id == userId) && (m.Status == MatchStatus.Confirmed || m.Status == MatchStatus.Pendent));
 
-        if (!string.IsNullOrEmpty(q)) {
-            query = query.Where(m => m.Description.ToLower().Contains(q.ToLower()));
-        }
-
-        int total = await query.CountAsync(ct);
-        int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-        List<Match> matches = await query
-            .OrderByDescending(m => m.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-        var matchesDto = matches.Select(m => m.ToDto()).ToList();
-
-        return Result<PaginationResponse<List<MatchDto>>>.Ok(
-            new PaginationResponse<List<MatchDto>>
-            {
-                Data = matchesDto,
-                NextPageAvailable = page < totalPages,
-                Page = page,
-                PageSize = pageSize,
-                PreviousPageAvailable = page > 1,
-                TotalCount = total
-            });
+        return await PaginateMatchesAsync(query, q, page, pageSize, ct);
     }
-
-    public static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+    /// <summary>
+    /// Calculates the distance between two geographic coordinates using the Haversine formula.
+    /// </summary>
+    /// <param name="lat1">Latitude of the first point in degrees.</param>
+    /// <param name="lon1">Longitude of the first point in degrees.</param>
+    /// <param name="lat2">Latitude of the second point in degrees.</param>
+    /// <param name="lon2">Longitude of the second point in degrees.</param>
+    /// <returns>
+    /// The distance between the two points in kilometers.
+    /// </returns>
+    private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
     {
         const double R = 6371;
 
@@ -425,7 +501,7 @@ public class MatchesService(
 
         return R * c;
     }
-
+    
     public async Task<Result<PaginationResponse<List<MatchDto>>>> GetRecommendedMatches(
         string userId,
         ICollection<Sports> preferredSports,
@@ -435,7 +511,9 @@ public class MatchesService(
         int pageSize = 5,
         CancellationToken ct = default)
     {
-        IQueryable<Match> query = applicationDbContext
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<Match> query = dbContext
             .Matches
             .AsNoTracking()
             .Include(m => m.Participants)
@@ -447,7 +525,7 @@ public class MatchesService(
 
         if (!string.IsNullOrEmpty(q)) { query = query.Where(m => m.Description.ToLower().Contains(q.ToLower())); }
 
-        var matches = await query.ToListAsync(ct);
+        List<Match> matches = await query.ToListAsync(ct);
 
         var ranked = matches
             .Select(m => new
