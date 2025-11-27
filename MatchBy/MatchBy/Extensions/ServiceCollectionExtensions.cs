@@ -1,7 +1,5 @@
-﻿using Amazon;
-using Amazon.Runtime;
+﻿using Amazon.Runtime;
 using Amazon.S3;
-using MatchBy.Services;
 using MatchBy.Services.S3;
 using MatchBy.Settings;
 using Microsoft.Extensions.Options;
@@ -21,7 +19,7 @@ public static class ServiceCollectionExtensions
 
             var cfg = new AmazonS3Config
             {
-                ServiceURL = "https://nnuhjbuxyanjwvtgxsyt.storage.supabase.co/storage/v1/s3",
+                ServiceURL = s3.ServiceUrl,
                 ForcePathStyle = true,
                 AuthenticationRegion = s3.Region
             };

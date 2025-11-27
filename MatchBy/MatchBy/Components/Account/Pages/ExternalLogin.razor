@@ -128,7 +128,7 @@
     private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
     private ExternalLoginInfo? _externalLoginInfo;
 
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
 
     [SupplyParameterFromForm] private InputModel? Input { get; set; }
 
@@ -180,6 +180,7 @@
         if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            return;
         }
 
         // Sign in the user with this external login provider if the user already has a login.

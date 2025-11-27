@@ -13,3 +13,5 @@ public sealed record FriendDto
     public DateTime? UpdatedAtUtc { get; init; }
     public DateTime? DeletedAtUtc { get; init; }
 }
+
+

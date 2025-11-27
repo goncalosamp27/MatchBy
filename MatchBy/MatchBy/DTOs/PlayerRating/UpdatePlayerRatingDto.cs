@@ -6,3 +6,5 @@ public sealed record UpdatePlayerRatingDto
     public required int Rating { get; init; }
     public required string SentById { get; init; }
 }
+
+

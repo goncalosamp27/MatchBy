@@ -1,15 +1,16 @@
+using System.Reflection;
+using System.Security.Claims;
+using System.Text.Json;
 using MatchBy.Components.Account.Pages;
 using MatchBy.Components.Account.Pages.Manage;
 using MatchBy.Models;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
-using System.Reflection;
-using System.Security.Claims;
-using System.Text.Json;
 
 namespace Microsoft.AspNetCore.Routing;
 
@@ -39,7 +40,8 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
                 "/Account/ExternalLogin",
                 QueryString.Create(query));
 
-            AuthenticationProperties properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+            AuthenticationProperties properties =
+                signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
             return TypedResults.Challenge(properties, [provider]);
         });
 
@@ -50,6 +52,45 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
         {
             await signInManager.SignOutAsync();
             return TypedResults.LocalRedirect($"~/{returnUrl}");
+        });
+
+        accountGroup.MapPost("/PasskeyCreationOptions", async (
+            HttpContext context,
+            [FromServices] UserManager<ApplicationUser> userManager,
+            [FromServices] SignInManager<ApplicationUser> signInManager,
+            [FromServices] IAntiforgery antiforgery) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+
+            ApplicationUser? user = await userManager.GetUserAsync(context.User);
+            if (user is null)
+            {
+                return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
+            }
+
+            string userId = await userManager.GetUserIdAsync(user);
+            string userName = await userManager.GetUserNameAsync(user) ?? "User";
+            string optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new()
+            {
+                Id = userId,
+                Name = userName,
+                DisplayName = userName
+            });
+            return TypedResults.Content(optionsJson, contentType: "application/json");
+        });
+
+        accountGroup.MapPost("/PasskeyRequestOptions", async (
+            HttpContext context,
+            [FromServices] UserManager<ApplicationUser> userManager,
+            [FromServices] SignInManager<ApplicationUser> signInManager,
+            [FromServices] IAntiforgery antiforgery,
+            [FromQuery] string? username) =>
+        {
+            await antiforgery.ValidateRequestAsync(context);
+
+            ApplicationUser? user = string.IsNullOrEmpty(username) ? null : await userManager.FindByNameAsync(username);
+            string optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
+            return TypedResults.Content(optionsJson, contentType: "application/json");
         });
 
         RouteGroupBuilder manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();
@@ -67,8 +108,8 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
                 "/Account/Manage/ExternalLogins",
                 QueryString.Create("Action", ExternalLogins.LinkLoginCallbackAction));
 
-            AuthenticationProperties properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl,
-                signInManager.UserManager.GetUserId(context.User));
+            AuthenticationProperties properties = signInManager.ConfigureExternalAuthenticationProperties(provider,
+                redirectUrl, signInManager.UserManager.GetUserId(context.User));
             return TypedResults.Challenge(properties, [provider]);
         });
 

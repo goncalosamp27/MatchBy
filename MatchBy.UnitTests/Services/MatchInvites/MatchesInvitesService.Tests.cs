@@ -22,7 +22,6 @@ public class MatchesInvitesServiceTests : IDisposable
     public MatchesInvitesServiceTests()
     {
         _createValidatorMock = new Mock<IValidator<CreateMatchInviteDto>>();
-        var updateValidatorMock = new Mock<IValidator<UpdateMatchInviteDto>>();
         var notificationServiceMock = new Mock<INotificationService>();
         _dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
@@ -46,7 +45,6 @@ public class MatchesInvitesServiceTests : IDisposable
         _matchesInvitesService = new MatchesInvitesService(
             _dbContextFactoryMock.Object,
             _createValidatorMock.Object,
-            updateValidatorMock.Object,
             notificationServiceMock.Object);
     }
 
@@ -333,59 +331,6 @@ public class MatchesInvitesServiceTests : IDisposable
         // Assert
         Assert.False(result.Success);
         Assert.Contains("already full", result.ErrorMessages[0]);
-    }
-
-    #endregion
-
-    #region DeclineInvite Tests
-
-    [Fact]
-    public async Task DeclineInvite_WithValidInvite_ShouldDeclineInvite()
-    {
-        // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
-        var match = new Match
-        {
-            Id = "match1",
-            CreatorId = "sender1",
-            Description = "Test Match",
-            Address = "Test Address",
-            Location = new Location(0, 0, "City", "Country"),
-            MatchDateTimeUtc = DateTime.UtcNow,
-            minPlayers = 2,
-            maxPlayers = 10,
-            Sport = Sports.Basketball,
-            Status = MatchStatus.Pendent,
-            Privacy = MatchPrivacy.Public,
-            CreatedAtUtc = DateTime.UtcNow,
-            Participants = new List<ApplicationUser> { sender }
-        };
-        
-        var invite = new MatchInvite
-        {
-            Id = "invite1",
-            SenderId = "sender1",
-            ReceiverId = "receiver1",
-            MatchId = "match1",
-            Content = "Join us!",
-            Status = InviteStatus.Pending,
-            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Matches.AddAsync(match);
-        await _dbContext.MatchInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
-
-        // Act
-        Result<MatchInviteDto> result = await _matchesInvitesService.DeclineInvite("invite1", "receiver1");
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Equal(InviteStatus.Declined, result.Data!.Status);
-        Assert.NotNull(result.Data.DeclinedAtUtc);
     }
 
     #endregion

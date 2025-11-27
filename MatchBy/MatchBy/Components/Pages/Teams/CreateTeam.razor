@@ -25,8 +25,7 @@
 else
 {
     <div class="min-h-screen bg-[var(--background)] px-4 py-8">
-        <div class="max-w-4xl mx-auto">
-            <!-- Back Button -->
+        <div class="max-w-5xl mx-auto">
             <button @onclick="@(() => NavigationManager.NavigateTo("/teams"))"
                     class="flex items-center gap-2 text-[var(--text)] hover:text-[var(--main)] mb-6 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,247 +34,339 @@ else
                 Back to Teams
             </button>
 
-            <!-- Main Card -->
-            <div class="bg-[var(--section-secondary)] rounded-2xl border border-[var(--main)] shadow-sm p-6 md:p-8">
-                <h1 class="text-3xl md:text-4xl font-bold text-[var(--main)] mb-6">Create Team</h1>
+            <div
+                class="relative overflow-hidden rounded-3xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 md:p-8 mb-8">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold text-[var(--text)] mt-2">Create a new team</h1>
+                        <p class="text-[var(--text)] mt-3 max-w-2xl">
+                            Give your team an identity, invite members, and share the details that make your team
+                            stand out.
+                            Complete each section below, then send out the invites.
+                        </p>
+                    </div>
+                </div>
+                <div
+                    class="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--main)]/15 via-transparent to-transparent pointer-events-none"></div>
+            </div>
 
-                <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
-                    <Validation Validator="@ValidateName">
-                        <Field>
-                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Name</FieldLabel>
-                            <FieldBody>
-                                <TextEdit Placeholder="Enter team name"
-                                          Text="@_viewModel.Model.Name"
-                                          TextChanged="@(v =>
-                                                       {
-                                                           _viewModel.UpdateName(v);
-                                                           StateHasChanged();
-                                                       })"
-                                          Class="w-full"
-                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
-                                    <Feedback>
-                                        <ValidationError/>
-                                    </Feedback>
-                                </TextEdit>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
-
-                    <Validation Validator="@ValidateDescription">
-                        <Field class="mt-4">
-                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description</FieldLabel>
-                            <FieldBody>
-                                <TextEdit Placeholder="Type a description for your team"
-                                          Text="@_viewModel.Model.Description"
-                                          TextChanged="@(v =>
-                                                       {
-                                                           _viewModel.UpdateDescription(v);
-                                                           StateHasChanged();
-                                                       })"
-                                          Class="w-full"
-                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
-                                    <Feedback>
-                                        <ValidationError/>
-                                    </Feedback>
-                                </TextEdit>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
-
-                    <Validation Validator="@ValidatePrivacy">
-                        <Field class="mt-4">
-                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Privacy</FieldLabel>
-                            <FieldBody>
-                                <Select TValue="TeamPrivacy"
-                                        SelectedValue="@_viewModel.Model.Privacy"
-                                        SelectedValueChanged="@(v =>
-                                                              {
-                                                                  _viewModel.UpdatePrivacy(v);
-                                                                  StateHasChanged();
-                                                              })"
-                                        Class="w-full"
-                                        Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
-                                    @foreach (var item in Enum.GetValues<TeamPrivacy>())
-                                    {
-                                        <SelectItem Value="@item">@item.ToString()</SelectItem>
-                                    }
-                                </Select>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
-
-                    <Field class="mt-6">
-                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Team Image</FieldLabel>
-                        <FieldBody>
-                            <div class="flex items-center gap-3">
-                                <InputFile OnChange="@((e) =>
-                                                     {
-                                                         _viewModel.OnImageSelected(e);
-                                                         StateHasChanged();
-                                                     })"
-                                           accept="image/*"
-                                           class="block w-full text-sm text-[var(--text)] border-2 border-[var(--main)] rounded-lg cursor-pointer bg-[var(--background)] focus:outline-none focus:border-[var(--main)] file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--main)] file:text-[var(--text-contrast)] hover:file:opacity-80"/>
-                                @if (_viewModel.SelectedImage != null)
-                                {
-                                    <button type="button" @onclick="@(() =>
-                                                                    {
-                                                                        _viewModel.RemoveImage();
-                                                                        StateHasChanged();
-                                                                    })"
-                                            class="shrink-0 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-[var(--error)] hover:opacity-80 text-white transition">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
-                                }
-                            </div>
-                            <div class="text-xs text-[var(--text)] opacity-70 mt-2">
-                                Supported formats: JPG, PNG, GIF. Max size: 5MB
-                            </div>
-                        </FieldBody>
-                    </Field>
-
-                    <Validation Validator="@ValidateMembers">
-                        <Field class="mt-6">
-                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Invite Team Members</FieldLabel>
-                            <FieldBody>
-                                <div class="mb-3">
-                                    <TextEdit @bind-Text="_viewModel.MemberSearch"
-                                              @bind-Text:after="StateHasChanged"
-                                              Placeholder="Search for users to add"
-                                              Role="TextRole.Search"
-                                              KeyDown="@(async (e) =>
-                                                       {
-                                                           await _viewModel.OnMemberSearchKeyDownAsync(e);
-                                                           StateHasChanged();
-                                                       })"
-                                              Class="w-full"
-                                              Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.5rem; padding: 0.75rem;">
-                                        <Feedback>
-                                            <ValidationError/>
-                                        </Feedback>
-                                    </TextEdit>
+            <div class="grid gap-8">
+                <div class="space-y-6">
+                    <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
+                        <div class="space-y-6">
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 1</p>
+                                        <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Team basics</h3>
+                                        <p class="text-sm text-[var(--text)]">Name your team, tell people what your team is
+                                            about, and define the privacy level.</p>
+                                    </div>
+                                    <span
+                                        class="inline-flex items-center rounded-full bg-[var(--main)]/10 text-[var(--main)] px-3 py-1 text-xs font-semibold">
+                                        Required
+                                    </span>
                                 </div>
 
-                                @if (_viewModel.IsLoadingMembers)
-                                {
-                                    <Loading></Loading>
-                                }
-                                else
-                                {
-                                    <div
-                                        class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-lg p-2 thin-scroll"
-                                        style="background-color: var(--background);">
-                                        
-                                        @if (_viewModel.AvailableUsers.Data.Count == 0)
-                                        {
-                                            <div class="py-3 text-center opacity-60" style="color: var(--text);"> No
-                                                users found
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            @foreach (var user in _viewModel.AvailableUsers.Data)
-                                            {
-                                                var isOwner = user.Id == _viewModel.Model.OwnerId;
-                                                var isSelected = _viewModel.Model.MembersIds.Contains(user.Id) || isOwner;
-                                                var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                                <div
-                                                    class="flex items-center gap-3 py-2 px-3 rounded-lg @(isOwner ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:opacity-70") transition-all @(isSelected ? "bg-[var(--main)]" : "")"
-                                                    @onclick="@(() =>
-                                                              {
-                                                                  if (isOwner)
-                                                                  {
-                                                                      return;
-                                                                  }
-
-                                                                  _viewModel.ToggleMember(user.Id);
-                                                                  StateHasChanged();
-                                                              })" style="color: var(--text);"
-                                                    title="@(isOwner ? "Owner" : "")">
-                                                    <img
-                                                        src="@photoUrl" alt="@user.UserName"
-                                                        class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
-                                                    <span
-                                                        class="fw-500 truncate flex-1">@user.DisplayName @(isOwner ? "(Owner)" : "")</span>
-                                                    @if (isSelected)
-                                                    {
-                                                        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor"
-                                                             viewBox="0 0 20 20">
-                                                            <path fill-rule="evenodd"
-                                                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                                  clip-rule="evenodd"/>
-                                                        </svg>
-                                                    }
-                                                </div>
-                                            }
-                                        }
-                                    </div> @if (_viewModel.Model.MembersIds.Count > 1) @* Show invited members only if more than 1 (excluding owner) *@
-                                    {
-                                        <div class="mb-3">
-                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Users to Invite (@(_viewModel.Model.MembersIds.Count - 1))
+                                <div class="space-y-4">
+                                    <Validation Validator="@ValidateName">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team name
                                             </FieldLabel>
-                                            <div class="flex flex-wrap gap-2">
-                                                @foreach (var memberId in _viewModel.Model.MembersIds)
-                                                {
-                                                    var member = _viewModel.AvailableUsers.Data?.FirstOrDefault(u => u.Id == memberId);
-                                                    if (member != null)
-                                                    {
-                                                        var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                                        <div
-                                                            class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
-                                                            <img src="@photoUrl" alt="@member.UserName"
-                                                                 class="rounded-full w-6 h-6 object-cover"/>
-                                                            <span
-                                                                class="text-sm">@member.DisplayName</span>
-                                                            <button @onclick="@(() =>
+                                            <FieldBody>
+                                                <TextEdit Placeholder="Enter team name"
+                                                          Text="@_viewModel.Model.Name"
+                                                          TextChanged="@(v =>
+                                                                       {
+                                                                           _viewModel.UpdateName(v);
+                                                                           StateHasChanged();
+                                                                       })"
+                                                          Class="w-full"
+                                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </TextEdit>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+
+                                    <Validation Validator="@ValidateDescription">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description
+                                            </FieldLabel>
+                                            <FieldBody>
+                                                <TextEdit Placeholder="Share a brief description about your team"
+                                                          Text="@_viewModel.Model.Description"
+                                                          TextChanged="@(v =>
+                                                                       {
+                                                                           _viewModel.UpdateDescription(v);
+                                                                           StateHasChanged();
+                                                                       })"
+                                                          Class="w-full"
+                                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem; ">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </TextEdit>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+
+                                    <Validation Validator="@ValidatePrivacy">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Privacy</FieldLabel>
+                                            <FieldBody>
+                                                <Select TValue="TeamPrivacy"
+                                                        SelectedValue="@_viewModel.Model.Privacy"
+                                                        SelectedValueChanged="@(v =>
                                                                               {
-                                                                                  _viewModel.RemoveMember(memberId);
+                                                                                  _viewModel.UpdatePrivacy(v);
                                                                                   StateHasChanged();
-                                                                              })" @onclick:stopPropagation="true"
-                                                                    class="ml-1 hover:opacity-70 transition"
-                                                                    title="Remove invite">
-                                                                <svg class="w-4 h-4" 
-                                                                     fill="currentColor"
-                                                                     viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd"
-                                                                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                                                          clip-rule="evenodd"/>
-                                                                </svg>
-                                                            </button>
-                                                        </div>
+                                                                              })"
+                                                        Class="w-full"
+                                                        Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    @foreach (var item in Enum.GetValues<TeamPrivacy>())
+                                                    {
+                                                        <SelectItem Value="@item">@item.ToString()</SelectItem>
                                                     }
+                                                </Select>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+                                </div>
+                            </section>
+
+                            <div class="flex flex-col gap-4 md:flex-row md:items-stretch">
+                                <div
+                                    class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4 flex-1">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step
+                                                2</p>
+                                            <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Branding</h3>
+                                            <p class="text-sm text-[var(--text)]">Upload a team image to make your team
+                                                easily recognizable.</p>
+                                        </div>
+                                    </div>
+
+                                    <Field>
+                                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Team image</FieldLabel>
+                                        <FieldBody>
+                                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                                <InputFile OnChange="HandleImageChanged"
+                                                           accept="image/*"
+                                                           class="block w-full text-sm text-[var(--text)] border-2 border-dashed border-[var(--main)] rounded-xl cursor-pointer bg-[var(--background)] focus:outline-none focus:border-[var(--main)] file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-sm file:font-semibold file:bg-[var(--main)] file:text-[var(--text-contrast)] hover:file:opacity-80"/>
+                                                @if (_viewModel.SelectedImage != null)
+                                                {
+                                                    <button type="button"
+                                                            @onclick="@(() =>
+                                                                      {
+                                                                          _viewModel.RemoveImage();
+                                                                          StateHasChanged();
+                                                                      })"
+                                                            class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-[var(--error)] text-[var(--text-contrast)] hover:opacity-90 transition">
+                                                        Remove
+                                                    </button>
                                                 }
                                             </div>
-                                        </div>
-                                    } @if (_viewModel.AvailableUsers is { Data: not null, TotalCount: > 0 })
+                                            <p class="text-xs text-[var(--text)] mt-2">
+                                                Supported formats: JPG, JPEG, PNG. Max size is 50MB.
+                                            </p>
+                                        </FieldBody>
+                                    </Field>
+                                </div>
+                                <div
+                                    class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] flex-1 flex items-center justify-center overflow-hidden max-h-[360px]">
+                                    @if (!string.IsNullOrEmpty(_viewModel.SelectedImagePreviewUrl))
                                     {
-                                        <div class="flex justify-center mt-2">
-                                            <OffsetPagination CurrentPage="@_viewModel.CurrentMemberPage"
-                                                              OnPageChanged="@(async (page) =>
-                                                                             {
-                                                                                 await _viewModel.OnMemberPageChangedAsync(page);
-                                                                                 StateHasChanged();
-                                                                             })" PageSize="10"
-                                                              TotalItems="@_viewModel.AvailableUsers.TotalCount"/>
+                                        <img src="@_viewModel.SelectedImagePreviewUrl"
+                                             alt="Team image preview"
+                                             class="w-full h-full object-cover max-h-[360px]">
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center text-[var(--text)] space-y-2 p-6">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                 stroke-linecap="round" stroke-linejoin="round"
+                                                 class="w-10 h-10 mx-auto lucide lucide-image-icon lucide-image text-[var(--text)]">
+                                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                                <circle cx="9" cy="9" r="2"/>
+                                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                                            </svg>
+                                            <p class="text-sm font-medium text-[var(--text)]">Your preview will appear
+                                                here</p>
+                                            <p class="text-xs text-[var(--text)]">Upload an image above to bring your
+                                                team to life.</p>
                                         </div>
                                     }
-                                }
-                            </FieldBody>
-                        </Field>
-                    </Validation>
+                                </div>
+                            </div>
 
-                    <Field class="mt-6">
-                        <Button Color="Color.Primary"
-                                Clicked="@SubmitTeam"
-                                Loading="@_viewModel.IsSubmitting"
-                                Class="w-full md:w-auto"
-                                Style="background-color: var(--main); color: var(--text-contrast); padding: 0.75rem 2rem; border-radius: 0.5rem; font-weight: 500; transition: all 0.2s;">
-                            Create Team
-                        </Button>
-                    </Field>
-                </Validations>
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 3</p>
+                                        <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Invite members</h3>
+                                        <p class="text-sm text-[var(--text)]">Find teammates by name and send them an invite to your team.</p>
+                                    </div>
+                                </div>
+
+                                <Validation Validator="@ValidateMembers">
+                                    <Field>
+                                        <FieldBody>
+                                            <div class="mb-3">
+                                                <TextEdit @bind-Text="_viewModel.MemberSearch"
+                                                          @bind-Text:after="StateHasChanged"
+                                                          Placeholder="Search by username or email"
+                                                          Role="TextRole.Search"
+                                                          KeyDown="@(async (e) =>
+                                                                   {
+                                                                       await _viewModel.OnMemberSearchKeyDownAsync(e);
+                                                                       StateHasChanged();
+                                                                   })"
+                                                          Class="w-full"
+                                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </TextEdit>
+                                            </div>
+
+                                            @if (_viewModel.IsLoadingMembers)
+                                            {
+                                                <Loading></Loading>
+                                            }
+                                            else
+                                            {
+                                                <div
+                                                    class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
+                                                    style="background-color: var(--background);">
+
+                                                    @if (_viewModel.AvailableUsers.Data.Count == 0)
+                                                    {
+                                                        <div class="py-3 text-center opacity-60"
+                                                             style="color: var(--text);">No users found
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        foreach (var user in _viewModel.AvailableUsers.Data)
+                                                        {
+                                                            var isOwner = user.Id == _viewModel.Model.OwnerId;
+                                                            var isSelected = _viewModel.Model.MembersIds.Contains(user.Id) || isOwner;
+                                                            var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                            <div
+                                                                class="flex items-center gap-3 py-2 px-3 rounded-xl  text-[var(--text)] @(isOwner ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:opacity-80") transition-all)"
+                                                                @onclick="@(() =>
+                                                                          {
+                                                                              if (isOwner)
+                                                                              {
+                                                                                  return;
+                                                                              }
+
+                                                                              _viewModel.ToggleMember(user.Id);
+                                                                              StateHasChanged();
+                                                                          })"
+                                                                title="@(isOwner ? "Owner" : "Tap to toggle")">
+                                                                <img src="@photoUrl"
+                                                                     alt="@user.UserName"
+                                                                     class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]/60"/>
+                                                                <span
+                                                                    class="fw-500 truncate flex-1">@user.DisplayName @(isOwner ? "(Owner)" : "")</span>
+                                                                @if (isSelected)
+                                                                {
+                                                                    <svg class="w-5 h-5 flex-shrink-0"
+                                                                         fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd"
+                                                                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                              clip-rule="evenodd"/>
+                                                                    </svg>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    }
+                                                </div>
+
+                                                @if (_viewModel.SelectedUsers.Count > 0)
+                                                {
+                                                    <div class="mb-3">
+                                                        <FieldLabel class="text-[var(--text)] font-medium mb-2">Invites
+                                                            (@Math.Max(0, _viewModel.SelectedUsers.Count)
+                                                        </FieldLabel>
+                                                        <div class="flex flex-wrap gap-2">
+                                                            @foreach (var member in _viewModel.SelectedUsers)
+                                                            {
+                                                                var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                                <div
+                                                                    class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                                    <img src="@photoUrl" alt="@member.UserName"
+                                                                         class="rounded-full w-6 h-6 object-cover"/>
+                                                                    <span class="text-sm">@member.DisplayName</span>
+                                                                    <button @onclick="@(() =>
+                                                                {
+                                                                    _viewModel.RemoveMember(member.Id);
+                                                                    StateHasChanged();
+                                                                })"
+                                                                            @onclick:stopPropagation="true"
+                                                                            class="ml-1 hover:opacity-80 transition"
+                                                                            title="Remove invite">
+                                                                        <svg class="w-4 h-4" fill="currentColor"
+                                                                             viewBox="0 0 20 20">
+                                                                            <path fill-rule="evenodd"
+                                                                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                                  clip-rule="evenodd"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+
+                                                @if (_viewModel.AvailableUsers is { Data: not null, TotalCount: > 0 })
+                                                {
+                                                    <div class="flex justify-center mt-6">
+                                                        <OffsetPagination CurrentPage="@_viewModel.CurrentMemberPage"
+                                                                          OnPageChanged="@(async (page) =>
+                                                                                         {
+                                                                                             await _viewModel.OnMemberPageChangedAsync(page);
+                                                                                             StateHasChanged();
+                                                                                         })"
+                                                                          PageSize="10"
+                                                                          TotalItems="@_viewModel.AvailableUsers.TotalCount"/>
+                                                    </div>
+                                                }
+                                            }
+                                        </FieldBody>
+                                    </Field>
+                                </Validation>
+                            </section>
+
+                            <section
+                                class="rounded-2xl border border-[var(--main) bg-[var(--section-secondary)] p-6">
+                                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-[var(--text)]">Ready to create your
+                                            team?</h3>
+                                        <p class="text-sm text-[var(--text)]">You can always edit details later.
+                                            Invites go out as soon as you submit.</p>
+                                    </div>
+                                    <Button Color="Color.Primary"
+                                            Clicked="@SubmitTeam"
+                                            Loading="@_viewModel.IsSubmitting"
+                                            Class="w-full md:w-auto"
+                                            Style="background-color: var(--main); color: var(--text-contrast); padding: 0.9rem 2.4rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s;">
+                                        Create team
+                                    </Button>
+                                </div>
+                            </section>
+                        </div>
+                    </Validations>
+                </div>
             </div>
         </div>
     </div>
@@ -339,6 +430,12 @@ else
 
         await _viewModel.LoadMembersAsync();
         _viewModel.IsLoading = false;
+    }
+
+    private async Task HandleImageChanged(InputFileChangeEventArgs e)
+    {
+        await _viewModel.OnImageSelectedAsync(e);
+        await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

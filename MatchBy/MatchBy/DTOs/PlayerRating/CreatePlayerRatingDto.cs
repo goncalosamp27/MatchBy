@@ -10,3 +10,5 @@ public sealed record CreatePlayerRatingDto
     public string? Comment { get; init; }
     
 }
+
+

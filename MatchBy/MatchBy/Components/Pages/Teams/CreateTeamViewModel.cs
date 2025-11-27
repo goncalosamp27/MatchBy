@@ -27,14 +27,12 @@ public sealed class CreateTeamViewModel(
         MaxMembers = 10
     };
 
-    private bool _isLoading = true;
-    private bool _isSubmitting;
     private bool _isLoadingMembers;
     private string _memberSearch = string.Empty;
     private int _currentMemberPage = 1;
-    private PaginationResponse<List<ApplicationUser>> _availableUsers = new();
     private IBrowserFile? _selectedImage;
     private string? _userId;
+    private const long MaxPreviewBytes = 5 * 1024 * 1024;
 
     public CreateTeamDto Model
     {
@@ -48,20 +46,20 @@ public sealed class CreateTeamViewModel(
 
     public bool IsLoading
     {
-        get => _isLoading;
+        get;
         set
         {
-            _isLoading = value;
+            field = value;
             OnPropertyChanged(nameof(IsLoading));
         }
-    }
+    } = true;
 
     public bool IsSubmitting
     {
-        get => _isSubmitting;
+        get;
         set
         {
-            _isSubmitting = value;
+            field = value;
             OnPropertyChanged(nameof(IsSubmitting));
         }
     }
@@ -98,13 +96,23 @@ public sealed class CreateTeamViewModel(
 
     public PaginationResponse<List<ApplicationUser>> AvailableUsers
     {
-        get => _availableUsers;
+        get;
         set
         {
-            _availableUsers = value;
+            field = value;
             OnPropertyChanged(nameof(AvailableUsers));
         }
-    }
+    } = new();
+    
+    public List<ApplicationUser> SelectedUsers
+    {
+        get;
+        set
+        {
+            field = value;
+            OnPropertyChanged(nameof(SelectedUsers));
+        }
+    } = new();
 
     public IBrowserFile? SelectedImage
     {
@@ -113,6 +121,16 @@ public sealed class CreateTeamViewModel(
         {
             _selectedImage = value;
             OnPropertyChanged(nameof(SelectedImage));
+        }
+    }
+
+    public string? SelectedImagePreviewUrl
+    {
+        get;
+        private set
+        {
+            field = value;
+            OnPropertyChanged(nameof(SelectedImagePreviewUrl));
         }
     }
 
@@ -179,9 +197,13 @@ public sealed class CreateTeamViewModel(
     public void ToggleMember(string userId)
     {
         if (!_model.MembersIds.Remove(userId))
-        {
+        { 
             _model.MembersIds.Add(userId);
         }
+        
+        SelectedUsers = AvailableUsers.Data
+            .Where(u => _model.MembersIds.Contains(u.Id))
+            .ToList();
 
         OnPropertyChanged(nameof(Model));
     }
@@ -189,17 +211,28 @@ public sealed class CreateTeamViewModel(
     public void RemoveMember(string userId)
     {
         _model.MembersIds.Remove(userId);
+        
+        SelectedUsers = AvailableUsers.Data
+            .Where(u => _model.MembersIds.Contains(u.Id))
+            .ToList();
+        
         OnPropertyChanged(nameof(Model));
     }
 
-    public void OnImageSelected(InputFileChangeEventArgs e)
+    public async Task OnImageSelectedAsync(InputFileChangeEventArgs e)
     {
         SelectedImage = e.File;
+        await using Stream readStream = e.File.OpenReadStream(MaxPreviewBytes);
+        await using var memory = new MemoryStream();
+        await readStream.CopyToAsync(memory);
+        string base64 = Convert.ToBase64String(memory.ToArray());
+        SelectedImagePreviewUrl = $"data:{e.File.ContentType};base64,{base64}";
     }
 
     public void RemoveImage()
     {
         SelectedImage = null;
+        SelectedImagePreviewUrl = null;
     }
 
     public async Task LoadMembersAsync()

@@ -1,13 +1,12 @@
 ﻿@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Diagnostics.CodeAnalysis
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Login> Logger
-@inject UserManager<ApplicationUser> UserManager
-@inject IUserStore<ApplicationUser> UserStore
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
@@ -16,7 +15,7 @@
 <section class="bg-[var(--background)] min-h-screen flex items-center">
     <div class="grow flex flex-col lg:flex-row items-center justify-center px-6 py-8 mx-auto lg:py-0 lg:px-0">
         <!-- Left Column: Login Form -->
-        <div class="w-full lg:w-1/2 flex items-center justify-center lg:px-8 xl:px-16">
+        <div class="w-full lg:w-1/2 flex items-center justify-center lg:justify-end lg:px-8 xl:px-16">
             <div class="w-full max-w-md">
                 <div class="bg-[var(--section)] rounded-lg shadow-lg p-8 ring-1 ring-[var(--main)]">
                     <h1 class="text-2xl font-bold leading-tight tracking-tight text-[var(--text)] mb-2">Welcome
@@ -31,7 +30,7 @@
 
                     @if (Input is not null)
                     {
-                        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login"
+                        <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login"
                                   class="space-y-4 md:space-y-6">
                             <DataAnnotationsValidator/>
 
@@ -47,7 +46,8 @@
                                         focus:ring-1 focus:ring-[var(--main)]
                                         focus:outline-none
                                         border-0"
-                                           autocomplete="username" aria-required="true" placeholder="name@example.com"/>
+                                           autocomplete="username webauthn" aria-required="true"
+                                           placeholder="name@example.com"/>
                                 <ValidationMessage For="() => Input.Email" class="text-danger"/>
                             </div>
 
@@ -82,10 +82,19 @@
                                     Forgot password?
                                 </a>
                             </div>
-
+                            
                             <div>
+                                @if (Input is not null)
+                                {
+                                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="w-full px-4 py-2.5 text-sm font-medium text-[var(--text)] 
+                                           bg-[var(--section-secondary)] border border-gray-300 rounded-lg 
+                                           hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[var(--main)] 
+                                           transition-colors text-center">
+                                        Sign in with a passkey
+                                    </PasskeySubmit>
+                                }
                                 <button type="submit"
-                                        class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                                        class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 mt-2 text-center">
                                     Sign in to your account
                                 </button>
                             </div>
@@ -105,7 +114,6 @@
                             <ExternalLoginPicker/>
                         </div>
                     </div>
-
                     <div class="mt-6">
                         <p class="text-sm font-light text-gray-500 dark:text-gray-400">
                             Didn't receive a confirmation email?
@@ -120,7 +128,7 @@
         </div>
 
         <!-- Right Column: Illustration -->
-        <div class="hidden lg:flex lg:w-1/2 items-center justify-center p-8">
+        <div class="hidden lg:flex lg:w-1/2 items-center justify-center lg:justify-start p-8">
             <div class="w-full max-w-lg">
                 <img src="/images/login/loginImage.png"
                      alt="Authentication illustration"
@@ -132,6 +140,7 @@
 
 @code {
     private string? _errorMessage;
+    private EditContext editContext = default!;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -142,6 +151,7 @@
     protected override async Task OnInitializedAsync()
     {
         Input ??= new InputModel();
+        editContext = new EditContext(Input);
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
             // Clear the existing external cookie to ensure a clean login process
@@ -155,18 +165,26 @@
         {
             return;
         }
-        
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var emailStore = GetEmailStore();
-        var user = await emailStore.FindByEmailAsync(UserManager.NormalizeName(Input.Email), CancellationToken.None);
-        if (user?.UserName == null)
+
+        SignInResult result;
+        if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
         {
-            _errorMessage = "Error: Invalid login attempt.";
-            return;
+            // When performing passkey sign-in, don't perform form validation.
+            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+        }
+        else
+        {
+            // If doing a password sign-in, validate the form.
+            if (!editContext.Validate())
+            {
+                return;
+            }
+
+            // This doesn't count login failures towards account lockout
+            // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+            result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         }
 
-        var result = await SignInManager.PasswordSignInAsync(user.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
@@ -176,7 +194,7 @@
         {
             RedirectManager.RedirectTo(
                 "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+                new Dictionary<string, object?> { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
         else if (result.IsLockedOut)
         {
@@ -189,6 +207,7 @@
         }
     }
 
+    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     private sealed class InputModel
     {
         [Required] [EmailAddress] public string Email { get; set; } = "";
@@ -198,16 +217,7 @@
         public string Password { get; set; } = "";
 
         [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
-    }
-
-    private IUserEmailStore<ApplicationUser> GetEmailStore()
-    {
-        if (!UserManager.SupportsUserEmail)
-        {
-            throw new NotSupportedException("The default UI requires a user store with email support.");
-        }
-
-        return (IUserEmailStore<ApplicationUser>)UserStore;
+        public PasskeyInputModel? Passkey { get; set; } = new();
     }
 
 }

@@ -52,7 +52,7 @@
                 </a>
             </div>
             <div class="flex items-center lg:order-2">
-                <DarkModeToggle></DarkModeToggle>
+                <DarkModeToggle ></DarkModeToggle>
                 <AuthorizeView>
                     <Authorized>
                         <NotificationsHeader UserId="@_userId"></NotificationsHeader>
@@ -243,13 +243,6 @@
     {
         _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
         StateHasChanged();
-    }
-
-
-    public ValueTask DisposeAsync()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-        return ValueTask.CompletedTask;
     }
 
 }

@@ -19,6 +19,21 @@ public class ConversationService(
     IValidator<UpdateConversationDto> updateConversationValidator,
     IImageRefreshService imageRefreshService) : IConversationService
 {
+    /// <summary>
+    /// Paginates conversations using cursor-based pagination with optional search filtering.
+    /// </summary>
+    /// <param name="baseQuery">The base queryable collection of conversations to paginate.</param>
+    /// <param name="pageSize">The number of conversations to retrieve per page.</param>
+    /// <param name="cursorReceived">Optional cursor for pagination. If provided, returns conversations before this cursor.</param>
+    /// <param name="query">Optional search query to filter conversations by title or participant names (case-insensitive).</param>
+    /// <param name="dbContext">The database context to save image refresh changes.</param>
+    /// <returns>
+    /// A cursor-paginated response with a list of conversation DTOs, ordered by last message date or creation date (newest first).
+    /// </returns>
+    /// <remarks>
+    /// Conversations are ordered by last message date (if available) or creation date, then by ID.
+    /// Images are refreshed in parallel for all conversations before returning.
+    /// </remarks>
     private async Task<CursorPaginationResponse<List<ConversationDto>>> PaginateAsync(
         IQueryable<Conversation> baseQuery,
         int pageSize,
@@ -50,7 +65,8 @@ public class ConversationService(
         }
 
         List<Conversation> items = await baseQuery
-            .OrderByDescending(p => p.LastMessageAtUtc)
+            .OrderByDescending(p => p.LastMessageAtUtc != null)
+            .ThenByDescending(p => p.LastMessageAtUtc ?? p.CreatedAtUtc) 
             .ThenByDescending(p => p.Id)
             .Take(pageSize + 1)
             .ToListAsync();
@@ -73,7 +89,7 @@ public class ConversationService(
         await dbContext.SaveChangesAsync();
 
         var conversationDtos = items.Select(conversation => conversation.ToDto()).ToList();
-
+        
         return new CursorPaginationResponse<List<ConversationDto>>
         {
             Data = conversationDtos,
@@ -82,6 +98,17 @@ public class ConversationService(
     }
 
 
+    /// <summary>
+    /// Retrieves a paginated list of conversations for a specific user using cursor-based pagination.
+    /// </summary>
+    /// <param name="creatorUserId">The unique identifier of the user to get conversations for.</param>
+    /// <param name="pageSize">The number of conversations to retrieve per page.</param>
+    /// <param name="cursor">Optional cursor for pagination. If provided, returns conversations before this cursor.</param>
+    /// <param name="query">Optional search query to filter conversations by title or participant names (case-insensitive).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a cursor-paginated response with a list of conversation DTOs that the user participates in.
+    /// </returns>
     public async Task<Result<CursorPaginationResponse<List<ConversationDto>>>> GetConversationsAsync(
         string creatorUserId,
         int pageSize,
@@ -103,6 +130,19 @@ public class ConversationService(
             cursor, query, dbContext));
     }
 
+    /// <summary>
+    /// Retrieves a specific conversation by its unique identifier.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to retrieve.</param>
+    /// <param name="creatorUserId">The unique identifier of the user requesting the conversation.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the conversation DTO if found and the user is a participant, or an error message if not found.
+    /// </returns>
+    /// <remarks>
+    /// For private conversations, the title is automatically set to the other participant's display name.
+    /// Images are refreshed before returning the conversation.
+    /// </remarks>
     public async Task<Result<ConversationDto>> GetConversationByIdAsync(string conversationId, string creatorUserId,
         CancellationToken ct = default)
     {
@@ -134,6 +174,20 @@ public class ConversationService(
     }
 
 
+    /// <summary>
+    /// Creates a new conversation with the specified participants.
+    /// </summary>
+    /// <param name="createConversationDto">DTO containing conversation creation details (type, title, participants, team).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the created conversation DTO if successful, or an error message if:
+    /// - Validation fails
+    /// - A private conversation already exists between the same participants
+    /// </returns>
+    /// <remarks>
+    /// For private conversations, this method prevents duplicate conversations between the same participants.
+    /// The creator is automatically added as a participant.
+    /// </remarks>
     public async Task<Result<ConversationDto>> CreateConversationAsync(CreateConversationDto createConversationDto,
         CancellationToken ct = default)
     {
@@ -173,6 +227,20 @@ public class ConversationService(
         return await GetConversationByIdAsync(conversation.Id, conversation.CreatorId, ct);
     }
 
+    /// <summary>
+    /// Updates an existing conversation's details. Only the conversation creator can update it.
+    /// </summary>
+    /// <param name="updateConversationDto">DTO containing the conversation update details (id, title, participants, image).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the updated conversation DTO if successful, or an error message if:
+    /// - Validation fails
+    /// - Conversation not found or user is not the creator
+    /// - Failed to update conversation image (if provided)
+    /// </returns>
+    /// <remarks>
+    /// This method updates the conversation title and participants. If an image is provided, it is uploaded to S3 storage.
+    /// </remarks>
     public async Task<Result<ConversationDto>> UpdateConversationAsync(UpdateConversationDto updateConversationDto,
         CancellationToken ct = default)
     {
@@ -218,6 +286,17 @@ public class ConversationService(
         return await GetConversationByIdAsync(convo.Id, updateConversationDto.CreatorUserId, ct);
     }
 
+    /// <summary>
+    /// Soft deletes a conversation. For private conversations, any participant can delete. For other types, only the creator can delete.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to delete.</param>
+    /// <param name="userId">The unique identifier of the user attempting to delete the conversation.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing true if the conversation was successfully soft deleted, or an error message if:
+    /// - Conversation not found
+    /// - User does not have permission to delete the conversation
+    /// </returns>
     public async Task<Result<bool>> DeleteConversationAsync(string conversationId, string userId,
         CancellationToken ct = default)
     {await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -250,6 +329,20 @@ public class ConversationService(
         return Result<bool>.Ok(affected > 0);
     }
 
+    /// <summary>
+    /// Removes a user from a conversation. If only one participant remains, the conversation is soft deleted.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to leave.</param>
+    /// <param name="userId">The unique identifier of the user leaving the conversation.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing an integer indicating the operation result:
+    /// - 1: Conversation was soft deleted (only one participant remained)
+    /// - 2: User was removed from the conversation
+    /// Or an error message if:
+    /// - Conversation not found
+    /// - User is not a participant of the conversation
+    /// </returns>
     public async Task<Result<int>> LeaveConversationAsync(string conversationId, string userId,
         CancellationToken ct = default)
     {
@@ -287,6 +380,23 @@ public class ConversationService(
         return Result<int>.Ok(mustSoftDelete ? 1 : 2);
     }
 
+    /// <summary>
+    /// Updates the conversation's image by uploading it to S3 storage and generating a presigned URL.
+    /// </summary>
+    /// <param name="conversation">The conversation entity to update the image for.</param>
+    /// <param name="userId">The unique identifier of the user performing the update.</param>
+    /// <param name="file">The browser file containing the image to upload.</param>
+    /// <param name="dbContext">The database context to save changes to.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the updated conversation DTO if successful, or an error message if:
+    /// - Failed to upload the image to S3
+    /// - Failed to generate presigned URL
+    /// </returns>
+    /// <remarks>
+    /// This method uploads the image, generates a presigned URL (valid for 30 minutes), deletes the previous image
+    /// if it exists, and updates the conversation's image metadata in the database.
+    /// </remarks>
     private async Task<Result<ConversationDto>> UpdateConversationImageAsync(
         Conversation conversation,
         string userId,

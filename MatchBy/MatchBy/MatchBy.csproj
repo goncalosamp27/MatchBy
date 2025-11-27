@@ -62,6 +62,7 @@
         <Link>.dockerignore</Link>
       </Content>
       <Content Remove="Areas\**" />
+      <Content Remove="wwwroot\images\login\loginImage.svg" />
     </ItemGroup>
 
     <ItemGroup>
@@ -69,5 +70,14 @@
       <_ContentIncludedByDefault Remove="Pages\Shared\_LoginPartial.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\Shared\_ValidationScriptsPartial.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\_ViewImports.cshtml" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Data\Migrations\20251121145218_notificationschange.cs" />
+      <Compile Remove="Data\Migrations\20251121145218_notificationschange.Designer.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Components\Pages\AboutUs\" />
     </ItemGroup>
 </Project>

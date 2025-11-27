@@ -1,24 +1,21 @@
 @page "/Matches"
-@using Blazorise
 @using MatchBy.Services.Matches
 @inject IMatchesService MatchesService
-@inject NavigationManager NavigationManager
 @rendermode @(new InteractiveServerRenderMode(false))
 @attribute [StreamRendering]
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using System.Security.Claims
 @using MatchBy.DTOs.Match
-@inject IJSRuntime JS
 
 <section class="bg-[var(--background)]">
     <div class="grid max-w-screen-xl h-auto mx-auto px-4 py-8 lg:py-16 justify-center">
-        @if (isAuthenticated) {
-            @if (yourCreatedMatches is null) { <Loading></Loading> }
+        @if (_isAuthenticated) {
+            @if (YourCreatedMatches is null) { <Loading></Loading> }
             else {   
-                if (yourCreatedMatches.Count > 0){
+                if (YourCreatedMatches.Count > 0){
                     <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Matches By you:</h1>
                     <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-                        @foreach (var match in yourCreatedMatches)
+                        @foreach (var match in YourCreatedMatches)
                         {
                             <MatchCard Match="@match" />
                         }
@@ -26,39 +23,18 @@
                 }
             }
 
-            @if (attendingMatches is null) { <Loading></Loading> }
+            @if (AttendingMatches is null) { <Loading></Loading> }
             else {   
-                if (attendingMatches.Count > 0){
+                if (AttendingMatches.Count > 0){
                     <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Your upcoming Matches:</h1>
                     <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-                        @foreach (var match in attendingMatches) {
+                        @foreach (var match in AttendingMatches) {
                             <MatchCard Match="@match" />
                         }
                     </div>
                 }
             }
 
-            <h1 class="text-3xl font-semibold text-[var(--text)] mb-8">Recommended Matches:</h1>
-            @if (_showGeoHint)
-            {
-                <p class="text-md text-[var(--text)] mb-4 flex items-center gap-2 -mt-6">
-                    <svg class="w-6 h-6 text-[var(--main)]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                    <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clip-rule="evenodd"/>
-                    </svg>
-
-                    <span class ="text-[var(--main)]">Tip: </span>
-                    Activate browser geolocation for better recommendations!
-                </p>
-            }
-            @if (recommendedMatches is null) { <Loading></Loading> }
-            else if (recommendedMatches.Count > 0) {
-                <div class="grid gap-6 mx-auto justify-items-center grid-cols-1 md:grid-cols-3 mb-8">
-                    @foreach (var match in recommendedMatches)
-                    {
-                        <MatchCard Match="@match" />
-                    }
-                </div>
-            }
             <button class="w-1/3 mx-auto block flex items-center justify-center 
                 px-5 py-3 text-base font-medium text-center 
                 rounded-lg bg-[var(--main)] hover:bg-[var(--main-hover)]
@@ -89,32 +65,21 @@
 </section>
 
 @code {
-    private bool isAuthenticated;
-    private List<MatchDto>? yourCreatedMatches { get; set; }
-    private List<MatchDto>? attendingMatches { get; set; }
+    private bool _isAuthenticated;
+    private List<MatchDto>? YourCreatedMatches { get; set; }
+    private List<MatchDto>? AttendingMatches { get; set; }
     private List<MatchDto>? matches { get; set; }
-    private List<MatchDto>? recommendedMatches { get; set; }
-
-    private Location? _currentLocation;
-    private bool _showGeoHint = false;
-
-    public class BrowserLocation
-    {
-        public double latitude { get; set; }
-        public double longitude { get; set; }
-    }
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
     private string? _userId;
-    private ICollection<Sports> preferredSports = new List<Sports>();
 
     protected override async Task OnInitializedAsync() {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
 
-        if (!isAuthenticated) {
-            yourCreatedMatches = null;
+        if (!_isAuthenticated) {
+            YourCreatedMatches = null;
             
             var publicMatches = await MatchesService.GetMatches(MatchStatus.Pendent, null, null, 1, 5, CancellationToken.None);
             if (!publicMatches.Success) {
@@ -126,11 +91,10 @@
         }
 
         _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        preferredSports = user.FindAll("PreferredSports").Select(c => Enum.Parse<Sports>(c.Value)).ToList();
 
         if (string.IsNullOrEmpty(_userId)) {    
-            yourCreatedMatches = [];
-            attendingMatches = [];
+            YourCreatedMatches = [];
+            AttendingMatches = [];
             return;
         }
         
@@ -139,7 +103,7 @@
             Console.WriteLine("Error fetching user matches: " + result.ErrorMessages);
             return;
         }
-        yourCreatedMatches = result.Data!.Data;
+        YourCreatedMatches = result.Data!.Data;
         
         var resultMatches = await MatchesService.GetMatchesExceptUser(_userId, null, 1, 5, CancellationToken.None);
         if (!resultMatches.Success) {
@@ -153,33 +117,6 @@
             Console.WriteLine("Error fetching attending matches: " + attendingResult.ErrorMessages);
             return;
         }
-        attendingMatches = attendingResult.Data!.Data;
-        
-
-        var recommendedResult = await MatchesService.GetRecommendedMatches(_userId, preferredSports, _currentLocation, null, 1, 5, CancellationToken.None);
-        if (!attendingResult.Success) {
-            Console.WriteLine("Error fetching attending matches: " + attendingResult.ErrorMessages);
-            return;
-        }
-        recommendedMatches = recommendedResult.Data!.Data;
-    }
-    
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
-            try {
-                var pos = await JS.InvokeAsync<BrowserLocation>("getCurrentPosition");
-
-                _currentLocation = new Location(
-                    pos.latitude,
-                    pos.longitude,
-                    "",
-                    "" 
-                );
-            }
-            catch (JSException) {
-                _showGeoHint = true;
-            }
-            StateHasChanged();
-        }
+        AttendingMatches = attendingResult.Data!.Data;
     }
 }

@@ -18,3 +18,6 @@ public class UpdateFriendDtoValidator : AbstractValidator<UpdateFriendDto>
 
 
 
+
+
+

@@ -53,19 +53,19 @@
 
                         @if (_isEmailConfirmed)
                         {
-                            <span class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-lg
-                                     bg-[var(--success)] text-[var(--text-contrast)]">
-                            Confirmed ✓
-                        </span>
+                            <span class="flex items-center justify-center p-3.5 text-xs font-medium rounded-lg
+                 bg-[var(--success)] text-[var(--text-contrast)]">
+                                Confirmed
+                            </span>
                         }
                         else
                         {
                             <button type="submit"
                                     form="send-verification-form"
-                                    class="inline-flex justify-center px-3 py-2 rounded-lg text-sm font-medium
-                                       text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none
-                                       focus:ring-4 focus:ring-blue-300 dark:text-blue-200 dark:bg-blue-900
-                                       dark:hover:bg-blue-800 dark:focus:ring-blue-700">
+                                    class="inline-flex justify-center px-3 py-2 rounded-lg text-sm font-medium h-full
+                                   text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none
+                                   focus:ring-4 focus:ring-blue-300 dark:text-blue-200 dark:bg-blue-900
+                                   dark:hover:bg-blue-800 dark:focus:ring-blue-700">
                                 Send verification
                             </button>
                         }

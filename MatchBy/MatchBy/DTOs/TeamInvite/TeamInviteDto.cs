@@ -23,3 +23,6 @@ public sealed record TeamInviteDto
     public DateTime? DeclinedAtUtc { get; init; }
     public DateTime? DeletedAtUtc { get; init; }
 }
+
+
+

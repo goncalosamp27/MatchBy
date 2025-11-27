@@ -151,6 +151,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.User.RequireUniqueEmail = true;
         options.User.AllowedUserNameCharacters =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -225,7 +226,7 @@ using (IServiceScope scope = app.Services.CreateScope())
     recurringJobManager.AddOrUpdate(
         "send-match-reminders",
         Job.FromExpression<IMatchReminderJob>(job => job.SendRemindersAsync()),
-        "*/30 * * * *" // A cada 30 minutos
+        "*/30 * * * *" // Every 30 minutes
     );
 }
 

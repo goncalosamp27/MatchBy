@@ -116,7 +116,7 @@ public class TeamServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         _teamInvitesServiceMock
-            .Setup(s => s.GetInvitesForTeam(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetInvites(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<PaginationResponse<List<TeamInviteDto>>>.Ok(new PaginationResponse<List<TeamInviteDto>>
             {
                 Data = new List<TeamInviteDto>(),
@@ -175,7 +175,7 @@ public class TeamServiceTests : IDisposable
 
         // Setup GetInvitesForTeam for GetTeamByIdAsync call
         _teamInvitesServiceMock
-            .Setup(s => s.GetInvitesForTeam(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetInvites(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<PaginationResponse<List<TeamInviteDto>>>.Ok(new PaginationResponse<List<TeamInviteDto>>
             {
                 Data = new List<TeamInviteDto>(),
@@ -274,7 +274,7 @@ public class TeamServiceTests : IDisposable
             .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
         _teamInvitesServiceMock
-            .Setup(s => s.GetInvitesForTeam(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetInvites(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<PaginationResponse<List<TeamInviteDto>>>.Ok(new PaginationResponse<List<TeamInviteDto>>
             {
                 Data = new List<TeamInviteDto>(),

@@ -24,7 +24,6 @@ public static class TeamInviteMappings
             CreatedAtUtc = teamInvite.CreatedAtUtc,
             UpdatedAtUtc = teamInvite.UpdatedAtUtc,
             AcceptedAtUtc = teamInvite.AcceptedAtUtc,
-            DeclinedAtUtc = teamInvite.DeclinedAtUtc,
             DeletedAtUtc = teamInvite.DeletedAtUtc
         };
     }
@@ -45,34 +44,7 @@ public static class TeamInviteMappings
             CreatedAtUtc = DateTime.UtcNow
         };
     }
-
-    public static void UpdateEntity(this Models.TeamInvite teamInvite, UpdateTeamInviteDto updateDto)
-    {
-        if (!string.IsNullOrWhiteSpace(updateDto.Content))
-        {
-            teamInvite.Content = updateDto.Content;
-        }
-
-        if (updateDto.Status.HasValue)
-        {
-            teamInvite.Status = updateDto.Status.Value;
-            
-            // Set appropriate timestamp based on status
-            if (updateDto.Status.Value == InviteStatus.Accepted)
-            {
-                teamInvite.AcceptedAtUtc = DateTime.UtcNow;
-            }
-            else if (updateDto.Status.Value == InviteStatus.Declined)
-            {
-                teamInvite.DeclinedAtUtc = DateTime.UtcNow;
-            }
-        }
-
-        if (updateDto.ExpiresAtUtc.HasValue)
-        {
-            teamInvite.ExpiresAtUtc = updateDto.ExpiresAtUtc.Value;
-        }
-
-        teamInvite.UpdatedAtUtc = DateTime.UtcNow;
-    }
 }
+
+
+
