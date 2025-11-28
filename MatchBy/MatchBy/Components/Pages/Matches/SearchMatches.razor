@@ -1,0 +1,653 @@
+@page "/matches/search"
+@using Blazorise
+@using MatchBy.Services.Matches
+@inject IMatchesService MatchesService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider Auth
+@using MatchBy.DTOs.Match
+@using Microsoft.AspNetCore.Identity
+@using MatchBy.Enums
+@inject UserManager<ApplicationUser> UserManager
+@rendermode InteractiveServer
+
+@inject IJSRuntime JS
+<section class="bg-[var(--background)] px-4 sm:px-6">
+    <div class="grid max-w-screen-xl h-auto mx-auto py-4 px-6 bg-[var(--section)] text-[var(--text)] rounded-lg mt-8 border-2 border-[var(--main)] hover:shadow-[0_0px_10px_-4px_var(--main)] transition duration-200 ease-out">
+        <div class="flex justify-between items-center mb-4 w-full">
+            <span class="font-medium text-lg">
+                Filter Matches by Sport:
+            </span>
+
+            <button @onclick="ToggleFilters" class="group px-4 py-2 text-sm bg-[var(--main)] text-[var(--text-contrast)] rounded-lg hover:bg-[var(--main-hover)] hover:text-[var(--text)] flex items-center gap-2">
+                <span>
+                    @(FiltersOpen ? "Hide filters" : "Show more filters")
+                </span>
+
+                @if (FiltersOpen)
+                {
+                    <svg class="w-4 h-4 text-[var(--text-contrast)] group-hover:text-[var(--text)]"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24" height="24" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="m5 15 7-7 7 7" />
+                    </svg>
+                }
+                else
+                {
+                    <svg class="w-4 h-4 text-[var(--text-contrast)] group-hover:text-[var(--text)]"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24" height="24" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="m19 9-7 7-7-7" />
+                    </svg>
+                }
+            </button>
+        </div>
+
+        <div class="flex flex-wrap gap-4 w-full">
+            @foreach (var sport in Enum.GetValues<Sports>())
+            {
+                var isSelected = SelectedSports.Contains(sport);
+
+                <button type="button"
+                        class="@(
+                            isSelected
+                            ? "px-4 py-2 bg-[var(--main)] text-[var(--text-contrast)] rounded-xl font-bold hover:bg-[var(--main-hover)] hover:text-[var(--text)]"
+                            : "px-4 py-2 text-[var(--text)] rounded-xl border-1 border-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)]"
+                        )"
+                        @onclick="@(() => ToggleSport(sport))">
+                    @sport
+                </button>
+            }
+        </div>
+
+        @if (FiltersOpen) {
+        <div class=" mt-4 bg-[var(--main)] h-[2px] group-hover:shadow-[0_0px_10px_-4px_var(--main)] transition duration-200 ease-out"></div>
+    
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full">
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium mb-2 text-[var(--text)]">Country:</label>
+
+                <Select TValue="string"
+                        SelectedValue="@SelectedCountry"
+                        SelectedValueChanged="OnCountryChanged"
+                        Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                    <SelectItem Value="@string.Empty">Select match country</SelectItem>
+
+                    @foreach (var c in Countries)
+                    {
+                        <SelectItem Value="@c">@c</SelectItem>
+                    }
+                </Select>
+            </div>
+
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium mb-2 text-[var(--text)]">City:</label>
+
+                <Select TValue="string"
+                        SelectedValue="@SelectedCity"
+                        SelectedValueChanged="OnCityChanged"
+                        Disabled="@(!Cities.Any())"
+                        Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                    <SelectItem Value="@string.Empty">
+                        @(Cities.Any() ? "Select match city" : "Select country first")
+                    </SelectItem>
+
+                    @foreach (var city in Cities)
+                    {
+                        <SelectItem Value="@city">@city</SelectItem>
+                    }
+                </Select>
+            </div>
+
+            
+            <div class="flex flex-col w-full lg:w-1/3 -mt-4">
+                @if (IsGeolocationEnabled) {
+                    <label class="font-medium text-[var(--text)]">@(DistanceFilterUsed ? $"Max Distance: {MaxDistanceKm} km" : "Max Distance: ∞")</label>
+                    <Slider Min="5" Max="55"
+                            Step="5"
+                            TValue="int"
+                            Value="@MaxDistanceKm"
+                            ValueChanged="OnDistanceChanged"
+                            Disabled="@(!IsGeolocationEnabled)"
+                            Class="w-full !mt-5 dark:!bg-[var(--text)] !bg-[var(--section-secondary)]" />
+                } 
+                else {
+                    <label class="font-medium text-[var(--error)]">Geolocation Disabled - Distance Filter Unavailable</label> 
+                    <Slider Min="5" Max="55"
+                            Step="5"
+                            TValue="int"
+                            Value="55"
+                            ValueChanged="OnDistanceChanged"
+                            Disabled="@(!IsGeolocationEnabled)"
+                            Class="w-full !mt-5" />
+                }                    
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full mt-4 mb-2">
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium mb-2 text-[var(--text)]">Status:</label>
+
+                <Select TValue="int"
+                        SelectedValue="@SelectedStatus"
+                        SelectedValueChanged="OnStatusChanged"
+                        Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+
+                    <SelectItem Value="1">Pendent</SelectItem>
+                    <SelectItem Value="3">Confirmed</SelectItem>
+                    <SelectItem Value="2">Completed</SelectItem>
+                    <SelectItem Value="0">Cancelled</SelectItem>
+                    <SelectItem Value="4">All</SelectItem>
+                </Select>
+            </div>
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium mb-2 text-[var(--text)]">Minimum average participant rating:</label>
+                <Select TValue="int"
+                        SelectedValue="@SelectedRating"
+                        SelectedValueChanged="OnRatingChanged"
+                        Class="!border !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                        <SelectItem Value="1">1 ★</SelectItem>
+                        <SelectItem Value="2">2 ★</SelectItem>
+                        <SelectItem Value="3">3 ★</SelectItem>
+                        <SelectItem Value="4">4 ★</SelectItem>
+                        <SelectItem Value="5">5 ★</SelectItem>
+                        <SelectItem Value="0">All Ratings</SelectItem>
+                </Select>
+            </div>
+            <div class="flex flex-col w-full lg:w-1/3 -mt-3">
+                <label class="font-medium mb-2 text-[var(--text)]">
+                    Match Hours:
+                    @StartHour:00 -
+                    @(EndHour == 24 ? "23:59" : $"{EndHour}:00")
+                </label>
+
+                <div class="flex gap-4 items-center mt-2">
+                    <div class="flex-1">
+                        <Slider Min="0" Max="24"
+                                Step="1"
+                                TValue="int"
+                                Value="@StartHour"
+                                ValueChanged="OnStartHourChanged"
+                                Class="dark:!bg-[var(--text)] !bg-[var(--section-secondary)]" />
+                    </div>
+
+                    <div class="flex-1">
+                        <Slider Min="0" Max="24"
+                                Step="1"
+                                TValue="int"
+                                Value="@EndHour"
+                                ValueChanged="OnEndHourChanged"
+                                Class="dark:!bg-[var(--text)] !bg-[var(--section-secondary)]" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 mt-6 w-full mt-4 mb-2">
+            <div class="flex flex-col w-full lg:w-1/3">
+                <div class="flex gap-4 items-center gap-8">
+                    <div class="flex-1">
+                        <label class="font-medium mb-2 text-[var(--text)]">Sort by:</label>
+                        <Select TValue="int"
+                                SelectedValue="@SelectedSorting"
+                                SelectedValueChanged="OnSortingChanged"
+                                Class="!border !mt-2 !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                                <SelectItem Value="1">Date</SelectItem>
+                                @if (IsGeolocationEnabled) {
+                                    <SelectItem Value="2">Distance</SelectItem>
+                                }
+                                <SelectItem Value="3">Rating</SelectItem>
+                        </Select>
+                    </div>
+
+                    <div class="flex-1">
+                        <label class="font-medium mb-2 text-[var(--text)]">Sorting order:</label>
+                        <Select TValue="int"
+                                SelectedValue="@SelectedSortingOrder"
+                                SelectedValueChanged="OnSortingOrderChanged"
+                                Class="!border !mt-2  !border-[var(--main)] !bg-[var(--section-secondary)] !text-[var(--text)] !rounded !p-2">
+                                <SelectItem Value="1">Ascending</SelectItem>
+                                <SelectItem Value="2">Descending</SelectItem>
+                        </Select>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col w-full lg:w-1/3">
+                <label class="font-medium  text-[var(--text)]">Date range:</label>
+
+                <DatePicker TValue="DateTime?"
+                            @bind-Dates="SelectedDates"
+                            SelectionMode="DateInputSelectionMode.Range"
+                            StaticPicker="false"
+                            Class="!border !mt-2 !border-[var(--main)] 
+                                !bg-[var(--section-secondary)] !text-[var(--text)] 
+                                !rounded !p-2 w-full" />
+            </div>
+
+            <div class="flex flex-col w-full lg:w-1/3 mt-7">
+                <button @onclick="ApplyFilters" class="bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)] hover:text-[var(--text)] font-medium rounded py-2 px-8">
+                        Apply filters
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+
+    <div class="max-w-screen-xl mt-8 mb-8 mx-auto">
+        <h1 class="text-3xl font-semibold text-[var(--text)] mb-8 text-left">
+            Showing available matches (@FilteredMatches.Count):
+        </h1>
+
+        <div class="flex flex-wrap justify-center gap-8 mx-auto">
+            @foreach (var match in PagedMatches)
+            {
+                <div class="max-w-[405px]">
+                    <MatchCard Match="@match" />
+                </div>
+            }
+        </div>
+
+       @if (TotalPages > 1)
+        {
+            <div class="flex justify-center gap-3 mt-10 items-center">
+
+                <button @onclick="(() => ChangePage(1))"
+                        disabled="@(CurrentPage == 1)"
+                        class=
+                            "px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    « First
+                </button>
+
+                <button @onclick="@(() => ChangePage(CurrentPage - 1))"
+                        disabled="@(CurrentPage == 1)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    ‹ Prev
+                </button>
+
+                <span class="text-sm text-[var(--text)]">
+                    Page @CurrentPage of @TotalPages
+                </span>
+
+                <button @onclick="@(() => ChangePage(CurrentPage + 1))"
+                        disabled="@(CurrentPage == TotalPages)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    Next ›
+                </button>
+
+                <button @onclick="@(() => ChangePage(TotalPages))"
+                        disabled="@(CurrentPage == TotalPages)"
+                        class="px-3 py-2 rounded-full bg-[var(--section-secondary)] 
+                            text-[var(--text)] border border-[var(--main)]
+                            disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                    Last »
+                </button>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private HashSet<Sports> SelectedSports { get; set; } = new();
+    private int SelectedStatus { get; set; } = 1;
+    private int SelectedRating { get; set; } = 0;
+    private int StartHour { get; set; } = 0;
+    private int EndHour { get; set; } = 24;
+    private string? SelectedCountry;
+    private string? SelectedCity;
+    private List<MatchDto> AllMatches = new();
+    private List<MatchDto> FilteredMatches = new();
+    private List<string> Countries = new();
+    private List<string> Cities = new();
+    private int MaxDistanceKm { get; set; } = 55;
+    private bool IsGeolocationEnabled { get; set; } = false;
+    private double? UserLatitude { get; set; }
+    private double? UserLongitude { get; set; }
+    private void ToggleSport(Sports sport)
+    {
+        if (SelectedSports.Contains(sport))
+            SelectedSports.Remove(sport);
+        else
+            SelectedSports.Add(sport);
+
+        ApplyFilters();
+    }
+    private bool DistanceFilterUsed = false;
+    private int CurrentPage { get; set; } = 1;
+    private int PageSize { get; set; } = 6; 
+    private int TotalPages => (int)Math.Ceiling(FilteredMatches.Count / (double)PageSize);
+    private IEnumerable<MatchDto> PagedMatches =>FilteredMatches.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+    private ApplicationUser? _user;
+    private int SelectedSorting { get; set; } = 1;
+    private int SelectedSortingOrder { get; set; } = 1;
+    private IReadOnlyList<DateTime?> SelectedDates { get; set; } = Array.Empty<DateTime?>();
+    private bool FiltersOpen { get; set; } = false;
+
+    protected override async Task OnInitializedAsync() 
+    {
+        await TryGetGeolocationAsync();
+
+        var authState = await Auth.GetAuthenticationStateAsync();
+        var principal = authState.User;
+        string? userIdz = null;
+        ApplicationUser? appUser = null;
+
+        if (principal?.Identity?.IsAuthenticated == true)
+        {
+            userIdz = UserManager.GetUserId(principal);
+
+            if (!string.IsNullOrEmpty(userIdz))
+            {
+                appUser = await UserManager.FindByIdAsync(userIdz);
+
+                if (appUser is not null)
+                {
+                    _user = appUser;
+                    SelectedSports = _user.PreferredSports?.ToHashSet() ?? new HashSet<Sports>();
+                }
+            }
+        }
+
+        var result = await MatchesService.GetMatches(
+            matchStatus: null,
+            q: null,
+            userId: null,
+            page: 1,
+            pageSize: 5000,
+            CancellationToken.None
+        );
+
+        if (result.Success) {
+            AllMatches = result.Data!.Data.ToList();
+            FilteredMatches = AllMatches.Where(m => (int)m.Status == SelectedStatus).ToList();
+
+            if (appUser is not null && appUser.PreferredSports is not null && appUser.PreferredSports.Any())
+            {
+                FilteredMatches = FilteredMatches
+                    .Where(m => appUser.PreferredSports.Contains(m.Sport))
+                    .ToList();
+            }
+
+            Countries = AllMatches
+                .Select(m => m.Location.Country)
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+        }
+    }
+
+    private Task OnCountryChanged(string? value)
+    {
+        SelectedCountry = value;
+
+        if (string.IsNullOrEmpty(SelectedCountry))
+        {
+            SelectedCity = null;
+            Cities = new();
+            return Task.CompletedTask;
+        }
+
+        Cities = AllMatches
+            .Where(m => m.Location.Country == SelectedCountry)
+            .Select(m => m.Location.City)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnCityChanged(string? value)
+    {
+        SelectedCity = value;
+        return Task.CompletedTask;
+    }
+
+    private Task OnStatusChanged(int value)
+    {
+        SelectedStatus = value;
+        return Task.CompletedTask;
+    }
+
+    private Task OnDistanceChanged(int value)
+    {   
+        DistanceFilterUsed = value < 55;
+        MaxDistanceKm = value;
+        return Task.CompletedTask;
+    }
+
+    private Task OnRatingChanged(int value)
+    {
+        SelectedRating = value;
+        return Task.CompletedTask;
+    }
+
+    private Task OnStartHourChanged(int value)
+    {
+        StartHour = Math.Clamp(value, 0, 23);
+
+        if (StartHour >= EndHour)
+            EndHour = StartHour + 1;
+
+        EndHour = Math.Clamp(EndHour, 1, 24);
+
+        return Task.CompletedTask;
+    }
+
+
+    private Task OnEndHourChanged(int value)
+    {
+        EndHour = Math.Clamp(value, 1, 24);
+
+        if (EndHour <= StartHour)
+            StartHour = EndHour - 1;
+
+        StartHour = Math.Clamp(StartHour, 0, 23);
+
+        return Task.CompletedTask;
+    }
+
+
+    private async Task TryGetGeolocationAsync()
+    {
+        try
+        {
+            var pos = await JS.InvokeAsync<PositionResult>("getCurrentPosition");
+
+            UserLatitude = pos.Latitude;
+            UserLongitude = pos.Longitude;
+
+            IsGeolocationEnabled = true;
+        }
+        catch
+        {
+            IsGeolocationEnabled = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        FilteredMatches = AllMatches
+            .Where(m => !SelectedSports.Any() || SelectedSports.Contains(m.Sport))
+            .Where(m => string.IsNullOrEmpty(SelectedCountry) || m.Location.Country == SelectedCountry)
+            .Where(m => string.IsNullOrEmpty(SelectedCity) || m.Location.City == SelectedCity)
+            .Where(m => !IsGeolocationEnabled || !DistanceFilterUsed || IsWithinDistance(m))
+            .ToList();
+
+        if (SelectedStatus != 4) 
+        {
+            FilteredMatches = FilteredMatches
+                .Where(m => (int)m.Status == SelectedStatus)
+                .ToList();
+        }
+
+        if (SelectedRating != 0)
+        {
+            FilteredMatches = FilteredMatches
+                .Where(m =>
+                {
+                    var ratings = m.Participants
+                        .Where(p => p.PlayerRating.HasValue && p.PlayerRating.Value > 0)
+                        .Select(p => p.PlayerRating!.Value)
+                        .ToList();
+
+                    Console.WriteLine($"Match {m.Id} → ratings: {string.Join(",", ratings)}");
+
+                    if (!ratings.Any())
+                        return false;
+
+                    var avg = ratings.Average();
+                    var roundedAvg = (int)Math.Round(avg, MidpointRounding.AwayFromZero);
+
+                    Console.WriteLine($"Match {m.Id} → avg={avg}, rounded={roundedAvg}, filter={SelectedRating}");
+
+                    return roundedAvg >= SelectedRating;
+                })
+                .ToList();
+        }
+
+        FilteredMatches = FilteredMatches
+            .Where(m =>
+                m.MatchDateTimeUtc.Hour >= StartHour &&
+                m.MatchDateTimeUtc.Hour <= EndHour)
+            .ToList();
+
+        FilteredMatches = ApplySorting(FilteredMatches);
+
+        if (SelectedDates?.Count >= 1 && SelectedDates[0].HasValue)
+        {
+            var start = SelectedDates[0]!.Value.Date;
+
+            FilteredMatches = FilteredMatches
+                .Where(m => m.MatchDateTimeUtc.Date >= start)
+                .ToList();
+        }
+
+        if (SelectedDates?.Count >= 2 && SelectedDates[1].HasValue)
+        {
+            var end = SelectedDates[1]!.Value.Date;
+
+            FilteredMatches = FilteredMatches
+                .Where(m => m.MatchDateTimeUtc.Date <= end)
+                .ToList();
+        }
+        
+        CurrentPage = 1;
+    }
+
+    private bool IsWithinDistance(MatchDto match)
+    {
+        var distance = GetMatchDistance(match);
+        return distance <= MaxDistanceKm;
+    }
+
+    private double GetMatchDistance(MatchDto match)
+    {
+        if (!UserLatitude.HasValue || !UserLongitude.HasValue) 
+            return double.MaxValue;
+
+        return HaversineDistance(
+            UserLatitude.Value,
+            UserLongitude.Value,
+            match.Location.Latitude,
+            match.Location.Longitude
+        );
+    }
+
+    private static double GetMatchRating(MatchDto match)
+    {
+        var ratings = match.Participants
+            .Where(p => p.PlayerRating.HasValue && p.PlayerRating.Value > 0)
+            .Select(p => p.PlayerRating!.Value)
+            .ToList();
+
+        if (!ratings.Any())
+            return 0;
+
+        return ratings.Average();
+    }
+
+    private List<MatchDto> ApplySorting(List<MatchDto> matches)
+    {
+        IEnumerable<MatchDto> sorted = matches;
+
+        sorted = SelectedSorting switch
+        {
+            2 => sorted.OrderBy(m => GetMatchDistance(m)),   // Distance
+            3 => sorted.OrderBy(m => GetMatchRating(m)),     // Rating
+            _ => sorted.OrderBy(m => m.MatchDateTimeUtc)     // Date (default = 2)
+        };
+
+        if (SelectedSortingOrder == 2) // 1 = asc, 2 = desc
+            sorted = sorted.Reverse();
+
+        return sorted.ToList();
+    }
+
+    private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371;
+
+        double dLat = DegreesToRadians(lat2 - lat1);
+        double dLon = DegreesToRadians(lon2 - lon1);
+
+        double a =
+            Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+            Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+            Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return R * c;
+    }
+
+    private static double DegreesToRadians(double deg) => deg * Math.PI / 180;
+
+
+    public class PositionResult
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+        CurrentPage = page;
+    }
+
+    private Task OnSortingChanged(int value)
+    {
+        SelectedSorting = value;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSortingOrderChanged(int value)
+    {
+        SelectedSortingOrder = value;
+        return Task.CompletedTask;
+    }
+    private void ToggleFilters()
+    {
+        FiltersOpen = !FiltersOpen;
+    }
+}

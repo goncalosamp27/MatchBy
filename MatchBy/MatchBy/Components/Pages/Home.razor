@@ -53,6 +53,12 @@
                     <CarouselSlide Name="6" Height="Height.Auto">
                         <Image Source="images/carousel/paddle.png" Text="Paddle" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
+                    <CarouselSlide Name="7" Height="Height.Auto">
+                        <Image Source="images/carousel/rugby.png" Text="Rugby" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
+                    <CarouselSlide Name="8" Height="Height.Auto">
+                        <Image Source="images/carousel/basketball.png" Text="Basketball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                    </CarouselSlide>
                 </Carousel>
             </div>
         </div>
@@ -111,5 +117,5 @@
         selectedSlide = randomSlideIndex.ToString();
     }
 
-    private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
+    private void GoToCreateMatch() => NavigationManager.NavigateTo("/matches/create");
 }

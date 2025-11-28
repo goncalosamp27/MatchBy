@@ -11,8 +11,6 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Profile> Logger
 
-@attribute [Authorize]
-
 <PageTitle>Profile</PageTitle>
 
 <section class="bg-[var(--background)] min-h-screen">
@@ -160,7 +158,7 @@
                 {
                     <div>
                         <h3 class="font-semibold mb-4 text-[var(--text)]">Create Matches</h3>
-                        <NavLink href="/CreateMatch"
+                        <NavLink href="/matches/create"
                                  class="border-2 border-dashed border-[var(--main)] rounded-xl flex flex-col items-center justify-center p-10 bg-[var(--section)]
                                     hover:bg-[var(--section-secondary)] hover:shadow-[0_0px_10px_-4px_var(--main)] cursor-pointer transition">
                             <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

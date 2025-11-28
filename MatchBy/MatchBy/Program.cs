@@ -204,8 +204,8 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
-    await app.RecreateDatabase();
-    //await app.ApplyMigrationsAsync();
+    // await app.RecreateDatabase();
+    await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
 else
