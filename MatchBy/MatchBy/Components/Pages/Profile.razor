@@ -6,10 +6,14 @@
 @using MatchBy.DTOs.Match
 @using MatchBy.Services.Matches
 @using MatchBy.Services.Users
+@using MatchBy.Services.Friends
 @inject IUsersService UsersService
 @inject IMatchesService MatchesService
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Profile> Logger
+@using MatchBy.DTOs.Friend
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IFriendService FriendService
 
 <PageTitle>Profile</PageTitle>
 
@@ -28,9 +32,8 @@
         else
         {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Left Column -->
                 <div class="bg-[var(--section)] shadow rounded-2xl p-6 border-2 border-[var(--main)] transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-start gap-4 w-full">
                         <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                             @if (_profile.ProfileImage is not null)
                             {
@@ -43,37 +46,38 @@
                                 </svg>
                             }
                         </div>
+
                         <div>
                             <h2 class="font-bold text-lg text-[var(--text)]">@_profile.DisplayName</h2>
                             <p class="text-sm text-gray-500">@_profile.UserName</p>
                         </div>
+
+                    @if (!_isOwner && _isLoggedIn) {                        
+                        <button class="ml-auto self-start py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:text-[var(--text)] hover:bg-[var(--main-hover)]">
+                            <div class="flex items-center gap-2">
+                                Add friend
+                                <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                    <path fill-rule="evenodd" d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4H7Zm8-1a1 1 0 0 1 1-1h1v-1a1 1 0 1 1 2 0v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 0 1-1-1Z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                        </button>
+                    }
                     </div>
+
 
                     <div class="mt-4 flex flex-wrap gap-4 items-center">
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">@_profile.Status</span>
 
-                        @if (_profile.BaseLocation is not null)
-                        {
-                            <span class="text-gray-600 flex items-center text-sm">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 7 7 13 7 13s7-6 7-13c0-3.87-3.13-7-7-7z" />
-                                </svg>
-                                @_profile.BaseLocation.City, @_profile.BaseLocation.Country
-                            </span>
-                        }
-
                         <div class="flex items-center">
                             <span class="text-sm font-medium mr-1 text-[var(--text)]">@_profile.Rating.ToString("0.0")</span>
                             <div class="flex text-yellow-400">
-                                @for (int i = 1; i <= 5; i++)
-                                {
+                                @for (int i = 1; i <= 5; i++) {
                                     <span class="@(i <= Math.Round(_profile.Rating) ? "" : "text-gray-500 dark:text-gray-600")">★</span>
                                 }
                             </div>
                         </div>
                     </div>
 
-                    <!-- Public Bio -->
                     @if (!string.IsNullOrWhiteSpace(_profile.Bio))
                     {
                         <div class="mt-6">
@@ -88,7 +92,6 @@
                         </div>
                     }
 
-                    <!-- Email: only for the owner -->
                     @if (_isOwner && !string.IsNullOrWhiteSpace(_ownEmail))
                     {
                         <div class="mt-4">
@@ -104,7 +107,6 @@
                     }
                 </div>
 
-                <!-- Right Column -->
                 <div class="bg-[var(--section)] shadow-sm rounded-2xl p-6 border-2 border-[var(--main)]
                             transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
                     <h3 class="font-semibold mb-4 text-[var(--text)]">Preferred Sports</h3>
@@ -114,7 +116,7 @@
                             @foreach (var sport in _profile.PreferredSports)
                             {
                                 <div class="flex items-center justify-center border-2 border-[var(--main)]
-                                            rounded-xl p-3 text-[var(--text)] bg-[var(--section-secondary)]
+                                            rounded-xl p-2 text-[var(--text)] bg-[var(--section-secondary)]
                                             transition duration-200 ease-out
                                             hover:shadow-[0_0px_10px_-4px_var(--main)]">
                                     @sport
@@ -129,7 +131,6 @@
                 </div>
             </div>
 
-            <!-- Matches -->
             <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                     <h3 class="font-semibold mb-4 text-[var(--text)]">Previous Matches</h3>
@@ -181,6 +182,7 @@
     private bool _isOwner;
     private string? _ownEmail;
     private bool _loading = true;
+    private bool _isLoggedIn = false;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
@@ -211,6 +213,9 @@
             {
                 targetId = Id;
                 var currentIdStr = UserManager.GetUserId(HttpContext.User);
+
+                _isLoggedIn = !string.IsNullOrEmpty(currentIdStr);
+
                 _isOwner = currentIdStr == targetId;
                 _ownEmail = null;
             }
@@ -238,4 +243,42 @@
             _loading = false;
         }
     }
+
+    private async Task SendFriendRequest()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? false)
+            {
+                Console.WriteLine("User not logged in.");
+                return;
+            }
+
+            var senderId = user.FindFirst("sub")?.Value ?? user.Identity?.Name;
+
+            if (senderId is null || _profile is null)
+                return;
+
+            if (senderId == _profile.Id)
+                return;
+
+            var dto = new CreateFriendDto
+            {
+                SenderId = senderId,
+                ReceiverId = _profile.Id
+            };
+
+            var result = await FriendService.CreateFriendRequest(dto);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding friend");
+        }
+
+        StateHasChanged();
+    }
+
 }
