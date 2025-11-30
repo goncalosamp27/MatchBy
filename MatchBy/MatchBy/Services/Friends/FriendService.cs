@@ -5,12 +5,16 @@ using MatchBy.DTOs.Friend;
 using MatchBy.Enums;
 using MatchBy.Models;
 using Microsoft.EntityFrameworkCore;
+using MatchBy.DTOs.Notification;
+using MatchBy.Services.Notifications;
+
 
 namespace MatchBy.Services.Friends;
 
 public class FriendService(
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
-    IValidator<CreateFriendDto> createFriendValidator) : IFriendService
+    IValidator<CreateFriendDto> createFriendValidator,
+    INotificationService notificationService) : IFriendService
 {
     public async Task<Result<FriendDto>> GetFriendshipById(string friendshipId, CancellationToken ct = default)
     {
@@ -167,6 +171,26 @@ public class FriendService(
         await dbContext.Friends.AddAsync(friend, ct);
         await dbContext.SaveChangesAsync(ct);
 
+        var sender = await dbContext.Users
+        .AsNoTracking()
+        .FirstAsync(u => u.Id == friend.SenderId, ct);
+
+        var senderName = sender.DisplayName ?? sender.UserName ?? "Someone";
+
+        var notification = new CreateNotificationDto
+        {
+            Type = NotificationType.FriendRequestReceived,
+            ReceiverUserId = friend.ReceiverId,
+            SenderUserId = friend.SenderId,
+            RelatedEntityId = friend.Id,
+            RelatedEntityName = "Friendship",
+            Title = "You received a friend request",
+            Message = $"{senderName} wants to be your friend!",
+            ActionUrl = $"/profile/{friend.SenderId}"
+        };
+
+        await notificationService.SendNotificationAsync(notification, ct);        
+
         return await GetFriendshipById(friend.Id, ct);
     }
 
@@ -189,7 +213,27 @@ public class FriendService(
 
         await dbContext.SaveChangesAsync(ct);
 
-        return Result<FriendDto>.Ok(friend.ToDto());
+        var receiver = await dbContext.Users
+        .AsNoTracking()
+        .FirstAsync(u => u.Id == friend.ReceiverId, ct);
+
+        var receiverName = receiver.DisplayName ?? receiver.UserName ?? "Someone";
+
+        var notification = new CreateNotificationDto
+        {
+            Type = NotificationType.FriendRequestAccepted,   
+            ReceiverUserId = friend.SenderId,                
+            SenderUserId = friend.ReceiverId,               
+            RelatedEntityId = friend.Id,
+            RelatedEntityName = "Friendship",
+            Title = "Friend request accepted",
+            Message = $"{receiverName} is your new friend!",
+            ActionUrl = $"/profile/{friend.ReceiverId}"
+        };
+
+        await notificationService.SendNotificationAsync(notification, ct);
+
+            return Result<FriendDto>.Ok(friend.ToDto());
     }
 
     public async Task<Result<bool>> RejectRequest(string friendshipId, string receiverId, CancellationToken ct = default)

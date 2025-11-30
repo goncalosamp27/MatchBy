@@ -317,8 +317,6 @@
 
     private async Task SendFriendRequest()
     {   
-        Logger.LogInformation("SendFriendRequest chamado. profile null? {ProfileNull}, userId: {UserId}, isOwner: {IsOwner}", _profile is null, _userId, _isOwner);
-        
         if (_profile is null || _userId is null)
         {
             await ToastService.Error("You must be logged in to add friends.");
@@ -329,20 +327,25 @@
             await ToastService.Info("You cannot add yourself.");
             return;
         }
+
         var createDto = new CreateFriendDto {
             SenderId = _userId,
             ReceiverId = _profile.Id
         };
+
         var result = await FriendService.CreateFriendRequest(createDto, CancellationToken.None);
-        if (!result.Success)
+        if (!result.Success || result.Data is null)
         {   
             await ToastService.Error("Failed to send friend request.");
             return;
         }
 
         _friendship = result.Data;
-        await ToastService.Success("Friend request sent!");
+        var receiverName = _profile.DisplayName ?? _profile.UserName ?? "this user";
+
+        await ToastService.Success($"Friend request sent to {receiverName}!", "Friend request sent");
     }
+
 
     private async Task AcceptFriendRequest()
     {
@@ -352,9 +355,15 @@
             return;
         }
 
+        // copiar para variável local para o compilador ficar feliz
+        var friendship = _friendship;
+
+        // aqui quem está a aceitar é o receiver, portanto o "outro" é o sender
+        var otherUserName = friendship.Sender?.DisplayName ?? "this user";
+
         try
         {
-            var result = await FriendService.AcceptRequest(_friendship.Id, _userId, CancellationToken.None);
+            var result = await FriendService.AcceptRequest(friendship.Id, _userId, CancellationToken.None);
 
             if (!result.Success || result.Data is null)
             {
@@ -364,14 +373,15 @@
 
             _friendship = result.Data;
 
-            await ToastService.Success("Friend request accepted!");
+            await ToastService.Success($"You are now friends with {otherUserName}!", "You have a new friend!");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error accepting friend request for friendship {FriendshipId}", _friendship.Id);
+            Logger.LogError(ex, "Error accepting friend request for friendship {FriendshipId}", friendship.Id);
             await ToastService.Error("Unexpected error while accepting friend request.");
         }
     }
+
 
     private async Task RemoveFriend()
     {
@@ -381,11 +391,18 @@
             return;
         }
 
+        var friendship = _friendship;
+        var otherUserIsSender = friendship.SenderId == _userId;
+
+        var otherUserName = otherUserIsSender
+            ? (friendship.Receiver?.DisplayName ?? "this user")
+            : (friendship.Sender?.DisplayName   ?? "this user");
+
         try
         {
-            var result = await FriendService.RemoveFriend(_friendship.Id, _userId, CancellationToken.None);
+            var result = await FriendService.RemoveFriend(friendship.Id, _userId, CancellationToken.None);
 
-            if (!result.Success || result.Data == false)
+            if (!result.Success || !result.Data)
             {
                 await ToastService.Error("Failed to remove friend.");
                 return;
@@ -393,7 +410,10 @@
 
             _friendship = null;
 
-            await ToastService.Success("Friend removed.");
+            await ToastService.Success(
+                $"{otherUserName} has been removed from your friends.",
+                "Friend removed."
+            );
         }
         catch (Exception ex)
         {
@@ -401,5 +421,4 @@
             await ToastService.Error("Unexpected error while removing friend.");
         }
     }
-
 }

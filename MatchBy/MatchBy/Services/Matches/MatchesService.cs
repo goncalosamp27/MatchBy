@@ -219,7 +219,7 @@ public class MatchesService(
             return await GetMatchById(matchId, userId, ct);
         }
 
-        string matchName = $"{match.Sport} em {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}";
+        string matchName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}";
         
         string? newParticipant = await dbContext.Users
             .Where(u => u.Id == userId)
