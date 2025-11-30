@@ -1,4 +1,5 @@
 using MatchBy.DTOs.User;
+using MatchBy.Enums;
 
 namespace MatchBy.DTOs.Friend;
 
@@ -12,4 +13,5 @@ public sealed record FriendDto
     public required DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; init; }
     public DateTime? DeletedAtUtc { get; init; }
+    public required FriendStatus Status { get; init; }
 }

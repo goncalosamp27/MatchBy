@@ -14,6 +14,9 @@
 @using MatchBy.DTOs.Friend
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IFriendService FriendService
+@using Blazorise
+@inject IToastService ToastService
+@rendermode InteractiveServer
 
 <PageTitle>Profile</PageTitle>
 
@@ -33,7 +36,7 @@
         {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="bg-[var(--section)] shadow rounded-2xl p-6 border-2 border-[var(--main)] transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
-                    <div class="flex items-start gap-4 w-full">
+                    <div class="flex flex-col md:flex-row items-start gap-4 w-full">
                         <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                             @if (_profile.ProfileImage is not null)
                             {
@@ -52,18 +55,52 @@
                             <p class="text-sm text-gray-500">@_profile.UserName</p>
                         </div>
 
-                    @if (!_isOwner && _isLoggedIn) {                        
-                        <button class="ml-auto self-start py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:text-[var(--text)] hover:bg-[var(--main-hover)]">
-                            <div class="flex items-center gap-2">
-                                Add friend
-                                <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                                    <path fill-rule="evenodd" d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4H7Zm8-1a1 1 0 0 1 1-1h1v-1a1 1 0 1 1 2 0v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 0 1-1-1Z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                        </button>
-                    }
+                        @if (!_isOwner && _userId is not null) {   
+                            @if (_friendship is null) {                     
+                                <button @onclick="SendFriendRequest" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:text-[var(--text)] hover:bg-[var(--main-hover)] cursor-pointer">
+                                    <div class="flex items-center gap-2">
+                                        Add friend
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4H7Zm8-1a1 1 0 0 1 1-1h1v-1a1 1 0 1 1 2 0v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 0 1-1-1Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                            else if (_friendship.Status == FriendStatus.Pending && _friendship.SenderId == _userId)
+                            {
+                                <button disabled class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--success)] text-[var(--text-contrast)] cursor-default">
+                                    <div class="flex items-center gap-2">
+                                        Request sent
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.793-1.793a1 1 0 0 0-1.414 1.414l2.5 2.5a1 1 0 0 0 1.414 0l4-4Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                            else if (_friendship.Status == FriendStatus.Pending && _friendship.ReceiverId == _userId)
+                            {
+                                <button @onclick="AcceptFriendRequest" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--success)] cursor-pointer">
+                                    <div class="flex items-center gap-2">
+                                        Accept request
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M18 14a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2h-2v-2Z" clip-rule="evenodd"/>
+                                            <path fill-rule="evenodd" d="M15.026 21.534A9.994 9.994 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2c2.51 0 4.802.924 6.558 2.45l-7.635 7.636L7.707 8.87a1 1 0 0 0-1.414 1.414l3.923 3.923a1 1 0 0 0 1.414 0l8.3-8.3A9.956 9.956 0 0 1 22 12a9.994 9.994 0 0 1-.466 3.026A2.49 2.49 0 0 0 20 14.5h-.5V14a2.5 2.5 0 0 0-5 0v.5H14a2.5 2.5 0 0 0 0 5h.5v.5c0 .578.196 1.11.526 1.534Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                            else if(_friendship.Status == FriendStatus.Accepted){
+                                <button @onclick="RemoveFriend" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--error)] text-[var(--text-contrast)] cursor-pointer hover:bg-[var(--reset)]">
+                                    <div class="flex items-center gap-2">
+                                        Remove friend
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M5 8a4 4 0 1 1 8 0 4 4 0 0 1-8 0Zm-2 9a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1Zm13-6a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-4Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                        }
                     </div>
-
 
                     <div class="mt-4 flex flex-wrap gap-4 items-center">
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">@_profile.Status</span>
@@ -171,8 +208,10 @@
                 }
             </div>
         }
-    </div>
+    </div> 
 </section>
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12 !bg-[var(--section)]"/>
 
 @code {
     [Parameter] public string? Id { get; set; }
@@ -182,11 +221,10 @@
     private bool _isOwner;
     private string? _ownEmail;
     private bool _loading = true;
-    private bool _isLoggedIn = false;
+    private string? _userId = null;
+    private FriendDto? _friendship;
 
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         _loading = true;
 
@@ -194,9 +232,20 @@
         {
             string targetId;
 
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
             if (Id is null)
             {
-                var current = await UserManager.GetUserAsync(HttpContext.User);
+                if (!user.Identity?.IsAuthenticated ?? true)
+                {
+                    _profile = null;
+                    _matches = null;
+                    _loading = false;
+                    return;
+                }
+
+                var current = await UserManager.GetUserAsync(user);
                 if (current is null)
                 {
                     _profile = null;
@@ -208,27 +257,49 @@
                 targetId = current.Id;
                 _isOwner = true;
                 _ownEmail = current.Email;
+                _userId  = current.Id; 
             }
             else
             {
                 targetId = Id;
-                var currentIdStr = UserManager.GetUserId(HttpContext.User);
 
-                _isLoggedIn = !string.IsNullOrEmpty(currentIdStr);
+                _userId = user.Identity?.IsAuthenticated == true
+                    ? UserManager.GetUserId(user)
+                    : null;
 
-                _isOwner = currentIdStr == targetId;
+                _isOwner = _userId == targetId;
                 _ownEmail = null;
             }
 
-            // Fetch public profile via service (does not expose everything)
             _profile = await UsersService.GetUser(targetId, CancellationToken.None);
 
             if (_profile is not null)
             {
-                var result = await MatchesService.GetMatchesForUser(_profile.Id, null, 1, 5, CancellationToken.None);
-                if (!result.Success)
+                var result = await MatchesService.GetMatchesForUser(
+                    _profile.Id, null, 1, 5, CancellationToken.None);
+
+                if (result.Success && result.Data is not null)
                 {
-                    _matches = result.Data!.Data;
+                    _matches = result.Data.Data ?? new List<MatchDto>();
+                }
+                else
+                {
+                    _matches = new List<MatchDto>();
+                    Logger.LogWarning("Failed to load matches for user {UserId}", _profile.Id);
+                }
+            }
+
+            if (_profile is not null && _userId is not null && !_isOwner)
+            {
+                var friendshipResult = await FriendService.GetFriendshipBetweenUsers(_userId, _profile.Id, CancellationToken.None);
+
+                if (friendshipResult.Success)
+                {
+                    _friendship = friendshipResult.Data;
+                }
+                else
+                {
+                    Logger.LogWarning("Failed to load friendship between {UserId} and {ProfileId}", _userId, _profile.Id);
                 }
             }
         }
@@ -245,40 +316,90 @@
     }
 
     private async Task SendFriendRequest()
+    {   
+        Logger.LogInformation("SendFriendRequest chamado. profile null? {ProfileNull}, userId: {UserId}, isOwner: {IsOwner}", _profile is null, _userId, _isOwner);
+        
+        if (_profile is null || _userId is null)
+        {
+            await ToastService.Error("You must be logged in to add friends.");
+            return;
+        }
+        if (_isOwner)
+        {
+            await ToastService.Info("You cannot add yourself.");
+            return;
+        }
+        var createDto = new CreateFriendDto {
+            SenderId = _userId,
+            ReceiverId = _profile.Id
+        };
+        var result = await FriendService.CreateFriendRequest(createDto, CancellationToken.None);
+        if (!result.Success)
+        {   
+            await ToastService.Error("Failed to send friend request.");
+            return;
+        }
+
+        _friendship = result.Data;
+        await ToastService.Success("Friend request sent!");
+    }
+
+    private async Task AcceptFriendRequest()
     {
+        if (_friendship is null || _userId is null)
+        {
+            await ToastService.Error("Invalid friend request.");
+            return;
+        }
+
         try
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
+            var result = await FriendService.AcceptRequest(_friendship.Id, _userId, CancellationToken.None);
 
-            if (!user.Identity?.IsAuthenticated ?? false)
+            if (!result.Success || result.Data is null)
             {
-                Console.WriteLine("User not logged in.");
+                await ToastService.Error("Failed to accept friend request.");
                 return;
             }
 
-            var senderId = user.FindFirst("sub")?.Value ?? user.Identity?.Name;
+            _friendship = result.Data;
 
-            if (senderId is null || _profile is null)
-                return;
-
-            if (senderId == _profile.Id)
-                return;
-
-            var dto = new CreateFriendDto
-            {
-                SenderId = senderId,
-                ReceiverId = _profile.Id
-            };
-
-            var result = await FriendService.CreateFriendRequest(dto);
+            await ToastService.Success("Friend request accepted!");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error adding friend");
+            Logger.LogError(ex, "Error accepting friend request for friendship {FriendshipId}", _friendship.Id);
+            await ToastService.Error("Unexpected error while accepting friend request.");
+        }
+    }
+
+    private async Task RemoveFriend()
+    {
+        if (_friendship is null || _userId is null)
+        {
+            await ToastService.Error("Invalid friendship.");
+            return;
         }
 
-        StateHasChanged();
+        try
+        {
+            var result = await FriendService.RemoveFriend(_friendship.Id, _userId, CancellationToken.None);
+
+            if (!result.Success || result.Data == false)
+            {
+                await ToastService.Error("Failed to remove friend.");
+                return;
+            }
+
+            _friendship = null;
+
+            await ToastService.Success("Friend removed.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error removing friend.");
+            await ToastService.Error("Unexpected error while removing friend.");
+        }
     }
 
 }
