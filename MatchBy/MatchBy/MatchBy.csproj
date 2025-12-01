@@ -7,6 +7,7 @@
         <UserSecretsId>aspnet-MatchBy-db35119d-08ef-4074-b3c3-d673bfb6010e</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <MinVerTagPrefix>v</MinVerTagPrefix>
+        <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     </PropertyGroup>
 
     <ItemGroup>
