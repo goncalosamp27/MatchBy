@@ -310,4 +310,32 @@ public class FriendService(
 
         return Result<FriendDto?>.Ok(friend?.ToDto());
     }
+
+    public async Task<Result<bool>> CancelFriendRequest(string friendshipId, string senderId, CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+
+        var friend = await dbContext.Friends
+            .FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
+
+        if (friend == null || friend.DeletedAtUtc != null)
+        {
+            return Result<bool>.Fail("Friend request not found.");
+        }
+
+        if (friend.SenderId != senderId)
+        {
+            return Result<bool>.Fail("Only the user who sent the request can cancel it.");
+        }
+
+        if (friend.Status != FriendStatus.Pending)
+        {
+            return Result<bool>.Fail("Only pending friend requests can be cancelled.");
+        }
+
+        dbContext.Friends.Remove(friend);
+        await dbContext.SaveChangesAsync(ct);
+
+        return Result<bool>.Ok(true);
+    }
 }
