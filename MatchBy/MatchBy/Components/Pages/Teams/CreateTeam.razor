@@ -20,7 +20,9 @@
 
 @if (_viewModel.IsLoading)
 {
-    <Loading></Loading>
+    <div class="flex items-center justify-center min-h-screen">
+        <Loading></Loading>
+    </div>
 }
 else
 {
@@ -260,7 +262,7 @@ else
                                                             var isSelected = _viewModel.Model.MembersIds.Contains(user.Id) || isOwner;
                                                             var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
                                                             <div
-                                                                class="flex items-center gap-3 py-2 px-3 rounded-xl  text-[var(--text)] @(isOwner ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:opacity-80") transition-all)"
+                                                                class="flex items-center gap-3 py-2 px-3 rounded-xl  text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer transition-all)"
                                                                 @onclick="@(() =>
                                                                           {
                                                                               if (isOwner)
@@ -295,7 +297,7 @@ else
                                                 {
                                                     <div class="mb-3">
                                                         <FieldLabel class="text-[var(--text)] font-medium mb-2">Invites
-                                                            (@Math.Max(0, _viewModel.SelectedUsers.Count)
+                                                            (@Math.Max(0, _viewModel.SelectedUsers.Count))
                                                         </FieldLabel>
                                                         <div class="flex flex-wrap gap-2">
                                                             @foreach (var member in _viewModel.SelectedUsers)

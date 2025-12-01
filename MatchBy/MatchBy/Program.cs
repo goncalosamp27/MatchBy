@@ -195,7 +195,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewPolicy", corsPolicyBuilder =>
-        corsPolicyBuilder.AllowAnyOrigin()
+        corsPolicyBuilder
+            .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());
 });

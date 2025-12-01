@@ -1,7 +1,7 @@
 ﻿@using Blazorise
 
 <Modal @ref="ModalRef">
-    <ModalContent Centered Class="rounded-3 shadow"
+    <ModalContent Centered Class="rounded-3 shadow border border-[var(--main)]"
                   Style="background-color: var(--background);"
                   Size="ModalSize.Default">
         <ModalHeader Style="border-color: var(--main); color: var(--text);">
@@ -37,7 +37,7 @@
                         }
                         else
                         {
-                            @foreach (var u in Users.Data ?? Enumerable.Empty<ApplicationUser>())
+                            foreach (var u in Users.Data ?? Enumerable.Empty<ApplicationUser>())
                             {
                                 var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
                                 <ListGroupItem Name="@u.Id"

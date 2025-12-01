@@ -22,13 +22,15 @@
 
 @if (_viewModel is null || _viewModel.Model is null || _viewModel.IsLoading)
 {
-    <Loading></Loading>
+    <div class="flex items-center justify-center min-h-screen">
+        <Loading></Loading>
+    </div>
 }
 else
 {
     var viewModel = _viewModel!;
     var model = viewModel.Model!;
-        <div class="min-h-screen bg-[var(--background)] px-4 py-8">
+    <div class="min-h-screen bg-[var(--background)] px-4 py-8">
         <div class="max-w-5xl mx-auto">
             <button @onclick="@(() => NavigationManager.NavigateTo($"/teams/{Id}"))"
                     class="flex items-center gap-2 text-[var(--text)] hover:text-[var(--main)] mb-6 transition">
@@ -38,7 +40,8 @@ else
                 Back to team
             </button>
 
-            <div class="relative overflow-hidden rounded-3xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 md:p-8 mb-8">
+            <div
+                class="relative overflow-hidden rounded-3xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 md:p-8 mb-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
                     <div>
                         <h1 class="text-3xl md:text-4xl font-bold text-[var(--text)] mt-2">Edit your team</h1>
@@ -47,14 +50,16 @@ else
                         </p>
                     </div>
                 </div>
-                <div class="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--main)]/15 via-transparent to-transparent pointer-events-none"></div>
+                <div
+                    class="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--main)]/15 via-transparent to-transparent pointer-events-none"></div>
             </div>
 
             <div class="grid gap-8">
                 <div class="space-y-6">
                     <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
                         <div class="space-y-6">
-                            <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-6">
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-6">
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
                                         <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 1</p>
@@ -63,7 +68,8 @@ else
                                             Name your team, describe what you do, and confirm who can find you.
                                         </p>
                                     </div>
-                                    <span class="inline-flex items-center rounded-full bg-[var(--main)]/10 text-[var(--main)] px-3 py-1 text-xs font-semibold">
+                                    <span
+                                        class="inline-flex items-center rounded-full bg-[var(--main)]/10 text-[var(--main)] px-3 py-1 text-xs font-semibold">
                                         Required
                                     </span>
                                 </div>
@@ -71,7 +77,8 @@ else
                                 <div class="space-y-4">
                                     <Validation Validator="@ValidateName">
                                         <Field>
-                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team name</FieldLabel>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team name
+                                            </FieldLabel>
                                             <FieldBody>
                                                 <TextEdit Placeholder="Enter team name"
                                                           Text="@model.Name"
@@ -88,7 +95,8 @@ else
 
                                     <Validation Validator="@ValidateDescription">
                                         <Field>
-                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description</FieldLabel>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description
+                                            </FieldLabel>
                                             <FieldBody>
                                                 <TextEdit Placeholder="Share your mission, cadence, or requirements"
                                                           Text="@model.Description"
@@ -124,18 +132,21 @@ else
                             </section>
 
                             <div class="grid gap-6 lg:grid-cols-[3fr_2fr]">
-                                <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
+                                <section
+                                    class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
                                     <div class="flex items-start justify-between gap-4">
                                         <div>
                                             <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 2</p>
                                             <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Branding</h3>
-                                            <p class="text-sm text-[var(--text)]">Upload a refreshed image so teammates can spot you instantly.</p>
+                                            <p class="text-sm text-[var(--text)]">Upload a refreshed image so teammates
+                                                can spot you instantly.</p>
                                         </div>
                                     </div>
 
                                     <div class="space-y-3">
                                         <Field>
-                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team image</FieldLabel>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Team image
+                                            </FieldLabel>
                                             <FieldBody>
                                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                                                     <InputFile OnChange="HandleImageChanged"
@@ -158,7 +169,8 @@ else
                                     </div>
                                 </section>
 
-                                <div class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] flex-1 flex items-center justify-center overflow-hidden max-h-[360px]">
+                                <div
+                                    class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] flex-1 flex items-center justify-center overflow-hidden max-h-[360px]">
                                     @if (!string.IsNullOrEmpty(viewModel.ImagePreviewSource))
                                     {
                                         <img src="@viewModel.ImagePreviewSource"
@@ -185,55 +197,65 @@ else
                                 </div>
                             </div>
 
-                            <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
                                         <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 3</p>
                                         <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Manage members</h3>
-                                        <p class="text-sm text-[var(--text)]">Search, toggle, and trim your active roster.</p>
+                                        <p class="text-sm text-[var(--text)]">Search, toggle, and trim your active
+                                            roster.</p>
                                     </div>
                                 </div>
 
                                 <Field>
                                     <FieldBody>
-                                            <div class="mb-3">
-                                                <TextEdit @bind-Text="viewModel.MemberSearch"
-                                                          @bind-Text:after="StateHasChanged"
-                                                          Placeholder="Search for users to add"
-                                                          Role="TextRole.Search"
-                                                          KeyDown="@(async e => await viewModel.OnMemberSearchKeyDownAsync(e))"
+                                        <div class="mb-3">
+                                            <TextEdit @bind-Text="viewModel.MemberSearch"
+                                                      @bind-Text:after="StateHasChanged"
+                                                      Placeholder="Search for users to add"
+                                                      Role="TextRole.Search"
+                                                      KeyDown="@(async e => await viewModel.OnMemberSearchKeyDownAsync(e))"
                                                       Class="w-full"
                                                       Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;"/>
                                         </div>
 
-                                            @if (viewModel.IsLoadingMembers)
+                                        @if (viewModel.IsLoadingMembers)
                                         {
                                             <Loading></Loading>
                                         }
                                         else if (model.MembersIds.Any(m => m != viewModel.UserId))
                                         {
-                                            <div class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
-                                                 style="background-color: var(--background);">
+                                            <div
+                                                class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
+                                                style="background-color: var(--background);">
                                                 @if ((viewModel.AvailableUsers.Data?.Count ?? 0) == 0)
                                                 {
-                                                    <div class="py-3 text-center opacity-60" style="color: var(--text);">No users found</div>
+                                                    <div class="py-3 text-center opacity-60"
+                                                         style="color: var(--text);">No users found
+                                                    </div>
                                                 }
                                                 else
                                                 {
-                                                    @foreach (var user in viewModel.AvailableUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                                    foreach (var user in viewModel.AvailableUsers.Data ?? Enumerable.Empty<ApplicationUser>())
                                                     {
                                                         var isSelected = viewModel.SelectedMemberIds.Contains(user.Id);
                                                         var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                                        <div class="flex items-center gap-3 py-2 px-3 rounded-xl transition-all text-[var(--text)] @(isSelected ? "bg-[var(--main)]/80 text-[var(--text-contrast)]" : "hover:bg-[var(--section)]")"
-                                                             @onclick="@(() => viewModel.ToggleMember(user.Id))">
+                                                        <div
+                                                            class="flex items-center gap-3 py-2 px-3 rounded-xl transition-all text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer"
+                                                            @onclick="@(() => viewModel.ToggleMember(user.Id))">
                                                             <img src="@photoUrl"
                                                                  alt="@user.UserName"
                                                                  class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]/60"/>
-                                                            <span class="fw-500 truncate flex-1">@user.DisplayName</span>
+                                                            <span
+                                                                class="fw-500 truncate flex-1">@user.DisplayName</span>
                                                             @if (isSelected)
                                                             {
-                                                                <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                                <svg class="w-5 h-5 flex-shrink-0" fill="currentColor"
+                                                                     viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd"
+                                                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                          clip-rule="evenodd"/>
                                                                 </svg>
                                                             }
                                                         </div>
@@ -241,7 +263,7 @@ else
                                                 }
                                             </div>
 
-                                            @if (viewModel.AvailableUsers is { Data: not null, TotalCount: > 0 })
+                                            if (viewModel.AvailableUsers is { Data: not null, TotalCount: > 0 })
                                             {
                                                 <div class="flex justify-center mt-2 mb-3">
                                                     <OffsetPagination CurrentPage="@viewModel.CurrentMemberPage"
@@ -251,10 +273,12 @@ else
                                                 </div>
                                             }
 
-                                            @if (viewModel.HasAdditionalMembers)
+                                            if (viewModel.HasAdditionalMembers)
                                             {
                                                 <div class="mb-3">
-                                                    <FieldLabel class="text-[var(--text)] font-medium mb-2">Team members (@viewModel.MemberBadgeCount)</FieldLabel>
+                                                    <FieldLabel class="text-[var(--text)] font-medium mb-2">Team members
+                                                        (@viewModel.MemberBadgeCount)
+                                                    </FieldLabel>
                                                     <div class="flex flex-wrap gap-2">
                                                         @foreach (var memberId in viewModel.SelectedMemberIds.Where(s => s != viewModel.UserId))
                                                         {
@@ -263,17 +287,22 @@ else
                                                             var displayName = member?.DisplayName ?? currentMember?.DisplayName ?? "Unknown";
                                                             var photoUrl = member?.ProfileImage?.Url ?? currentMember?.AvatarUrl ?? "/images/user-avatar.png";
 
-                                                            <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                            <div
+                                                                class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
                                                                 <img src="@photoUrl"
                                                                      alt="@displayName"
                                                                      class="rounded-full w-6 h-6 object-cover"/>
                                                                 <span class="text-sm">@displayName</span>
-                                                                <button @onclick="@(() => viewModel.RemoveMember(memberId))"
-                                                                        @onclick:stopPropagation="true"
-                                                                        class="ml-1 hover:opacity-80 transition"
-                                                                        title="Remove member">
-                                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                                                <button
+                                                                    @onclick="@(() => viewModel.RemoveMember(memberId))"
+                                                                    @onclick:stopPropagation="true"
+                                                                    class="ml-1 hover:opacity-80 transition"
+                                                                    title="Remove member">
+                                                                    <svg class="w-4 h-4" fill="currentColor"
+                                                                         viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd"
+                                                                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                              clip-rule="evenodd"/>
                                                                     </svg>
                                                                 </button>
                                                             </div>
@@ -283,12 +312,14 @@ else
                                             }
                                             else
                                             {
-                                                <p class="text-sm text-[var(--text)]">No additional members selected yet.</p>
+                                                <p class="text-sm text-[var(--text)]">No additional members selected
+                                                    yet.</p>
                                             }
                                         }
                                         else
                                         {
-                                            <div class="rounded-xl border border-dashed border-[var(--main)]/40 bg-[var(--section)]/60 p-4 text-sm text-[var(--text)]">
+                                            <div
+                                                class="rounded-xl border border-dashed border-[var(--main)]/40 bg-[var(--section)]/60 p-4 text-sm text-[var(--text)]">
                                                 No other members to manage right now.
                                             </div>
                                         }
@@ -296,64 +327,73 @@ else
                                 </Field>
                             </section>
 
-                            <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
                                         <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 4</p>
                                         <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Manage invites</h3>
-                                        <p class="text-sm text-[var(--text)]">Review pending invites and send new ones.</p>
+                                        <p class="text-sm text-[var(--text)]">Review pending invites and send new
+                                            ones.</p>
                                     </div>
                                 </div>
                             </section>
 
                             @if (viewModel.PendingInvites?.Count > 0)
                             {
-                                
-                            <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
-                                <div class="flex items-center justify-between">
-                                    <h4 class="text-lg font-semibold text-[var(--text)]">Pending invites (@(viewModel.PendingInvites?.Count ?? 0))</h4>
-                                </div>
-                                @if (viewModel.IsLoadingInvites)
-                                {
-                                    <Loading></Loading>
-                                }
-                                else if (viewModel.PendingInvites is { Count: > 0 })
-                                {
-                                    <div class="space-y-2 max-h-60 overflow-y-auto border-2 border-[var(--main)] rounded-xl p-3 thin-scroll"
-                                         style="background-color: var(--background);">
-                                        @foreach (var invite in viewModel.PendingInvites)
-                                        {
-                                            var photoUrl = invite.Receiver?.AvatarUrl ?? "/images/user-avatar.png";
-                                            <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--main)]/10 transition-all"
-                                                 style="color: var(--text);">
-                                                <div class="flex items-center gap-3">
-                                                    <img src="@photoUrl"
-                                                         alt="@invite.Receiver?.DisplayName"
-                                                         class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
-                                                    <div>
-                                                        <span class="font-medium">@invite.Receiver?.DisplayName</span>
-                                                        <div class="text-xs opacity-70">Invited @invite.CreatedAtUtc.ToLocalTime().ToString("MMM dd, yyyy")</div>
+                                <section
+                                    class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-lg font-semibold text-[var(--text)]">Pending invites
+                                            (@(viewModel.PendingInvites?.Count ?? 0))</h4>
+                                    </div>
+                                    @if (viewModel.IsLoadingInvites)
+                                    {
+                                        <Loading></Loading>
+                                    }
+                                    else if (viewModel.PendingInvites is { Count: > 0 })
+                                    {
+                                        <div
+                                            class="space-y-2 max-h-60 overflow-y-auto border-2 border-[var(--main)] rounded-xl p-3 thin-scroll"
+                                            style="background-color: var(--background);">
+                                            @foreach (var invite in viewModel.PendingInvites)
+                                            {
+                                                var photoUrl = invite.Receiver?.AvatarUrl ?? "/images/user-avatar.png";
+                                                <div
+                                                    class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--main)]/10 transition-all"
+                                                    style="color: var(--text);">
+                                                    <div class="flex items-center gap-3">
+                                                        <img src="@photoUrl"
+                                                             alt="@invite.Receiver?.DisplayName"
+                                                             class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
+                                                        <div>
+                                                            <span
+                                                                class="font-medium">@invite.Receiver?.DisplayName</span>
+                                                            <div class="text-xs opacity-70">
+                                                                Invited @invite.CreatedAtUtc.ToLocalTime().ToString("MMM dd, yyyy")</div>
+                                                        </div>
                                                     </div>
+                                                    <button @onclick="@(() => CancelInvite(invite.Id))"
+                                                            class="px-3 py-1 bg-[var(--error)] hover:opacity-80 text-white rounded-lg text-sm font-medium transition">
+                                                        Cancel
+                                                    </button>
                                                 </div>
-                                                <button @onclick="@(() => CancelInvite(invite.Id))"
-                                                        class="px-3 py-1 bg-[var(--error)] hover:opacity-80 text-white rounded-lg text-sm font-medium transition">
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="py-4 text-center opacity-60 border-2 border-[var(--main)] rounded-lg"
-                                         style="color: var(--text); background-color: var(--background);">
-                                        No pending invites
-                                    </div>
-                                }
-                            </section>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div
+                                            class="py-4 text-center opacity-60 border-2 border-[var(--main)] rounded-lg"
+                                            style="color: var(--text); background-color: var(--background);">
+                                            No pending invites
+                                        </div>
+                                    }
+                                </section>
                             }
 
-                            <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-4">
                                 <div class="flex items-center justify-between">
                                     <h4 class="text-lg font-semibold text-[var(--text)]">Invite new members</h4>
                                 </div>
@@ -373,11 +413,14 @@ else
                                 }
                                 else
                                 {
-                                    <div class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
-                                         style="background-color: var(--background);">
+                                    <div
+                                        class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
+                                        style="background-color: var(--background);">
                                         @if ((viewModel.AvailableInviteUsers.Data?.Count ?? 0) == 0)
                                         {
-                                            <div class="py-3 text-center opacity-60" style="color: var(--text);">No users found</div>
+                                            <div class="py-3 text-center opacity-60" style="color: var(--text);">No
+                                                users found
+                                            </div>
                                         }
                                         else
                                         {
@@ -387,8 +430,9 @@ else
                                                 var isAlreadyMember = viewModel.SelectedMemberIds.Contains(user.Id);
                                                 var isAlreadyInvited = viewModel.PendingInvites?.Any(i => i.ReceiverId == user.Id) ?? false;
 
-                                                <div class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg transition-all hover:opacity-80 @(isAlreadyMember || isAlreadyInvited ? "opacity-50" : "")"
-                                                     style="color: var(--text);">
+                                                <div
+                                                    class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg transition-all hover:opacity-80 @(isAlreadyMember || isAlreadyInvited ? "opacity-50" : "")"
+                                                    style="color: var(--text);">
                                                     <div class="flex items-center gap-3 flex-1">
                                                         <img src="@photoUrl"
                                                              alt="@user.UserName"
@@ -397,11 +441,13 @@ else
                                                     </div>
                                                     @if (isAlreadyMember)
                                                     {
-                                                        <span class="text-xs px-2 py-1 bg-[var(--main)] rounded-full text-[var(--text-contrast)]">Member</span>
+                                                        <span
+                                                            class="text-xs px-2 py-1 bg-[var(--main)] rounded-full text-[var(--text-contrast)]">Member</span>
                                                     }
                                                     else if (isAlreadyInvited)
                                                     {
-                                                        <span class="text-xs px-2 py-1 bg-yellow-500 text-white rounded-full">Invited</span>
+                                                        <span
+                                                            class="text-xs px-2 py-1 bg-yellow-500 text-white rounded-full">Invited</span>
                                                     }
                                                     else
                                                     {
@@ -431,7 +477,8 @@ else
                                 <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                     <div>
                                         <h3 class="text-xl font-semibold text-[var(--text)]">Ready to update?</h3>
-                                        <p class="text-sm text-[var(--text)]">Changes apply immediately and new invites are sent right away.</p>
+                                        <p class="text-sm text-[var(--text)]">Changes apply immediately and new invites
+                                            are sent right away.</p>
                                     </div>
                                     <Button Color="Color.Primary"
                                             Clicked="@SubmitTeam"
@@ -585,4 +632,5 @@ else
                 break;
         }
     }
+
 }

@@ -301,6 +301,15 @@ namespace MatchBy.Migrations
                     b.Property<DateTime>("MatchDateTimeUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("MaxPlayers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinPlayers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinimumPlayersRating")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Privacy")
                         .HasColumnType("integer");
 
@@ -318,12 +327,6 @@ namespace MatchBy.Migrations
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("maxPlayers")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("minPlayers")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -347,9 +350,6 @@ namespace MatchBy.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeclinedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
@@ -562,9 +562,6 @@ namespace MatchBy.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeclinedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")

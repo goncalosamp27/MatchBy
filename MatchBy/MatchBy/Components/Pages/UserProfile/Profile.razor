@@ -1,7 +1,6 @@
 @page "/profile"
 @page "/profile/{id}"
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Authorization
 @using MatchBy.Components.Pages.Matches
 @using MatchBy.DTOs.Match
 @using MatchBy.Services.Matches
@@ -10,6 +9,7 @@
 @inject IMatchesService MatchesService
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Profile> Logger
+@attribute [StreamRendering]
 
 <PageTitle>Profile</PageTitle>
 
@@ -19,7 +19,9 @@
 
         @if (_profile is null && _loading)
         {
-            <p class="text-[var(--text)]">Loading profile...</p>
+            <div class="flex items-center justify-center min-h-screen">
+                <Loading></Loading>
+            </div>
         }
         else if (_profile is null)
         {
@@ -210,9 +212,25 @@
             else
             {
                 targetId = Id;
-                var currentIdStr = UserManager.GetUserId(HttpContext.User);
-                _isOwner = currentIdStr == targetId;
-                _ownEmail = null;
+                var current = await UserManager.GetUserAsync(HttpContext.User);
+                if (current is null)
+                {
+                    _profile = null;
+                    _matches = null;
+                    _loading = false;
+                    return;
+                }
+                _isOwner = current.Id == targetId;
+                if (_isOwner)
+                {
+                    targetId = current.Id;
+                    _isOwner = true;
+                    _ownEmail = current.Email;
+                }
+                else
+                {
+                    _ownEmail = null;   
+                }
             }
 
             // Fetch public profile via service (does not expose everything)

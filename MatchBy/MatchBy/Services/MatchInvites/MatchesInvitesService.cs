@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
 using MatchBy.Data;
+using MatchBy.DTOs.Match;
 using MatchBy.DTOs.MatchInvite;
 using MatchBy.DTOs.Notification;
 using MatchBy.Enums;
@@ -16,7 +17,7 @@ public class MatchesInvitesService(
     INotificationService notificationService) : IMatchesInvitesService
 {
     /// <summary>
-    /// Retrieves a match invite for a specific match and receiver.
+    /// Retrieves a match invite for a specific match and receiver, with pending state.
     /// </summary>
     /// <param name="matchId">The unique identifier of the match.</param>
     /// <param name="receiverId">The unique identifier of the receiver.</param>
@@ -31,7 +32,7 @@ public class MatchesInvitesService(
         MatchInvite? invite = await dbContext
             .MatchInvites
             .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.MatchId == matchId && i.ReceiverId == receiverId, ct);
+            .FirstOrDefaultAsync(i => i.MatchId == matchId && i.ReceiverId == receiverId && i.Status == InviteStatus.Pending, ct);
 
         return invite == null
             ? Result<MatchInviteDto>.Fail($"No invite found for match {matchId} and receiver {receiverId}.")
@@ -88,6 +89,7 @@ public class MatchesInvitesService(
                 .ThenInclude(m => m!.Creator)
             .Include(i => i.Match)
                 .ThenInclude(m => m!.Participants)
+            .Where(i => i.Status == InviteStatus.Pending)
             .Where(i => i.ReceiverId == userId);
 
         int total = await query.CountAsync(ct);
@@ -136,6 +138,7 @@ public class MatchesInvitesService(
                 .ThenInclude(m => m!.Creator)
             .Include(i => i.Match)
                 .ThenInclude(m => m!.Participants)
+            .Where(i => i.Status == InviteStatus.Pending)
             .Where(i => i.SenderId == userId);
 
         int total = await query.CountAsync(ct);
@@ -192,6 +195,7 @@ public class MatchesInvitesService(
                 .ThenInclude(m => m!.Creator)
             .Include(i => i.Match)
                 .ThenInclude(m => m!.Participants)
+            .Where(i => i.Status == InviteStatus.Pending)
             .Where(i => i.MatchId == matchId);
 
         int total = await query.CountAsync(ct);
@@ -370,7 +374,7 @@ public class MatchesInvitesService(
         MatchInvite? invite = await dbContext.MatchInvites
             .Include(i => i.Match)
                 .ThenInclude(m => m!.Participants)
-            .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
+            .FirstOrDefaultAsync(i => i.Id == inviteId && i.Status == InviteStatus.Pending, ct);
 
         if (invite == null)
         {
@@ -383,11 +387,6 @@ public class MatchesInvitesService(
             return Result<MatchInviteDto>.Fail("Only the receiver can accept the invite.");
         }
 
-        if (invite.Status != InviteStatus.Pending)
-        {
-            return Result<MatchInviteDto>.Fail($"Cannot accept an invite with status {invite.Status}.");
-        }
-
         if (invite.IsExpired)
         {
             invite.Status = InviteStatus.Expired;
@@ -396,16 +395,22 @@ public class MatchesInvitesService(
         }
 
         // Check if match still has space
-        if (invite.Match!.Participants.Count >= invite.Match.maxPlayers)
+        if (invite.Match!.Participants.Count >= invite.Match.MaxPlayers)
         {
             return Result<MatchInviteDto>.Fail("The match is already full.");
         }
+        
 
         // Add user to match participants
         ApplicationUser? user = await dbContext.Users.FindAsync([userId], ct);
         if (user == null)
         {
             return Result<MatchInviteDto>.Fail($"User with id {userId} not found.");
+        }
+        
+        if(invite.Match!.MinimumPlayersRating != MinimumPlayersAverage.All && user.Rating < (int)invite.Match!.MinimumPlayersRating)
+        {
+            return Result<MatchInviteDto>.Fail($"User with id {userId} does not meet the minimum players average rating requirement to join the match {invite.Match!.Id}.");
         }
 
         invite.Match.Participants.Add(user);

@@ -63,8 +63,8 @@ public class ApplicationDbContextTests : IDisposable
         {
             Id = "test-match-id",
             Description = "Test Match",
-            minPlayers = 5,
-            maxPlayers = 10,
+            MinPlayers = 5,
+            MaxPlayers = 10,
             CreatorId = "creator-id",
             Address = "123 Test St",
         };

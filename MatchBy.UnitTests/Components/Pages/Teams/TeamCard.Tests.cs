@@ -251,7 +251,7 @@ public class TeamCardTests
             Id = "owner-id",
             DisplayName = "Team Owner",
             AvatarUrl = "https://example.com/owner-avatar.jpg",
-            PlayerRating = null
+            PlayerRating = 0.0f
         };
         var member = new UserDto
         {
@@ -282,7 +282,7 @@ public class TeamCardTests
             Id = "owner-id",
             DisplayName = "Team Owner",
             AvatarUrl = "https://example.com/owner-avatar.jpg",
-            PlayerRating = null
+            PlayerRating = 0.0f
         };
         var members = Enumerable.Range(1, memberCount)
             .Select(i => new UserDto
