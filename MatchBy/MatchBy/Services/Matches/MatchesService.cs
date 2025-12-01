@@ -123,11 +123,62 @@ public class MatchesService(
         }
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
+        var creator = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == createMatchDto.CreatorId, ct);
+
+        if (creator is null)
+        {
+            return Result<bool>.Fail($"Creator with id {createMatchDto.CreatorId} not found.");
+        }
+
         Match match = createMatchDto.ToEntity();
-        match.Participants = (List<ApplicationUser>)
-            [await dbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
+        match.Participants = (List<ApplicationUser>) [await dbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
         await dbContext.Matches.AddAsync(match, ct);
         await dbContext.SaveChangesAsync(ct);
+
+         if (match.Privacy == MatchPrivacy.Public)
+        {
+            var friendships = await dbContext.Friends
+                .Where(f =>
+                    f.Status == FriendStatus.Accepted &&
+                    f.DeletedAtUtc == null &&
+                    (f.SenderId == creator.Id || f.ReceiverId == creator.Id))
+                .ToListAsync(ct);
+
+            if (friendships.Count > 0)
+            {
+                string creatorName = creator.DisplayName ?? creator.UserName ?? "Your friend";
+                string matchName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}";
+
+                var friendIds = friendships
+                    .Select(f => f.SenderId == creator.Id ? f.ReceiverId : f.SenderId)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var friendId in friendIds)
+                {
+                    var notification = new CreateNotificationDto
+                    {
+                        Type = NotificationType.FriendMatchCreated,
+                        ReceiverUserId = friendId,
+                        SenderUserId = creator.Id,
+                        RelatedEntityId = match.Id,
+                        RelatedEntityName = matchName,
+                        Title = "Your friend created a new match",
+                        Message = $"{creatorName} created a new match: {matchName}",
+                        ActionUrl = $"/matches/{match.Id}"
+                    };
+
+                    try
+                    {
+                        await notificationService.SendNotificationAsync(notification, ct);
+                    }
+                    catch
+                    {
+                        // Ignore notification failures
+                    }
+                }
+            }
+        }
 
         return Result<bool>.Ok(true);
     }
