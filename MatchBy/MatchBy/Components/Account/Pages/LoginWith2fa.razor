@@ -19,64 +19,67 @@
                 </h1>
 
                 <p class="text-sm text-[var(--text)]">
-                    Your account is protected with an authenticator app.  
+                    Your account is protected with an authenticator app.
                     Enter the 6-digit verification code from your app below.
                 </p>
 
-                <StatusMessage Message="@_message" UseCookieMessage="false" />
+                <StatusMessage Message="@_message" UseCookieMessage="false"/>
+                @if (Input is not null)
+                {
+                    <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post"
+                              class="space-y-4 md:space-y-6">
+                        <DataAnnotationsValidator/>
+                        <ValidationSummary class="text-danger" role="alert"/>
 
-                <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post" class="space-y-4 md:space-y-6">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary class="text-danger" role="alert" />
+                        <input type="hidden" name="ReturnUrl" value="@ReturnUrl"/>
+                        <input type="hidden" name="RememberMe" value="@RememberMe"/>
 
-                    <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-                    <input type="hidden" name="RememberMe" value="@RememberMe" />
-
-                    <div>
-                        <label for="Input.TwoFactorCode" class="block mb-2 text-sm font-medium text-[var(--text)]">
-                            Authenticator code
-                        </label>
-                        <InputText
-                            @bind-Value="Input.TwoFactorCode"
-                            id="Input.TwoFactorCode"
-                            class="block w-full p-2.5 rounded-lg
+                        <div>
+                            <label for="Input.TwoFactorCode" class="block mb-2 text-sm font-medium text-[var(--text)]">
+                                Authenticator code
+                            </label>
+                            <InputText
+                                @bind-Value="Input.TwoFactorCode"
+                                id="Input.TwoFactorCode"
+                                class="block w-full p-2.5 rounded-lg
                                    bg-[var(--section-secondary)]
                                    text-[var(--text)]
                                    focus:border-[var(--main)]
                                    focus:ring-1 focus:ring-[var(--main)]
                                    focus:outline-none
                                    border-0"
-                            autocomplete="one-time-code"
-                            inputmode="numeric"
-                            aria-required="true"
-                            placeholder="123 456" />
-                        <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
-                    </div>
-
-                    <div class="flex items-center">
-                        <div class="flex items-center h-5">
-                            <InputCheckbox @bind-Value="Input.RememberMachine"
-                                           id="remember-machine"
-                                           class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0" />
+                                autocomplete="one-time-code"
+                                inputmode="numeric"
+                                aria-required="true"
+                                placeholder="123 456"/>
+                            <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger"/>
                         </div>
-                        <label for="remember-machine" class="ml-3 text-sm text-[var(--text)]">
-                            Remember this machine
-                        </label>
-                    </div>
 
-                    <button type="submit"
-                            class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-                        Log in
-                    </button>
+                        <div class="flex items-center">
+                            <div class="flex items-center h-5">
+                                <InputCheckbox @bind-Value="Input.RememberMachine"
+                                               id="remember-machine"
+                                               class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                            </div>
+                            <label for="remember-machine" class="ml-3 text-sm text-[var(--text)]">
+                                Remember this machine
+                            </label>
+                        </div>
 
-                    <p class="text-sm font-light text-gray-500 dark:text-gray-400">
-                        Don't have access to your authenticator device?
-                        <a class="font-medium text-[var(--main)] hover:underline"
-                           href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">
-                            Log in with a recovery code
-                        </a>
-                    </p>
-                </EditForm>
+                        <button type="submit"
+                                class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            Log in
+                        </button>
+
+                        <p class="text-sm font-light text-gray-500 dark:text-gray-400">
+                            Don't have access to your authenticator device?
+                            <a class="font-medium text-[var(--main)] hover:underline"
+                               href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">
+                                Log in with a recovery code
+                            </a>
+                        </p>
+                    </EditForm>
+                }
             </div>
         </div>
     </div>
@@ -86,7 +89,7 @@
     private string? _message;
     private ApplicationUser _user = default!;
 
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
 
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
@@ -94,13 +97,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Input ??= new InputModel();
         // Ensure the user has gone through the username & password screen first
         _user = await SignInManager.GetTwoFactorAuthenticationUserAsync()
-               ?? throw new InvalidOperationException("Unable to load two-factor authentication user.");
+                ?? throw new InvalidOperationException("Unable to load two-factor authentication user.");
     }
 
     private async Task OnValidSubmitAsync()
     {
+        if (Input is null)
+        {
+            return;
+        }
+
         var authenticatorCode = (Input.TwoFactorCode ?? string.Empty)
             .Replace(" ", string.Empty)
             .Replace("-", string.Empty);
@@ -138,4 +147,5 @@
         [Display(Name = "Remember this machine")]
         public bool RememberMachine { get; set; }
     }
+
 }

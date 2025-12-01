@@ -57,7 +57,6 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
 
         builder.Property(t => t.UpdatedAtUtc);
         builder.Property(t => t.AcceptedAtUtc);
-        builder.Property(t => t.DeclinedAtUtc);
         builder.Property(t => t.DeletedAtUtc);
         builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }

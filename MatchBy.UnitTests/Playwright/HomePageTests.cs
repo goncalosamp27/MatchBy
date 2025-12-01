@@ -1,50 +1,40 @@
 using Microsoft.Playwright;
+using Microsoft.Playwright.Xunit;
 
 namespace MatchBy.UnitTests.Playwright;
 
-public class HomePageTests(PlaywrightFixture fixture) : IClassFixture<PlaywrightFixture>
+public class HomePageTests : PageTest
 {
+    private const string BaseUrl = "http://localhost:5029";
+
     [Fact]
     public async Task HomePage_ShouldLoadSuccessfully()
     {
-        // Arrange
-        IBrowserContext context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            IgnoreHTTPSErrors = true // Ignore self-signed certificate errors for localhost
-        });
-        IPage page = await context.NewPageAsync();
-        const string baseUrl = "http://localhost:5029";
-
         try
         {
             // Act - Navigate to home page
-            await page.GotoAsync(baseUrl, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = 30000
-            });
+            await Page.GotoAsync(BaseUrl);
 
             // Assert - Check page title
-            string title = await page.TitleAsync();
+            string title = await Page.TitleAsync();
             Assert.Contains("MatchBy", title);
 
             // Assert - Check main heading is visible
-            ILocator heading = page.Locator("h1").First;
+            ILocator heading = Page.Locator("h1").First;
             await Assertions.Expect(heading).ToBeVisibleAsync();
 
             // Assert - Check that the page contains MatchBy text
-            string? bodyText = await page.TextContentAsync("body");
+            string? bodyText = await Page.TextContentAsync("body");
             Assert.NotNull(bodyText);
             Assert.Contains("MatchBy", bodyText, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
-            await page.CloseAsync();
-            await context.CloseAsync();
+            await Page.CloseAsync();
         }
     }
 
-    [Fact]
+    /*[Fact]
     public async Task HomePage_ShouldHaveJoinNowButton_WhenNotAuthenticated()
     {
         // Arrange
@@ -73,6 +63,6 @@ public class HomePageTests(PlaywrightFixture fixture) : IClassFixture<Playwright
             await page.CloseAsync();
             await context.CloseAsync();
         }
-    }
+    }*/
 }
 

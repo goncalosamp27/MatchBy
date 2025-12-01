@@ -14,3 +14,5 @@ public interface IPlayerRatingService
     Task<Result<bool>> DeleteRating(string ratingId, string userId, CancellationToken ct = default);
     Task<Result<double>> GetAverageRatingForUser(string userId, CancellationToken ct = default);
 }
+
+

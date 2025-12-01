@@ -35,7 +35,7 @@ public class JobService(ILogger<JobService> logger, IDbContextFactory<Applicatio
         List<Match> pendentMatchesBefore1Day = await dbContext.Matches
             .Include(m => m.Creator)
             .Include(m => m.Participants)
-            .Where(m => m.Status == MatchStatus.Pendent 
+            .Where(m => (m.Status == MatchStatus.Pendent || (m.Status == MatchStatus.Confirmed && m.Participants.Count < m.MinPlayers))
                 && m.MatchDateTimeUtc <= now.Add(oneDay))
             .ToListAsync();
         

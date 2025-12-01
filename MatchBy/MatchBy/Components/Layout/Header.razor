@@ -52,7 +52,7 @@
                 </a>
             </div>
             <div class="flex items-center lg:order-2">
-                <DarkModeToggle></DarkModeToggle>
+                <DarkModeToggle ></DarkModeToggle>
                 <AuthorizeView>
                     <Authorized>
                         <NotificationsHeader UserId="@_userId"></NotificationsHeader>
@@ -139,7 +139,7 @@
                                 <li class="group">
                                     <form action="Account/Logout" method="post">
                                         <AntiforgeryToken/>
-                                        <input type="hidden" name="ReturnUrl" value="@_currentUrl"/>
+                                        <input type="hidden" name="ReturnUrl" value="/"/>
                                         <button type="submit"
                                                 class="flex items-center py-2 px-4 text-sm text-[var(--text)]">
                                             <svg class="mr-2 w-5 h-5 text-[var(--text)] group-hover:text-[var(--main)]"
@@ -227,29 +227,16 @@
 </header>
 
 @code {
-    private string? _currentUrl;
     private string? _userId;
 
     protected override async Task OnInitializedAsync()
     {
-        _currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
 
         var authState = await Auth.GetAuthenticationStateAsync();
         _userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
     
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        _currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
-    }
-
-
-    public ValueTask DisposeAsync()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-        return ValueTask.CompletedTask;
-    }
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => StateHasChanged();
 
 }

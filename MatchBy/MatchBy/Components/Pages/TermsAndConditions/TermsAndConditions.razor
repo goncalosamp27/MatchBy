@@ -1,0 +1,86 @@
+﻿@page "/TermsAndConditions"
+
+<section class="thin-scroll max-w-4xl mx-auto px-4 py-10 text-[var(--text)]">
+    @*
+    <header
+        class="rounded-3xl border border-[var(--section-secondary)] bg-[var(--section)]/80 px-6 py-10 text-center shadow-lg shadow-black/5 backdrop-blur">
+        <p class="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--main)]">MatchBy</p>
+        <h1 class="mt-3 text-3xl font-semibold leading-tight text-[var(--text)] md:text-4xl">
+            Terms &amp; Conditions
+        </h1>
+        <p class="mx-auto mt-4 max-w-2xl text-base text-[var(--text)] opacity-80">
+            Please review these terms carefully. Continuing to use MatchBy means you accept them.
+        </p>
+    </header>
+    *@
+    <ol
+        class="space-y-8 rounded-3xl border border-[var(--section)] bg-[var(--section-secondary)] px-8 py-10 shadow-xl shadow-black/5">
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Acceptance of Terms</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                By creating an account or accessing MatchBy you agree to abide by these Terms and all applicable laws.
+                If you do not agree, discontinue use immediately.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Account Responsibilities</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                You’re responsible for safeguarding your credentials and any activity under your account. Notify us
+                promptly of unauthorized use.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Permitted Use</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                MatchBy must be used solely for lawful matchmaking purposes. Reverse engineering, scraping, or
+                interfering with service integrity is prohibited.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Content Ownership</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                You retain rights to content you submit. By posting, you grant MatchBy a worldwide, royalty-free
+                license to host and display that content for service delivery.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Termination</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                We may suspend or terminate access if these Terms are violated or if required by law. You may delete
+                your account at any time via Account Settings.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Limitation of Liability</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                MatchBy provides services “as-is.” To the fullest extent permitted by law, we disclaim liability for
+                indirect or consequential damages.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Updates to Terms</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                We may modify these Terms and will post updates here with a revised “Last updated” date. Continued use
+                after changes constitutes acceptance.
+            </p>
+        </li>
+        <li class="space-y-2 text-[var(--text)]">
+            <h2 class="text-xl font-semibold text-[var(--main)]">Contact</h2>
+            <p class="font-light text-[var(--main)] leading-relaxed opacity-80">
+                Questions? Email <a class="underline decoration-[var(--main)] decoration-2 underline-offset-4"
+                    href="mailto:support@uniqueue.site">support@uniqueue.site</a>.
+            </p>
+        </li>
+    </ol>
+
+    <footer
+        class="mt-8 flex flex-col gap-4 rounded-3xl border border-[var(--section)] bg-[var(--section-secondary)] px-6 py-6 text-sm text-[var(--text)] opacity-80 shadow-lg shadow-black/5 sm:flex-row sm:items-center sm:justify-between">
+        <span>Last updated: @DateTime.UtcNow.ToString("MMMM dd, yyyy")</span>
+        <a
+            class="inline-flex items-center justify-center rounded-full bg-[var(--main)] px-5 py-2 text-sm font-semibold text-[var(--text-contrast)] shadow-md transition hover:-translate-y-0.5 hover:bg-[var(--main-hover)]"
+            href="/">
+            Back to Home
+        </a>
+    </footer>
+
+</section>

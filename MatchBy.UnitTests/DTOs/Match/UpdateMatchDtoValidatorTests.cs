@@ -15,14 +15,18 @@ public class UpdateMatchDtoValidatorTests
         {
             UserId = "user_123",
             MatchId = "match_456",
-            Location = new Location(40.7128, -74.0060, "New York", "USA"),
+            Location = new Location(40.7128,
+                -74.0060,
+                "New York",
+                "USA"),
             Address = "123 Main St, New York, NY",
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(7),
             Description = "Updated football match",
             MinPlayers = 4,
             MaxPlayers = 10,
             Sport = Sports.Football,
-            Privacy = MatchPrivacy.Public
+            Privacy = MatchPrivacy.Public,
+            MinimumPlayersRating = MinimumPlayersAverage.All
         };
     }
 

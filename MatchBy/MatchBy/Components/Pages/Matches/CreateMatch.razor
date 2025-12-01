@@ -2,307 +2,510 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IMatchesService MatchesService
+@inject IUsersService UsersService
 @inject NavigationManager NavigationManager
 @using Blazorise
+@using System.ComponentModel
 @using System.Security.Claims
 @using FluentValidation
 @using MatchBy.DTOs.Match
 @using MatchBy.Services.Matches
+@using MatchBy.Services.Users
 @using Microsoft.AspNetCore.Authorization
 @inject IJSRuntime Js
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IValidator<CreateMatchDto> CreateMatchDtoValidator
+@inject IToastService ToastService
+@implements IDisposable
 
-@if (_isLoading || _tz is null)
+@if (_viewModel.IsLoading || _tz is null)
 {
-    <Loading></Loading>
+    <div class="flex items-center justify-center min-h-screen">
+        <Loading></Loading>
+    </div>
 }
-else {
-    <div class="max-w-screen-xl px-4 mt-8 mb-16 mx-auto">
-    <Div Margin="Margin.IsAuto.OnX" Padding="Padding.Is5.OnX" class="mt-8">
-        <Heading Size="HeadingSize.Is2" Margin="Margin.Is3.FromBottom" Style="color: var(--main);">
-            Create Match
-        </Heading>
+else
+{
+    <div class="min-h-screen bg-[var(--background)] px-4 py-8">
+        <div class="max-w-5xl mx-auto">
+            <button @onclick="@(() => NavigationManager.NavigateTo("/matches"))"
+                    class="flex items-center gap-2 text-[var(--text)] hover:text-[var(--main)] mb-6 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Matches
+            </button>
 
-        <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
-            <Fields>
-                <FieldLabel> Choose the match location by clicking on the map: </FieldLabel>
-                <div id="matchMap" class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-3 border-[var(--main)] shadow-sm z-0"></div>
-
-                @* HIDDEN LOCATION FIELDS *@
-                <div style="display:none">
-                    <Validation Validator="@ValidateLatitude">
-                        <Field>
-                            <FieldLabel>Latitude</FieldLabel>
-                            <FieldBody>
-                                <NumericEdit TValue="double"
-                                            Value="@_model.Location.Latitude"
-                                            ValueChanged="@(v => _model = _model with { Location = _model.Location with { Latitude = v } })">
-                                    <Feedback>
-                                        <ValidationError/>
-                                    </Feedback>
-                                </NumericEdit>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
-                    <Validation Validator="@ValidateLongitude">
-                        <Field>
-                            <FieldLabel>Longitude</FieldLabel>
-                            <FieldBody>
-                                <NumericEdit TValue="double"
-                                            Value="@_model.Location.Longitude"
-                                            ValueChanged="@(v => _model = _model with { Location = _model.Location with { Longitude = v } })">
-                                    <Feedback>
-                                        <ValidationError/>
-                                    </Feedback>
-                                </NumericEdit>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
-                    <Validation Validator="@ValidateCity">
-                        <Field>
-                            <FieldLabel>City</FieldLabel>
-                            <FieldBody>
-                                <TextEdit Text="@_model.Location.City"
-                                        TextChanged="@(v => _model = _model with { Location = _model.Location with { City = v } })">
-                                    <Feedback>
-                                        <ValidationError/>
-                                    </Feedback>
-                                </TextEdit>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
-                    <Validation Validator="@ValidateCountry">
-                        <Field>
-                            <FieldLabel>Country</FieldLabel>
-                            <FieldBody>
-                                <TextEdit Text="@_model.Location.Country"
-                                        TextChanged="@(v => _model = _model with { Location = _model.Location with { Country = v } })">
-                                    <Feedback>
-                                        <ValidationError/>
-                                    </Feedback>
-                                </TextEdit>
-                            </FieldBody>
-                        </Field>
-                    </Validation>
+            <div
+                class="relative overflow-hidden rounded-3xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 md:p-8 mb-8">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold text-[var(--text)] mt-2">Create a new match</h1>
+                        <p class="text-[var(--text)] mt-3 max-w-2xl">
+                            Organize a game, find players, and set the rules.
+                        </p>
+                    </div>
                 </div>
-            </Fields>
-            <Validation Validator="@ValidateAddress">
-                <Field>
-                    <FieldLabel>Address</FieldLabel>
-                    <FieldBody>
-                        <TextEdit Placeholder="Type your match address" 
-                                Text="@_model.Address"
-                                Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                TextChanged="@(v => _model = _model with { Address = v })"
-                                @onblur="@OnAddressBlur">
-                            <Feedback>
-                                <ValidationError/>
-                            </Feedback>
-                        </TextEdit>
-                    </FieldBody>
-                </Field>
-            </Validation>
-
-            <Validation Validator="@ValidateDescription">
-                <Field>
-                    <FieldLabel>Description</FieldLabel>
-                    <FieldBody>
-                        <TextEdit Placeholder="Type a description for your match" 
-                                Text="@_model.Description"
-                                Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                TextChanged="@(v => _model = _model with { Description = v })">
-                            <Feedback>
-                                <ValidationError/>
-                            </Feedback>
-                        </TextEdit>
-                    </FieldBody>
-                </Field>
-            </Validation>
-
-            <Fields>
-                <Validation Validator="@ValidateMinPlayers">
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsHalf.OnDesktop">
-                        <FieldLabel>Min Players</FieldLabel>
-                        <FieldBody>
-                            <NumericEdit TValue="int" Placeholder="Min Players Number" 
-                                        Value="@_model.MinPlayers"
-                                        Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                        ValueChanged="@(v => _model = _model with { MinPlayers = v })">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </NumericEdit>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-
-                <Validation Validator="@ValidateMaxPlayers">
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsHalf.OnDesktop">
-                        <FieldLabel>Max Players</FieldLabel>
-                        <FieldBody>
-                            <NumericEdit TValue="int" Placeholder="Max Players Number" 
-                                        Value="@_model.MaxPlayers"
-                                        Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                        ValueChanged="@(v => _model = _model with { MaxPlayers = v })">
-                                <Feedback>
-                                    <ValidationError/>
-                                </Feedback>
-                            </NumericEdit>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-            </Fields>
-
-            <Fields>
-                <Validation Validator="@ValidateSport">
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsThird.OnDesktop">
-                        <FieldLabel>Sport</FieldLabel>
-                        <FieldBody>
-                            <Select TValue="Sports" 
-                                    SelectedValue="@_model.Sport"
-                                    Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                    SelectedValueChanged="@(v => _model = _model with { Sport = v })">
-                                @foreach (var item in Enum.GetValues<Sports>())
-                                {
-                                    <SelectItem Value="@item">@item.ToString()</SelectItem>
-                                }
-                            </Select>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-
-                <Validation Validator="@ValidatePrivacy">
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsThird.OnDesktop">
-                        <FieldLabel>Privacy</FieldLabel>
-                        <FieldBody>
-                            <Select TValue="MatchPrivacy" 
-                                    SelectedValue="@_model.Privacy"
-                                    Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                    SelectedValueChanged="@(v => _model = _model with { Privacy = v })">
-                                @foreach (var item in Enum.GetValues<MatchPrivacy>())
-                                {
-                                    <SelectItem Value="@item">@item.ToString()</SelectItem>
-                                }
-                            </Select>
-                        </FieldBody>
-                    </Field>
-                </Validation>
-
-                <Validation Validator="@ValidateMatchDate">
-                    <Field ColumnSize="ColumnSize.IsFull.OnTablet.IsThird.OnDesktop">
-                        <FieldLabel>MatchDateTime</FieldLabel>
-                        <DatePicker TValue="DateTime"
-                                    InputMode="DateInputMode.DateTime"
-                                    DefaultHour="9"
-                                    Class ="!block !w-full !p-2.5 !rounded-lg
-                                    !bg-[var(--section-secondary)]
-                                    !text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0"
-                                    StaticPicker="false"
-                                    DefaultMinute="15"
-                                    TimeAs24hr="true"
-                                    Placeholder="DD/MM/YYYY - HH:mm"
-                                    Date="@LocalMatchDate"
-                                    DateChanged="@(v => LocalMatchDate = v)">
-                            <Feedback>
-                                <ValidationError/>
-                            </Feedback>
-                        </DatePicker>
-                    </Field>
-                </Validation>
-            </Fields>
-            <div class="mt-4">
-            <Field>
-                <Button Color="Color.Primary" Clicked="@SubmitMatch" Loading="@_isLoading" Width="Width.Is100"
-                        Class ="!block !w-full !p-2.5 !rounded-lg
-                                    hover:!text-[var(--text)]
-                                    focus:!border-[var(--main)]
-                                    focus:!ring-1 focus:!ring-[var(--main)]
-                                    focus:!outline-none
-                                    !border-0
-                                    !text-[var(--text-contrast)]
-                                    !bg-[var(--main)]
-                                    hover:!bg-[var(--main-hover)]"
-                                    >
-                    Create Match
-                </Button>
-            </Field>
+                <div
+                    class="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-[var(--main)]/15 via-transparent to-transparent pointer-events-none"></div>
             </div>
 
-        </Validations>
-    </Div>
+            <div class="grid gap-8">
+                <div class="space-y-6">
+                    <Validations @ref="@_validations" Mode="ValidationMode.Manual" ValidateOnLoad="false">
+                        <div class="space-y-6">
+                            <!-- Step 1: Location & Details -->
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 1</p>
+                                        <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Match Details</h3>
+                                        <p class="text-sm text-[var(--text)]">Where, when, and what are you playing?</p>
+                                    </div>
+                                    <span
+                                        class="inline-flex items-center rounded-full bg-[var(--main)]/10 text-[var(--main)] px-3 py-1 text-xs font-semibold">
+                                        Required
+                                    </span>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <FieldLabel> Choose the match location by clicking on the map:</FieldLabel>
+                                    <div id="matchMap"
+                                         class="w-full h-[180px] mt-2 sm:h-64 md:h-80 lg:h-[480px] rounded-lg border-3 border-[var(--main)] shadow-sm z-0"></div>
+
+                                    @* HIDDEN LOCATION FIELDS *@
+                                    <div style="display:none">
+                                        <Validation Validator="@ValidateLatitude">
+                                            <Field>
+                                                <FieldLabel>Latitude</FieldLabel>
+                                                <FieldBody>
+                                                    <NumericEdit TValue="double"
+                                                                 Value="@_viewModel.Model.Location.Latitude"
+                                                                 ValueChanged="@(v => _viewModel.UpdateLocation(_viewModel.Model.Location with { Latitude = v }))">
+                                                        <Feedback>
+                                                            <ValidationError/>
+                                                        </Feedback>
+                                                    </NumericEdit>
+                                                </FieldBody>
+                                            </Field>
+                                        </Validation>
+                                        <Validation Validator="@ValidateLongitude">
+                                            <Field>
+                                                <FieldLabel>Longitude</FieldLabel>
+                                                <FieldBody>
+                                                    <NumericEdit TValue="double"
+                                                                 Value="@_viewModel.Model.Location.Longitude"
+                                                                 ValueChanged="@(v => _viewModel.UpdateLocation(_viewModel.Model.Location with { Longitude = v }))">
+                                                        <Feedback>
+                                                            <ValidationError/>
+                                                        </Feedback>
+                                                    </NumericEdit>
+                                                </FieldBody>
+                                            </Field>
+                                        </Validation>
+                                        <Validation Validator="@ValidateCity">
+                                            <Field>
+                                                <FieldLabel>City</FieldLabel>
+                                                <FieldBody>
+                                                    <TextEdit Text="@_viewModel.Model.Location.City"
+                                                              TextChanged="@(v => _viewModel.UpdateLocation(_viewModel.Model.Location with { City = v }))">
+                                                        <Feedback>
+                                                            <ValidationError/>
+                                                        </Feedback>
+                                                    </TextEdit>
+                                                </FieldBody>
+                                            </Field>
+                                        </Validation>
+                                        <Validation Validator="@ValidateCountry">
+                                            <Field>
+                                                <FieldLabel>Country</FieldLabel>
+                                                <FieldBody>
+                                                    <TextEdit Text="@_viewModel.Model.Location.Country"
+                                                              TextChanged="@(v => _viewModel.UpdateLocation(_viewModel.Model.Location with { Country = v }))">
+                                                        <Feedback>
+                                                            <ValidationError/>
+                                                        </Feedback>
+                                                    </TextEdit>
+                                                </FieldBody>
+                                            </Field>
+                                        </Validation>
+                                    </div>
+
+                                    <Validation Validator="@ValidateAddress">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Address</FieldLabel>
+                                            <FieldBody>
+                                                <TextEdit Placeholder="Type your match address"
+                                                          Text="@_viewModel.Model.Address"
+                                                          TextChanged="@(v =>
+                                                                       {
+                                                                           _viewModel.UpdateAddress(v);
+                                                                           StateHasChanged();
+                                                                       })"
+                                                          @onblur="@OnAddressBlur"
+                                                          Class="w-full"
+                                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </TextEdit>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+
+                                    <Validation Validator="@ValidateDescription">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Description
+                                            </FieldLabel>
+                                            <FieldBody>
+                                                <TextEdit Placeholder="Type a description for your match"
+                                                          Text="@_viewModel.Model.Description"
+                                                          TextChanged="@(v =>
+                                                                       {
+                                                                           _viewModel.UpdateDescription(v);
+                                                                           StateHasChanged();
+                                                                       })"
+                                                          Class="w-full"
+                                                          Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </TextEdit>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Validation Validator="@ValidateSport">
+                                            <Field>
+                                                <FieldLabel class="text-[var(--text)] font-medium mb-2">Sport
+                                                </FieldLabel>
+                                                <FieldBody>
+                                                    <Select TValue="Sports"
+                                                            SelectedValue="@_viewModel.Model.Sport"
+                                                            SelectedValueChanged="@(v =>
+                                                                                  {
+                                                                                      _viewModel.UpdateSport(v);
+                                                                                      StateHasChanged();
+                                                                                  })"
+                                                            Class="w-full"
+                                                            Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                        @foreach (var item in Enum.GetValues<Sports>())
+                                                        {
+                                                            <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                                        }
+                                                    </Select>
+                                                </FieldBody>
+                                            </Field>
+                                        </Validation>
+
+                                        <Validation Validator="@ValidatePrivacy">
+                                            <Field>
+                                                <FieldLabel class="text-[var(--text)] font-medium mb-2">Privacy
+                                                </FieldLabel>
+                                                <FieldBody>
+                                                    <Select TValue="MatchPrivacy"
+                                                            SelectedValue="@_viewModel.Model.Privacy"
+                                                            SelectedValueChanged="@(v =>
+                                                                                  {
+                                                                                      _viewModel.UpdatePrivacy(v);
+                                                                                      StateHasChanged();
+                                                                                  })"
+                                                            Class="w-full"
+                                                            Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                        @foreach (var item in Enum.GetValues<MatchPrivacy>())
+                                                        {
+                                                            <SelectItem Value="@item">@item.ToString()</SelectItem>
+                                                        }
+                                                    </Select>
+                                                </FieldBody>
+                                            </Field>
+                                        </Validation>
+                                    </div>
+
+                                    <Validation Validator="@ValidateMatchDate">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Match DateTime
+                                            </FieldLabel>
+                                            <DatePicker TValue="DateTime"
+                                                        InputMode="DateInputMode.DateTime"
+                                                        DefaultHour="9"
+                                                        DefaultMinute="15"
+                                                        TimeAs24hr="true"
+                                                        Placeholder="DD/MM/YYYY - HH:mm"
+                                                        Date="@LocalMatchDate"
+                                                        DateChanged="@(v => LocalMatchDate = v)"
+                                                        Class="w-full !bg-[var(--background)] !text-[var(--text)] border !border-[var(--main)]"
+                                                        style="color: var(--text); border-radius: 0.65rem; padding: 0.85rem">
+                                                <Feedback>
+                                                    <ValidationError/>
+                                                </Feedback>
+                                            </DatePicker>
+                                        </Field>
+                                    </Validation>
+                                </div>
+                            </section>
+
+                            <!-- Step 2: Requirements -->
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 2</p>
+                                        <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Requirements</h3>
+                                        <p class="text-sm text-[var(--text)]">Set player limits and rating
+                                            requirements.</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <Validation Validator="@ValidateMinPlayers">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Min Players
+                                            </FieldLabel>
+                                            <FieldBody>
+                                                <NumericEdit TValue="int" Placeholder="Min Players"
+                                                             Value="@_viewModel.Model.MinPlayers"
+                                                             ValueChanged="@(v =>
+                                                                           {
+                                                                               _viewModel.UpdateMinPlayers(v);
+                                                                               StateHasChanged();
+                                                                           })"
+                                                             Class="w-full"
+                                                             Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </NumericEdit>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+
+                                    <Validation Validator="@ValidateMaxPlayers">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Max Players
+                                            </FieldLabel>
+                                            <FieldBody>
+                                                <NumericEdit TValue="int" Placeholder="Max Players"
+                                                             Value="@_viewModel.Model.MaxPlayers"
+                                                             ValueChanged="@(v =>
+                                                                           {
+                                                                               _viewModel.UpdateMaxPlayers(v);
+                                                                               StateHasChanged();
+                                                                           })"
+                                                             Class="w-full"
+                                                             Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <Feedback>
+                                                        <ValidationError/>
+                                                    </Feedback>
+                                                </NumericEdit>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+
+                                    <Validation Validator="@ValidateMinimumPlayersRating">
+                                        <Field>
+                                            <FieldLabel class="text-[var(--text)] font-medium mb-2">Min Rating
+                                            </FieldLabel>
+                                            <FieldBody>
+                                                <Select TValue="MinimumPlayersAverage"
+                                                        SelectedValue="@_viewModel.Model.MinimumPlayersRating"
+                                                        SelectedValueChanged="@(v =>
+                                                                              {
+                                                                                  _viewModel.UpdateMinimumPlayersRating(v);
+                                                                                  StateHasChanged();
+                                                                              })"
+                                                        Class="w-full"
+                                                        Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                                    <SelectItem Value="@MinimumPlayersAverage.All">Zero Stars
+                                                    </SelectItem>
+                                                    <SelectItem Value="@MinimumPlayersAverage.OneStars">1 Star & Up
+                                                    </SelectItem>
+                                                    <SelectItem Value="@MinimumPlayersAverage.TwoStars">2 Stars & Up
+                                                    </SelectItem>
+                                                    <SelectItem Value="@MinimumPlayersAverage.ThreeStars">3 Stars & Up
+                                                    </SelectItem>
+                                                    <SelectItem Value="@MinimumPlayersAverage.FourStars">4 Stars & Up
+                                                    </SelectItem>
+                                                    <SelectItem Value="@MinimumPlayersAverage.FiveStars">5 Stars Only
+                                                    </SelectItem>
+                                                </Select>
+                                            </FieldBody>
+                                        </Field>
+                                    </Validation>
+                                </div>
+                            </section>
+
+                            <!-- Step 3: Invites -->
+                            <section
+                                class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6 space-y-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.2em] text-[var(--text)]">Step 3</p>
+                                        <h3 class="text-xl font-semibold text-[var(--text)] mt-1">Invite Players</h3>
+                                        <p class="text-sm text-[var(--text)]">Find and invite players to your match.</p>
+                                    </div>
+                                </div>
+
+                                <Field>
+                                    <FieldBody>
+                                        <div class="mb-3">
+                                            <TextEdit @bind-Text="_viewModel.MemberSearch"
+                                                      @bind-Text:after="StateHasChanged"
+                                                      Placeholder="Search by username or email"
+                                                      Role="TextRole.Search"
+                                                      KeyDown="@(async (e) =>
+                                                               {
+                                                                   await _viewModel.OnMemberSearchKeyDownAsync(e);
+                                                                   StateHasChanged();
+                                                               })"
+                                                      Class="w-full"
+                                                      Style="background-color: var(--background); color: var(--text); border-color: var(--main); border-radius: 0.65rem; padding: 0.85rem;">
+                                            </TextEdit>
+                                        </div>
+
+                                        @if (_viewModel.IsLoadingMembers)
+                                        {
+                                            <Loading></Loading>
+                                        }
+                                        else
+                                        {
+                                            <div
+                                                class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
+                                                style="background-color: var(--background);">
+                                                @if (_viewModel.AvailableUsers.Data.Count == 0)
+                                                {
+                                                    <div class="py-3 text-center opacity-60"
+                                                         style="color: var(--text);">No users found
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    foreach (var user in _viewModel.AvailableUsers.Data)
+                                                    {
+                                                        var isCreator = user.Id == _viewModel.UserId;
+                                                        var isSelected = _viewModel.Model.MembersIds.Contains(user.Id) || isCreator;
+                                                        var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
+
+                                                        <div
+                                                            class="flex items-center gap-3 py-2 px-3 rounded-xl text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer transition-all"
+                                                            @onclick="@(() =>
+                                                                      {
+                                                                          if (isCreator) return;
+                                                                          _viewModel.ToggleMember(user.Id);
+                                                                          StateHasChanged();
+                                                                      })"
+                                                            title="@(isCreator ? "Creator" : "Tap to toggle")">
+                                                            <img src="@photoUrl" alt="@user.UserName"
+                                                                 class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]/60"/>
+                                                            <span
+                                                                class="fw-500 truncate flex-1">@user.DisplayName @(isCreator ? "(You)" : "")</span>
+                                                            @if (isSelected)
+                                                            {
+                                                                <svg class="w-5 h-5 flex-shrink-0" fill="currentColor"
+                                                                     viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd"
+                                                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                          clip-rule="evenodd"/>
+                                                                </svg>
+                                                            }
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+
+                                            @if (_viewModel.SelectedUsers.Count > 0)
+                                            {
+                                                <div class="mb-3">
+                                                    <FieldLabel class="text-[var(--text)] font-medium mb-2">Invites
+                                                        (@_viewModel.SelectedUsers.Count)
+                                                    </FieldLabel>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        @foreach (var member in _viewModel.SelectedUsers)
+                                                        {
+                                                            var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                                            <div
+                                                                class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
+                                                                <img src="@photoUrl" alt="@member.UserName"
+                                                                     class="rounded-full w-6 h-6 object-cover"/>
+                                                                <span class="text-sm">@member.DisplayName</span>
+                                                                <button @onclick="@(() =>
+                                                                                  {
+                                                                                      _viewModel.RemoveMember(member.Id);
+                                                                                      StateHasChanged();
+                                                                                  })"
+                                                                        @onclick:stopPropagation="true"
+                                                                        class="ml-1 hover:opacity-80 transition"
+                                                                        title="Remove invite">
+                                                                    <svg class="w-4 h-4" fill="currentColor"
+                                                                         viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd"
+                                                                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                              clip-rule="evenodd"/>
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            @if (_viewModel.AvailableUsers is { Data: not null, TotalCount: > 0 })
+                                            {
+                                                <div class="flex justify-center mt-6">
+                                                    <OffsetPagination CurrentPage="@_viewModel.CurrentMemberPage"
+                                                                      OnPageChanged="@(async (page) =>
+                                                                                     {
+                                                                                         await _viewModel.OnMemberPageChangedAsync(page);
+                                                                                         StateHasChanged();
+                                                                                     })"
+                                                                      PageSize="10"
+                                                                      TotalItems="@_viewModel.AvailableUsers.TotalCount"/>
+                                                </div>
+                                            }
+                                        }
+                                    </FieldBody>
+                                </Field>
+                            </section>
+
+                            <!-- Actions -->
+                            <section class="rounded-2xl border border-[var(--main)] bg-[var(--section-secondary)] p-6">
+                                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-[var(--text)]">Ready to create?</h3>
+                                        <p class="text-sm text-[var(--text)]">Invites will be sent immediately.</p>
+                                    </div>
+                                    <Button Color="Color.Primary"
+                                            Clicked="@SubmitMatch"
+                                            Loading="@_viewModel.IsSubmitting"
+                                            Class="w-full md:w-auto"
+                                            Style="background-color: var(--main); color: var(--text-contrast); padding: 0.9rem 2.4rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s;">
+                                        Create Match
+                                    </Button>
+                                </div>
+                            </section>
+                        </div>
+                    </Validations>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
 @code {
     Validations _validations = null!;
-    CreateMatchDto _model = new()
-    {
-        Location = new Location(0,
-            0,
-            string.Empty,
-            string.Empty),
-        MatchDateTimeUtc = DateTime.UtcNow.AddDays(1),
-        Address = string.Empty,
-        Description = string.Empty,
-        Privacy = MatchPrivacy.Public,
-        Sport = Sports.Football,
-        MinPlayers = 1,
-        MaxPlayers = 10,
-        CreatorId = string.Empty
-    };
-
+    private CreateMatchViewModel _viewModel = null!;
+    private PropertyChangedEventHandler? _propertyChangedHandler;
     private string? _tzId;
     private TimeZoneInfo? _tz;
-    private string? _userId;
-    private bool _isLoading = true;
 
     private DateTime LocalMatchDate
     {
         get
         {
             if (_tz is null) return default;
-            var utc = DateTime.SpecifyKind(_model.MatchDateTimeUtc, DateTimeKind.Utc);
+            var utc = DateTime.SpecifyKind(_viewModel.Model.MatchDateTimeUtc, DateTimeKind.Utc);
             var local = Tz.ToLocal(utc, _tz);
             return DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
         }
@@ -311,24 +514,17 @@ else {
             if (_tz is null) return;
             var local = DateTime.SpecifyKind(value, DateTimeKind.Unspecified);
             var utc = Tz.ToUtc(local, _tz);
-            _model = _model with { MatchDateTimeUtc = DateTime.SpecifyKind(utc, DateTimeKind.Utc) };
+            _viewModel.UpdateMatchDateTimeUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc));
         }
     }
 
     private void ValidateProperty(ValidatorEventArgs e, string propertyPath)
     {
-        var errors = CreateMatchDtoValidator.Validate(_model).Errors
-            .Where(x => x.PropertyName == propertyPath)
-            .ToList();
-
-        if (errors.Any())
+        var status = _viewModel.ValidateProperty(propertyPath);
+        e.Status = status;
+        if (status == ValidationStatus.Error)
         {
-            e.Status = ValidationStatus.Error;
-            e.ErrorText = errors[0].ErrorMessage;
-        }
-        else
-        {
-            e.Status = ValidationStatus.Success;
+            e.ErrorText = _viewModel.GetValidationError(propertyPath);
         }
     }
 
@@ -343,37 +539,52 @@ else {
     void ValidateMatchDate(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateMatchDto.MatchDateTimeUtc));
     void ValidateSport(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateMatchDto.Sport));
     void ValidatePrivacy(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateMatchDto.Privacy));
+    void ValidateMinimumPlayersRating(ValidatorEventArgs e) => ValidateProperty(e, nameof(CreateMatchDto.MinimumPlayersRating));
 
     private async Task SubmitMatch()
     {
         if (!await _validations.ValidateAll()) return;
 
-        var createDto = _model with { CreatorId = _userId! };
+        var success = await _viewModel.SubmitMatchAsync();
 
-        var result = await MatchesService.CreateMatch(createDto);
-
-        if (!result.Success)
+        if (success)
         {
-            Console.WriteLine($"Error creating match: {result.ErrorMessages}");
-            return;
+            NavigationManager.NavigateTo("/Matches");
         }
-
-        NavigationManager.NavigateTo("/Matches");
+        else
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task OnAddressBlur(FocusEventArgs _)
     {
-        if (string.IsNullOrWhiteSpace(_model.Address)) return;
-        await Js.InvokeVoidAsync("geocodeAddress", _model.Address);
+        if (string.IsNullOrWhiteSpace(_viewModel.Model.Address)) return;
+        await Js.InvokeVoidAsync("geocodeAddress", _viewModel.Model.Address);
     }
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        
-        _userId = user.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-        _isLoading = false;
+
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
+        {
+            NavigationManager.NavigateTo("/Account/Login");
+            return;
+        }
+
+        _viewModel = new CreateMatchViewModel(MatchesService, UsersService, CreateMatchDtoValidator, ToastService)
+        {
+            UserId = userId
+        };
+
+        _propertyChangedHandler = (_, _) => StateHasChanged();
+        _viewModel.PropertyChanged += _propertyChangedHandler;
+
+        await _viewModel.LoadMembersAsync();
+        _viewModel.IsLoading = false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -390,11 +601,17 @@ else {
     [JSInvokable]
     public void UpdateLocationFromMap(double lat, double lng, string city, string country, string address)
     {
-        _model = _model with 
-        { 
-            Location = new Location(Latitude: lat, Longitude: lng, City: city, Country: country),
-            Address = address
-        };
+        _viewModel.UpdateLocation(new Location(Latitude: lat, Longitude: lng, City: city, Country: country));
+        _viewModel.UpdateAddress(address);
         InvokeAsync(StateHasChanged);
     }
+
+    public void Dispose()
+    {
+        if (_propertyChangedHandler != null)
+        {
+            _viewModel.PropertyChanged -= _propertyChangedHandler;
+        }
+    }
+
 }

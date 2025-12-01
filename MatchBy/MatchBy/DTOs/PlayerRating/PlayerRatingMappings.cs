@@ -42,3 +42,6 @@ public static class PlayerRatingMappings
         playerRating.UpdatedAtUtc = DateTime.UtcNow;
     }
 }
+
+
+

@@ -13,6 +13,14 @@ public class ImageRefreshService(
     IS3Service s3Service,
     IOptions<S3Settings> s3Settings) : IImageRefreshService
 {
+    /// <summary>
+    /// Refreshes the presigned URL for a user's profile image if it has expired or is missing.
+    /// </summary>
+    /// <param name="user">The user entity whose profile image should be refreshed.</param>
+    /// <remarks>
+    /// This method checks if the user has a profile image and if the current URL has expired.
+    /// If expired or missing, it generates a new presigned URL from S3 and updates the user's profile image metadata.
+    /// </remarks>
     public async Task RefreshUserProfileImageAsync(ApplicationUser user)
     {
         if (user.ProfileImage?.Key is null)
@@ -36,6 +44,14 @@ public class ImageRefreshService(
         }
     }
 
+    /// <summary>
+    /// Refreshes the presigned URL for a team's image if it has expired or is missing.
+    /// </summary>
+    /// <param name="team">The team entity whose image should be refreshed.</param>
+    /// <remarks>
+    /// This method checks if the team has an image and if the current URL has expired.
+    /// If expired or missing, it generates a new presigned URL from S3 and updates the team's image metadata.
+    /// </remarks>
     public async Task RefreshTeamImageAsync(Team team)
     {
         if (team.Image?.Key is null)
@@ -59,6 +75,17 @@ public class ImageRefreshService(
         }
     }
     
+    /// <summary>
+    /// Refreshes all images associated with a team, including the team image, member profile images, owner profile image, and conversation image.
+    /// </summary>
+    /// <param name="team">The team entity whose images should be refreshed.</param>
+    /// <remarks>
+    /// This method refreshes images in parallel for better performance. It refreshes:
+    /// - The team's own image
+    /// - All team members' profile images
+    /// - The team owner's profile image
+    /// - The associated conversation image (if exists)
+    /// </remarks>
     public async Task RefreshTeamImagesAsync(Team team)
     {
         // Refresh conversation image
@@ -80,6 +107,13 @@ public class ImageRefreshService(
         }
     }
     
+    /// <summary>
+    /// Refreshes profile images for both the sender and receiver of a notification.
+    /// </summary>
+    /// <param name="notification">The notification entity whose associated user images should be refreshed.</param>
+    /// <remarks>
+    /// This method refreshes the profile images for both the notification sender and receiver in parallel.
+    /// </remarks>
     public async Task RefreshNotificationImagesAsync(Notification notification)
     {
         // Refresh receiver profile image
@@ -95,14 +129,23 @@ public class ImageRefreshService(
         }
     }
 
+    /// <summary>
+    /// Refreshes the presigned URL for a conversation's image if it has expired or is missing.
+    /// Also refreshes the associated team image if the conversation is linked to a team.
+    /// </summary>
+    /// <param name="conversation">The conversation entity whose image should be refreshed.</param>
+    /// <remarks>
+    /// This method checks if the conversation has an image or is linked to a team with an image.
+    /// If expired or missing, it generates new presigned URLs from S3 and updates the metadata.
+    /// </remarks>
     public async Task RefreshConversationImageAsync(Conversation conversation)
     {
-        if (conversation.Image?.Key is null)
+        if (conversation.Image?.Key is null && conversation.Team?.Image is null)
         {
             return;
         }
 
-        if (conversation.Image.ExpireDateTimeUtc < DateTime.UtcNow || string.IsNullOrEmpty(conversation.Image.Url))
+        if (conversation.Image is not null && (conversation.Image.ExpireDateTimeUtc < DateTime.UtcNow || string.IsNullOrEmpty(conversation.Image.Url)))
         {
             Result<string> url = await s3Service.GetPresignedUrlAsync(
                 $"conversations/{conversation.Id}/image/{conversation.Image.Key}", HttpVerb.GET);
@@ -114,10 +157,25 @@ public class ImageRefreshService(
                     Url = url.Data!,
                     ExpireDateTimeUtc = DateTime.UtcNow.AddMinutes(s3Settings.Value.DefaultUrlExpiry)
                 };
-            }
+            }  
+        }
+        
+        if (conversation.Team?.Image != null && (conversation.Team.Image.ExpireDateTimeUtc < DateTime.UtcNow || string.IsNullOrEmpty(conversation.Team.Image.Url)))
+        {
+            await RefreshTeamImageAsync(conversation.Team);
         }
     }
 
+    /// <summary>
+    /// Refreshes all images associated with a conversation, including the conversation image, participant profile images, and creator profile image.
+    /// </summary>
+    /// <param name="conversation">The conversation entity whose images should be refreshed.</param>
+    /// <remarks>
+    /// This method refreshes images in parallel for better performance. It refreshes:
+    /// - The conversation's own image
+    /// - All conversation participants' profile images
+    /// - The conversation creator's profile image
+    /// </remarks>
     public async Task RefreshConversationImagesAsync(Conversation conversation)
     {
         // Refresh conversation image

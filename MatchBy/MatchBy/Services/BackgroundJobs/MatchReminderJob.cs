@@ -1,35 +1,24 @@
 ﻿using MatchBy.Data;
 using MatchBy.DTOs.Notification;
 using MatchBy.Enums;
+using MatchBy.Models;
 using MatchBy.Services.Email;
 using MatchBy.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.BackgroundJobs;
 
-public class MatchReminderJob : IMatchReminderJob
+public class MatchReminderJob(
+    IEmailSender emailSender,
+    IDbContextFactory<ApplicationDbContext> contextFactory,
+    ILogger<MatchReminderJob> logger,
+    INotificationService notificationService)
+    : IMatchReminderJob
 {
-    private readonly IEmailSender _emailSender;
-    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
-    private readonly ILogger<MatchReminderJob> _logger;
-    private readonly INotificationService _notificationService;
-
-    public MatchReminderJob(
-        IEmailSender emailSender,
-        IDbContextFactory<ApplicationDbContext> contextFactory,
-        ILogger<MatchReminderJob> logger,
-        INotificationService notificationService)
-    {
-        _emailSender = emailSender;
-        _contextFactory = contextFactory;
-        _logger = logger;
-        _notificationService = notificationService;
-    }
-
     public async Task SendRemindersAsync()
     {
-        await using var db = await _contextFactory.CreateDbContextAsync();
-        var now = DateTime.UtcNow;
+        await using ApplicationDbContext db = await contextFactory.CreateDbContextAsync();
+        DateTime now = DateTime.UtcNow;
 
         await Send3DayRemindersAsync(db, now);
         await Send30MinRemindersAsync(db, now);
@@ -39,7 +28,7 @@ public class MatchReminderJob : IMatchReminderJob
 
     private async Task Send3DayRemindersAsync(ApplicationDbContext db, DateTime now)
     {
-        var matches = await db.Matches
+        List<Match> matches = await db.Matches
             .Include(m => m.Participants)
             .Where(m =>
                 (m.Status == MatchStatus.Pendent || m.Status == MatchStatus.Confirmed) &&
@@ -48,9 +37,9 @@ public class MatchReminderJob : IMatchReminderJob
                 m.MatchDateTimeUtc <= now.AddDays(3))
             .ToListAsync();
 
-        foreach (var match in matches)
+        foreach (Match match in matches)
         {
-            foreach (var participant in match.Participants)
+            foreach (ApplicationUser participant in match.Participants)
             {
                 if (string.IsNullOrEmpty(participant.Email))
                 {
@@ -59,17 +48,17 @@ public class MatchReminderJob : IMatchReminderJob
 
                 try
                 {
-                    await _emailSender.SendMatchReminderAsync(
+                    await emailSender.SendMatchReminderAsync(
                         participant.Email,
                         participant.UserName!,
                         match,
                         "3 days");
 
-                    _logger.LogInformation("Sent 3-day email to {Email}", participant.Email);
+                    logger.LogInformation("Sent 3-day email to {Email}", participant.Email);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
+                    logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
                 }
 
                 try
@@ -85,23 +74,23 @@ public class MatchReminderJob : IMatchReminderJob
                         RelatedEntityName = "Match"
                     };
 
-                    await _notificationService.SendNotificationAsync(notification);
-                    _logger.LogInformation("Sent notification to {UserId}", participant.Id);
+                    await notificationService.SendNotificationAsync(notification);
+                    logger.LogInformation("Sent notification to {UserId}", participant.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send notification to {UserId}", participant.Id);
+                    logger.LogError(ex, "Failed to send notification to {UserId}", participant.Id);
                 }
             }
 
             match.Reminder3DaysSent = true;
-            _logger.LogInformation("Marked 3-day reminder as sent for match {MatchId}", match.Id);
+            logger.LogInformation("Marked 3-day reminder as sent for match {MatchId}", match.Id);
         }
     }
 
     private async Task Send30MinRemindersAsync(ApplicationDbContext db, DateTime now)
     {
-        var matches = await db.Matches
+        List<Match> matches = await db.Matches
             .Include(m => m.Participants)
             .Where(m =>
                 m.Status == MatchStatus.Confirmed &&
@@ -110,9 +99,9 @@ public class MatchReminderJob : IMatchReminderJob
                 m.MatchDateTimeUtc <= now.AddMinutes(30))
             .ToListAsync();
 
-        foreach (var match in matches)
+        foreach (Match match in matches)
         {
-            foreach (var participant in match.Participants)
+            foreach (ApplicationUser participant in match.Participants)
             {
                 if (string.IsNullOrEmpty(participant.Email))
                 {
@@ -121,17 +110,17 @@ public class MatchReminderJob : IMatchReminderJob
 
                 try
                 {
-                    await _emailSender.SendMatchReminderAsync(
+                    await emailSender.SendMatchReminderAsync(
                         participant.Email,
                         participant.UserName!,
                         match,
                         "30 minutes");
 
-                    _logger.LogInformation("Sent 30-min email to {Email}", participant.Email);
+                    logger.LogInformation("Sent 30-min email to {Email}", participant.Email);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
+                    logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
                 }
 
                 try
@@ -147,17 +136,17 @@ public class MatchReminderJob : IMatchReminderJob
                         RelatedEntityName = "Match"
                     };
 
-                    await _notificationService.SendNotificationAsync(notification);
-                    _logger.LogInformation("Sent notification to {UserId}", participant.Id);
+                    await notificationService.SendNotificationAsync(notification);
+                    logger.LogInformation("Sent notification to {UserId}", participant.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send notification to {UserId}", participant.Id);
+                    logger.LogError(ex, "Failed to send notification to {UserId}", participant.Id);
                 }
             }
 
             match.Reminder30MinSent = true;
-            _logger.LogInformation("Marked 30-min reminder as sent for match {MatchId}", match.Id);
+            logger.LogInformation("Marked 30-min reminder as sent for match {MatchId}", match.Id);
         }
     }
 }

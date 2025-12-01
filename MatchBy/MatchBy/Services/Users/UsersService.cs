@@ -9,6 +9,17 @@ public class UsersService(
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IImageRefreshService imageRefreshService) : IUsersService
 {
+    /// <summary>
+    /// Retrieves a paginated list of users matching the search query.
+    /// </summary>
+    /// <param name="q">Search query to filter users by username or display name (case-insensitive).</param>
+    /// <param name="page">The page number to retrieve (default: 1).</param>
+    /// <param name="pageSize">The number of users per page (default: 5).</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a paginated response with a list of users, ordered by username.
+    /// Profile images are refreshed before returning.
+    /// </returns>
     public async Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
         string q, int page = 1, int pageSize = 5, CancellationToken ct = default)
     {
@@ -45,6 +56,14 @@ public class UsersService(
     }
 
 
+    /// <summary>
+    /// Retrieves a specific user by their unique identifier and refreshes their profile image.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// The user entity if found, or null if the user does not exist. The user's profile image is refreshed before returning.
+    /// </returns>
     public async Task<ApplicationUser?> GetUser(string userId, CancellationToken cancellationToken)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

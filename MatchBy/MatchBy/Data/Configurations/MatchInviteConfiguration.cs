@@ -57,7 +57,6 @@ public class MatchInviteConfiguration: IEntityTypeConfiguration<MatchInvite>
 
         builder.Property(i => i.UpdatedAtUtc);
         builder.Property(i => i.AcceptedAtUtc);
-        builder.Property(i => i.DeclinedAtUtc);
         builder.Property(i => i.DeletedAtUtc);
         builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }

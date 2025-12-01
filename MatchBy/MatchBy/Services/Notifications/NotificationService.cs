@@ -16,6 +16,19 @@ public class NotificationService(
     IImageRefreshService imageRefreshService,
     IDbContextFactory<ApplicationDbContext> dbContextFactory) : INotificationService
 {
+    /// <summary>
+    /// Retrieves a paginated list of notifications for a specific user using cursor-based pagination.
+    /// </summary>
+    /// <param name="pageSize">The number of notifications to retrieve per page.</param>
+    /// <param name="userId">The unique identifier of the user to get notifications for.</param>
+    /// <param name="cursor">Optional cursor for pagination. If provided, returns notifications before this cursor.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing a cursor-paginated response with a list of notification DTOs, ordered by ID (newest first).
+    /// </returns>
+    /// <remarks>
+    /// Notifications are refreshed in parallel for better performance. The cursor is based on the notification ID.
+    /// </remarks>
     public async Task<Result<CursorPaginationResponse<List<NotificationDto>>>> GetNotifications(int pageSize, string userId, string? cursor, CancellationToken ct = default)
     {        
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -63,6 +76,15 @@ public class NotificationService(
                 NextCursor = nextCursor
             });
     }
+    /// <summary>
+    /// Marks a notification as read for a specific user.
+    /// </summary>
+    /// <param name="notificationId">The unique identifier of the notification to mark as read.</param>
+    /// <param name="userId">The unique identifier of the user marking the notification as read.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the updated notification DTO if successful, or an error message if the notification is not found.
+    /// </returns>
     public async Task<Result<NotificationDto>> ReadNotification(string notificationId, string userId, CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -85,6 +107,14 @@ public class NotificationService(
 
         return Result<NotificationDto>.Ok(notification.ToDto());
     }
+    /// <summary>
+    /// Marks all unread notifications for a user as read.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing the number of notifications marked as read, or 0 if there were no unread notifications.
+    /// </returns>
     public async Task<Result<int>> MarkAllNotificationsAsReadAsync(string userId, CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -109,6 +139,18 @@ public class NotificationService(
         await dbContext.SaveChangesAsync(ct);
         return Result<int>.Ok(unreadNotifications.Count);
     }
+    /// <summary>
+    /// Creates and sends a notification to a user via SignalR hub.
+    /// </summary>
+    /// <param name="notification">DTO containing the notification details to create and send.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <returns>
+    /// A result containing true if the notification was successfully created and sent, or an error message if validation fails.
+    /// </returns>
+    /// <remarks>
+    /// This method validates the notification, creates it in the database, and sends it to the receiver via SignalR
+    /// if they have an active connection. The notification is sent to all active connections for the receiver.
+    /// </remarks>
     public async Task<Result<bool>> SendNotificationAsync(CreateNotificationDto notification, CancellationToken ct = default)
     {
         ValidationResult? result = await createNotificationValidator.ValidateAsync(notification, ct);
@@ -142,6 +184,16 @@ public class NotificationService(
         
         return Result<bool>.Ok(true);
     }
+    /// <summary>
+    /// Sends a notification to a specific user via SignalR hub using their active connections.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to send the notification to.</param>
+    /// <param name="notification">The notification DTO to send.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <remarks>
+    /// This method retrieves all active SignalR connections for the user and sends the notification to all of them.
+    /// If the user has no active connections, the notification is not sent (but it's still stored in the database).
+    /// </remarks>
     private async Task SendNotificationToUserAsync(string userId, NotificationDto notification, CancellationToken ct = default)
     {
         // Get user connections from the hub's static dictionary
@@ -154,6 +206,16 @@ public class NotificationService(
         }
     }
     
+    /// <summary>
+    /// Sends a notification to multiple users via SignalR hub using their active connections.
+    /// </summary>
+    /// <param name="userIds">Collection of user IDs to send the notification to.</param>
+    /// <param name="notification">The notification DTO to send.</param>
+    /// <param name="ct">Cancellation token to cancel the operation.</param>
+    /// <remarks>
+    /// This method retrieves all active SignalR connections for all specified users and sends the notification
+    /// to all of them. Duplicate connections are removed before sending.
+    /// </remarks>
     private async Task SendNotificationToUsersAsync(IEnumerable<string> userIds, NotificationDto notification, CancellationToken ct = default)
     {
         // Get all connections for the specified users

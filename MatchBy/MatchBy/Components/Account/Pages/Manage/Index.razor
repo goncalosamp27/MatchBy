@@ -1,6 +1,7 @@
 @page "/Account/Manage"
 @using System.ComponentModel.DataAnnotations
 @using Amazon.S3
+@using Humanizer
 @using MatchBy.Services.FileValidator
 @using MatchBy.Services.S3
 @using Microsoft.AspNetCore.Identity
@@ -18,7 +19,8 @@
     <h2 class="text-lg font-medium text-[var(--text)]">Edit Profile</h2>
 
     <StatusMessage/>
-    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post" class="space-y-6"
+    @if(Input is not null)
+    {<EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post" class="space-y-6"
               enctype="multipart/form-data">
         <DataAnnotationsValidator/>
 
@@ -145,7 +147,7 @@
                 Save
             </button>
         </div>
-    </EditForm>
+    </EditForm>}
 
     <form id="removeImageForm" method="post" action="/api/profile-image/delete" class="hidden">
         <AntiforgeryToken/>
@@ -160,10 +162,11 @@
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        Input ??= new InputModel();
         _user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         _username = _user.UserName;
 
@@ -175,6 +178,10 @@
 
     private async Task OnValidSubmitAsync()
     {
+        if(Input is null)
+        {
+            return;
+        }
         var changed = false;
 
         if (Input.Bio != _bio)

@@ -13,45 +13,60 @@
 <PageTitle>Resend email confirmation</PageTitle>
 
 <section class="bg-[var(--background)]">
-<div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-    @*<a href="#" class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+    <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+        @*<a href="#" class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
         <img class="w-8 h-8 mr-2" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/logo.svg" alt="logo">
         MatchBy
     </a>*@
-    <div class="w-full p-6 bg-[var(--section)] ring-1 ring-[var(--main)] rounded-lg shadow md:mt-0 sm:max-w-md sm:p-8">
-        <h1 class="mb-1 text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-            Resend email confirmation
-        </h1>
-        <StatusMessage Message="@message"/>
-        <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator/>
-            <div class="form-floating mb-3">
-                <label for="Input.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
-                <InputText @bind-Value="Input.Email" id="Input.Email" 
-                           class="block w-full p-2.5 rounded-lg
+        <div
+            class="w-full p-6 bg-[var(--section)] ring-1 ring-[var(--main)] rounded-lg shadow md:mt-0 sm:max-w-md sm:p-8">
+            <h1 class="mb-1 text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+                Resend email confirmation
+            </h1>
+            <StatusMessage Message="@message"/>
+            @if (Input is not null)
+            {
+                <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync"
+                          method="post">
+                    <DataAnnotationsValidator/>
+                    <div class="form-floating mb-3">
+                        <label for="Input.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
+                        <InputText @bind-Value="Input.Email" id="Input.Email"
+                                   class="block w-full p-2.5 rounded-lg
                                     bg-[var(--section-secondary)]
                                     text-[var(--text)]
                                     focus:border-[var(--main)]
                                     focus:ring-1 focus:ring-[var(--main)]
                                     focus:outline-none
                                     border-0"
-                           aria-required="true" placeholder="name@example.com"/>
-                <ValidationMessage For="() => Input.Email" class="text-danger"/>
-            </div>
-            <button type="submit"  class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">Resend</button>
-        </EditForm>
+                                   aria-required="true" placeholder="name@example.com"/>
+                        <ValidationMessage For="() => Input.Email" class="text-danger"/>
+                    </div>
+                    <button type="submit"
+                            class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                        Resend
+                    </button>
+                </EditForm>
+            }
+        </div>
     </div>
-</div>
 </section>
 
 @code {
     private string? message;
 
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
+
+    protected override void OnInitialized() => Input ??= new InputModel();
 
     private async Task OnValidSubmitAsync()
     {
-        var user = await UserManager.FindByEmailAsync(Input.Email!);
+        if (Input is null)
+        {
+            return;
+        }
+        
+        var user = await UserManager.FindByEmailAsync(Input.Email);
         if (user is null)
         {
             message = "Verification email sent. Please check your email.";

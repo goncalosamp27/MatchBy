@@ -15,7 +15,6 @@ public abstract class Invite
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public DateTime? AcceptedAtUtc { get; set; } 
-    public DateTime? DeclinedAtUtc { get; set; } 
     public DateTime? DeletedAtUtc { get; set; }
 }
 
@@ -23,7 +22,6 @@ public enum InviteStatus
 {
     Pending = 0,
     Accepted = 1,
-    Declined = 2,
     Expired = 3,
-    Cancelled = 4
+    Deleted = 4
 }

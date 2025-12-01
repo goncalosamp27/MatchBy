@@ -36,7 +36,7 @@ public class CreateMatchDtoValidator : AbstractValidator<CreateMatchDto>
 
         RuleFor(x => x.MatchDateTimeUtc)
             .NotEmpty().WithMessage("Match date and time is required.")
-            .GreaterThan(DateTime.UtcNow).WithMessage("Match date and time must be in the future.");
+            .GreaterThan(DateTime.UtcNow.AddDays(7)).WithMessage("Match must be scheduled at least 7 days in the future.");
 
         RuleFor(x => x.Sport)
             .IsInEnum().WithMessage("Invalid sport type.");
@@ -46,5 +46,8 @@ public class CreateMatchDtoValidator : AbstractValidator<CreateMatchDto>
 
         RuleFor(x => x.CreatorId)
             .NotEmpty().WithMessage("Creator ID is required.");
+        
+        RuleFor(x => x.MinimumPlayersRating)
+            .IsInEnum().WithMessage("Invalid minimum players rating.");
     }
 }

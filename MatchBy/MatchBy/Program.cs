@@ -1,22 +1,18 @@
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Blazorise;
+using Blazorise.FluentValidation;
+using Blazorise.Icons.FontAwesome;
+using Blazorise.Tailwind;
+using FluentValidation;
+using Hangfire;
+using Hangfire.Common;
+using Hangfire.PostgreSql;
 using MatchBy.Components;
 using MatchBy.Components.Account;
 using MatchBy.Data;
 using MatchBy.Data.Seeders;
 using MatchBy.Extensions;
-using MatchBy.Models;
-using Blazorise;
-using Blazorise.FluentValidation;
-using Blazorise.Tailwind;
-using Blazorise.Icons.FontAwesome;
-using FluentValidation;
-using Hangfire;
-using Hangfire.PostgreSql;
-using Hangfire.Common;
 using MatchBy.Hubs;
-using MatchBy.Services.Notifications;
+using MatchBy.Models;
 using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
@@ -26,11 +22,15 @@ using MatchBy.Services.Friends;
 using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.Matches;
 using MatchBy.Services.MatchInvites;
+using MatchBy.Services.Notifications;
 using MatchBy.Services.PlayerRatings;
-using MatchBy.Services.Teams;
 using MatchBy.Services.TeamInvites;
+using MatchBy.Services.Teams;
 using MatchBy.Services.Users;
 using MatchBy.Settings;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Resend;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 using INotificationService = MatchBy.Services.Notifications.INotificationService;
@@ -151,6 +151,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.User.RequireUniqueEmail = true;
         options.User.AllowedUserNameCharacters =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -194,7 +195,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NewPolicy", corsPolicyBuilder =>
-        corsPolicyBuilder.AllowAnyOrigin()
+        corsPolicyBuilder
+            .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
@@ -204,8 +206,8 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
-    // await app.RecreateDatabase();
-    await app.ApplyMigrationsAsync();
+    //await app.RecreateDatabase();
+    //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
 }
 else
@@ -225,7 +227,7 @@ using (IServiceScope scope = app.Services.CreateScope())
     recurringJobManager.AddOrUpdate(
         "send-match-reminders",
         Job.FromExpression<IMatchReminderJob>(job => job.SendRemindersAsync()),
-        "*/30 * * * *" // A cada 30 minutos
+        "*/30 * * * *" // Every 30 minutes
     );
 }
 
