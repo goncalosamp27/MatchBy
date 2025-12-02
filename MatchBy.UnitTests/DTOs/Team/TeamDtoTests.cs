@@ -18,7 +18,7 @@ public class TeamDtoTests
                 Id = "user_1",
                 DisplayName = "User 1",
                 AvatarUrl = null,
-                PlayerRating = null
+                PlayerRating = 0.0f
             }
         };
 

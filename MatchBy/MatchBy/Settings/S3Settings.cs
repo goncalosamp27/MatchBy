@@ -2,6 +2,7 @@
 
 public sealed class S3Settings
 {
+    public string ServiceUrl { get; init; } = string.Empty;
     public string Region { get; init; } = string.Empty;
     public string BucketName { get; init; } = string.Empty;
     public string AccessKey { get; init; } = string.Empty;

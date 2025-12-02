@@ -33,12 +33,6 @@ public sealed class ChatState
 
     public void UpsertMessage(ChatMessageDto msg)
     {
-        int idx = Conversations.FindIndex(c => c.Id == msg.ConversationId);
-        if (idx < 0)
-        {
-            return;
-        }
-        
         if (Selected?.Id == msg.ConversationId)
         {
             int i = MessagesOfSelectedConversation.FindIndex(m => m.Id == msg.Id);
@@ -52,18 +46,22 @@ public sealed class ChatState
             }
         }
         
-        ConversationDto updated = Conversations[idx] with
+        int idx = Conversations.FindIndex(c => c.Id == msg.ConversationId);
+        if (idx >= 0)
         {
-            LastMessageAtUtc = DateTime.UtcNow,
-            LastMessageContent = msg.Content
-        };
-        Conversations[idx] = updated;
+            ConversationDto updated = Conversations[idx] with
+            {
+                LastMessageAtUtc = DateTime.UtcNow,
+                LastMessageContent = msg.Content
+            };
+            Conversations[idx] = updated;
         
-        if (Selected?.Id == updated.Id)
-        {
-            Selected = updated;
+            if (Selected?.Id == updated.Id)
+            {
+                Selected = updated;
+            }
         }
-
+        
         NotifyStateChanged();
     }
 

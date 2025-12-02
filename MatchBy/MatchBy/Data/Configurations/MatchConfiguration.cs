@@ -20,10 +20,13 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
             .HasMaxLength(500)
             .IsRequired();
 
-        builder.Property(m => m.minPlayers)
+        builder.Property(m => m.MinPlayers)
             .IsRequired();
 
-        builder.Property(m => m.maxPlayers)
+        builder.Property(m => m.MaxPlayers)
+            .IsRequired();
+        
+        builder.Property(m => m.MinimumPlayersRating)
             .IsRequired();
 
         builder.Property(m => m.Sport)

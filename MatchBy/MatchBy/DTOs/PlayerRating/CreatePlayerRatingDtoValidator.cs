@@ -27,3 +27,6 @@ public class CreatePlayerRatingDtoValidator : AbstractValidator<CreatePlayerRati
             .WithMessage("Sender and Receiver cannot be the same user.");
     }
 }
+
+
+

@@ -1,4 +1,5 @@
-﻿using MatchBy.Enums;
+﻿using MatchBy.DTOs.Match;
+using MatchBy.Enums;
 using MatchBy.Models;
 
 namespace MatchBy.Data.Seeders;
@@ -25,8 +26,9 @@ public class MatchSeeder : ISeeder
             Location = new Location(40.7128, -74.0060, "New York", "USA"),
             MatchDateTimeUtc = DateTime.UtcNow.AddDays(7),
             Description = "Sunday Soccer Match",
-            minPlayers = 5,
-            maxPlayers = 10,
+            MinPlayers = 5,
+            MaxPlayers = 10,
+            MinimumPlayersRating = MinimumPlayersAverage.All,
             Sport = Sports.Football,
             Status = MatchStatus.Confirmed,
             Privacy = MatchPrivacy.Public,

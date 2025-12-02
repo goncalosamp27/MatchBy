@@ -1,16 +1,15 @@
+using MatchBy.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using MatchBy.Data;
-using MatchBy.Models;
 
 namespace MatchBy.Components.Account;
 
 // Remove the "else if (EmailSender is IdentityNoOpEmailSender)" block from RegisterConfirmation.razor after updating with a real implementation.
 internal sealed class IdentityNoOpEmailSender : IEmailSender<ApplicationUser>
 {
-    #pragma warning disable CA1859
+#pragma warning disable CA1859
     private readonly IEmailSender emailSender = new NoOpEmailSender();
-    #pragma warning restore CA1859
+#pragma warning restore CA1859
 
     public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) =>
         emailSender.SendEmailAsync(email, "Confirm your email",

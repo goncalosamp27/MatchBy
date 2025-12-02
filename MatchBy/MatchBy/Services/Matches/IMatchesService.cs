@@ -6,9 +6,12 @@ namespace MatchBy.Services.Matches;
 
 public interface IMatchesService
 {
-    Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchStatus? matchStatus, string? q, string? userId, int page = 1, int pageSize = 5, CancellationToken ct = default);
+    Task<Result<MatchDto>> ConfirmMatch(string matchId, string userId, CancellationToken ct = default);
+    Task<Result<List<string>>> GetAllMatchCountries(CancellationToken ct = default);
+    Task<Result<List<string>>> GetAllCitiesByCountry(string country, CancellationToken ct = default);
+    Task<Result<PaginationResponse<List<MatchDto>>>> GetMatches(MatchQueryParametersDto matchQueryParametersDto, CancellationToken ct = default);
     Task<Result<MatchDto>> GetMatchById(string matchId, string? userId, CancellationToken ct = default);
-    Task<Result<bool>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default);
+    Task<Result<MatchDto>> CreateMatch(CreateMatchDto createMatchDto, CancellationToken ct = default);
     Task<Result<bool>> UpdateMatch(UpdateMatchDto updateMatchDto, CancellationToken ct = default);
     Task<Result<bool>> DeleteMatch(string matchId, string userId, CancellationToken ct = default);
     Task<Result<MatchDto>> JoinMatch(string matchId, string userId, CancellationToken ct = default);

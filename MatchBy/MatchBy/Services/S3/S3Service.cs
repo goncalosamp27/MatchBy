@@ -10,6 +10,20 @@ namespace MatchBy.Services.S3;
 
 public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILogger<S3Service> logger, IOptions<UploadSettings> uploadOptions) : IS3Service
 {
+    /// <summary>
+    /// Uploads a file stream to S3 storage with a generated unique key.
+    /// </summary>
+    /// <param name="stream">The file stream to upload.</param>
+    /// <param name="fileName">The original file name (used for metadata and extension extraction).</param>
+    /// <param name="contentType">The MIME content type of the file.</param>
+    /// <param name="folder">The S3 folder path where the file should be stored.</param>
+    /// <returns>
+    /// A result containing the generated file key if successful, or an error message if the upload fails.
+    /// </returns>
+    /// <remarks>
+    /// The file key is generated using a GUID v7 and the original file extension.
+    /// The original file name is stored in the S3 object metadata.
+    /// </remarks>
     private async Task<Result<string>> UploadFileAsync(
         Stream stream,
         string fileName, 
@@ -58,6 +72,14 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
         }
     }
     
+    /// <summary>
+    /// Uploads an IFormFile to S3 storage.
+    /// </summary>
+    /// <param name="file">The form file to upload.</param>
+    /// <param name="folder">The S3 folder path where the file should be stored.</param>
+    /// <returns>
+    /// A result containing the generated file key if successful, or an error message if the upload fails.
+    /// </returns>
     public async Task<Result<string>> UploadFormFileAsync(
         IFormFile file,
         string folder)
@@ -66,6 +88,17 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
         return await UploadFileAsync(stream, file.FileName, file.ContentType, folder);
     }
     
+    /// <summary>
+    /// Uploads an IBrowserFile to S3 storage with size validation.
+    /// </summary>
+    /// <param name="file">The browser file to upload.</param>
+    /// <param name="folder">The S3 folder path where the file should be stored.</param>
+    /// <returns>
+    /// A result containing the generated file key if successful, or an error message if the upload fails.
+    /// </returns>
+    /// <remarks>
+    /// The file size is validated against the configured maximum file size limit before upload.
+    /// </remarks>
     public async Task<Result<string>> UploadBrowserFileAsync(
         IBrowserFile file,
         string folder)
@@ -74,6 +107,17 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
         return await UploadFileAsync(stream, file.Name, file.ContentType, folder);
     }
 
+    /// <summary>
+    /// Generates a presigned URL for accessing an S3 object.
+    /// </summary>
+    /// <param name="key">The S3 object key (full path including folder).</param>
+    /// <param name="verb">The HTTP verb (GET, PUT, etc.) for the presigned URL.</param>
+    /// <returns>
+    /// A result containing the presigned URL if successful, or an error message if generation fails.
+    /// </returns>
+    /// <remarks>
+    /// The presigned URL expires after the configured default expiry time (typically 30 minutes).
+    /// </remarks>
     public async Task<Result<string>> GetPresignedUrlAsync(string key, HttpVerb verb)
     {
         try
@@ -104,6 +148,13 @@ public class S3Service(IAmazonS3 s3Client, IOptions<S3Settings> s3Settings, ILog
         }
     }
 
+    /// <summary>
+    /// Deletes a file from S3 storage.
+    /// </summary>
+    /// <param name="key">The S3 object key (full path including folder) to delete.</param>
+    /// <returns>
+    /// A result containing true if the file was successfully deleted, or an error message if deletion fails.
+    /// </returns>
     public async Task<Result<bool>> DeleteFileAsync(string key)
     {
         try

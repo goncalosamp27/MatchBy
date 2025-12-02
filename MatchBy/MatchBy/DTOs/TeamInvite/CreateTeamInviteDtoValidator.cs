@@ -34,3 +34,6 @@ public class CreateTeamInviteDtoValidator : AbstractValidator<CreateTeamInviteDt
         });
     }
 }
+
+
+

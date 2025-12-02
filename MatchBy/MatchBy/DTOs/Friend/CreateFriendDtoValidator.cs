@@ -19,3 +19,6 @@ public class CreateFriendDtoValidator : AbstractValidator<CreateFriendDto>
             .WithMessage("Sender and Receiver cannot be the same user.");
     }
 }
+
+
+

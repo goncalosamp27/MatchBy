@@ -16,3 +16,6 @@ public interface IFriendService {
     Task<Result<FriendDto?>> GetFriendshipBetweenUsers(string userId1, string userId2, CancellationToken ct = default);
     Task<Result<bool>> CancelFriendRequest(string friendshipId, string senderId, CancellationToken ct = default);
 }
+
+
+

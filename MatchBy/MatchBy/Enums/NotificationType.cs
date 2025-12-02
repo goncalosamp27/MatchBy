@@ -10,7 +10,8 @@ public enum NotificationType
     MatchJoined = 5,
     TeamLeft = 6,
     FriendRequestAccepted = 7,
-    FriendMatchCreated = 8
+    FriendMatchCreated = 8,
+    MatchReminder = 9
 }
 
 

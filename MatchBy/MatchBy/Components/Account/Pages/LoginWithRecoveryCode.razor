@@ -24,46 +24,49 @@
                     until you sign in again using an authenticator app code.
                 </p>
 
-                <StatusMessage Message="@_message" UseCookieMessage="false" />
+                <StatusMessage Message="@_message" UseCookieMessage="false"/>
+                @if (Input is not null)
+                {
+                    <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync"
+                              method="post"
+                              class="space-y-4 md:space-y-6">
+                        <DataAnnotationsValidator/>
+                        <ValidationSummary class="text-danger" role="alert"/>
 
-                <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post"
-                          class="space-y-4 md:space-y-6">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary class="text-danger" role="alert" />
-
-                    <div>
-                        <label for="Input.RecoveryCode" class="block mb-2 text-sm font-medium text-[var(--text)]">
-                            Recovery code
-                        </label>
-                        <InputText
-                            @bind-Value="Input.RecoveryCode"
-                            id="Input.RecoveryCode"
-                            class="block w-full p-2.5 rounded-lg
+                        <div>
+                            <label for="Input.RecoveryCode" class="block mb-2 text-sm font-medium text-[var(--text)]">
+                                Recovery code
+                            </label>
+                            <InputText
+                                @bind-Value="Input.RecoveryCode"
+                                id="Input.RecoveryCode"
+                                class="block w-full p-2.5 rounded-lg
                                    bg-[var(--section-secondary)]
                                    text-[var(--text)]
                                    focus:border-[var(--main)]
                                    focus:ring-1 focus:ring-[var(--main)]
                                    focus:outline-none
                                    border-0"
-                            autocomplete="one-time-code"
-                            aria-required="true"
-                            placeholder="XXXX-XXXX" />
-                        <ValidationMessage For="() => Input.RecoveryCode" class="text-danger" />
-                    </div>
+                                autocomplete="one-time-code"
+                                aria-required="true"
+                                placeholder="XXXX-XXXX"/>
+                            <ValidationMessage For="() => Input.RecoveryCode" class="text-danger"/>
+                        </div>
 
-                    <button type="submit"
-                            class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-                        Log in
-                    </button>
+                        <button type="submit"
+                                class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            Log in
+                        </button>
 
-                    <p class="text-sm font-light text-gray-500 dark:text-gray-400">
-                        Have access to your authenticator app?
-                        <a class="font-medium text-[var(--main)] hover:underline"
-                           href="@(NavigationManager.GetUriWithQueryParameters("Account/LoginWith2fa", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">
-                            Return to 2FA login
-                        </a>
-                    </p>
-                </EditForm>
+                        <p class="text-sm font-light text-gray-500 dark:text-gray-400">
+                            Have access to your authenticator app?
+                            <a class="font-medium text-[var(--main)] hover:underline"
+                               href="@(NavigationManager.GetUriWithQueryParameters("Account/LoginWith2fa", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">
+                                Return to 2FA login
+                            </a>
+                        </p>
+                    </EditForm>
+                }
             </div>
         </div>
     </div>
@@ -73,19 +76,25 @@
     private string? _message;
     private ApplicationUser _user = default!;
 
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
 
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        Input ??= new InputModel();
         // Ensure the user has gone through the username & password screen first
         _user = await SignInManager.GetTwoFactorAuthenticationUserAsync()
-               ?? throw new InvalidOperationException("Unable to load two-factor authentication user.");
+                ?? throw new InvalidOperationException("Unable to load two-factor authentication user.");
     }
 
     private async Task OnValidSubmitAsync()
     {
+        if (Input is null)
+        {
+            return;
+        }
+
         var raw = Input.RecoveryCode ?? string.Empty;
         var recoveryCode = raw.Replace(" ", string.Empty).Replace("-", string.Empty);
 
@@ -116,4 +125,5 @@
         [Display(Name = "Recovery Code")]
         public string RecoveryCode { get; set; } = "";
     }
+
 }

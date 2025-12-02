@@ -25,90 +25,97 @@
                 <h1 class="text-xl font-bold leading-tight tracking-tight text-[var(--text)] md:text-2xl">
                     Complete your registration
                 </h1>
-                
+
                 <div class="text-sm text-[var(--text)] bg-[var(--section-secondary)] p-3 rounded-lg">
                     You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
                     Please complete the form below to finish creating your account.
                 </div>
 
-                <StatusMessage Message="@Message" UseCookieMessage="false" />
+                <StatusMessage Message="@Message" UseCookieMessage="false"/>
 
-                <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post" class="space-y-4 md:space-y-6">
-                    <DataAnnotationsValidator />
-                    <!-- Username -->
-                    <div>
-                        <label for="Input.Username" class="block mb-2 text-sm font-medium text-[var(--text)]">Username</label>
-                        <InputText @bind-Value="Input.Username"
-                                   id="Input.Username"
-                                   class="block w-full p-2.5 rounded-lg
+                @if (Input is not null)
+                {
+                    <EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post"
+                              class="space-y-4 md:space-y-6">
+                        <DataAnnotationsValidator/>
+                        <!-- Username -->
+                        <div>
+                            <label for="Input.Username" class="block mb-2 text-sm font-medium text-[var(--text)]">Username</label>
+                            <InputText @bind-Value="Input.Username"
+                                       id="Input.Username"
+                                       class="block w-full p-2.5 rounded-lg
                                     bg-[var(--section-secondary)]
                                     text-[var(--text)]
                                     focus:border-[var(--main)]
                                     focus:ring-1 focus:ring-[var(--main)]
                                     focus:outline-none
                                     border-0"
-                                   placeholder="john" />
-                        <ValidationMessage For="() => Input.Username" class="text-danger" />
-                    </div>
-
-                    <!-- Display Name -->
-                    <div>
-                        <label for="Input.DisplayName" class="block mb-2 text-sm font-medium text-[var(--text)]">Display Name</label>
-                        <InputText @bind-Value="Input.DisplayName"
-                                   id="Input.DisplayName"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                   placeholder="john doe" />
-                        <ValidationMessage For="() => Input.DisplayName" class="text-danger" />
-                    </div>
-
-                    <!-- Email -->
-                    <div>
-                        <label for="Input.Email" class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
-                        <InputText @bind-Value="Input.Email"
-                                   id="Input.Email"
-                                   type="email"
-                                   class="block w-full p-2.5 rounded-lg
-                                    bg-[var(--section-secondary)]
-                                    text-[var(--text)]
-                                    focus:border-[var(--main)]
-                                    focus:ring-1 focus:ring-[var(--main)]
-                                    focus:outline-none
-                                    border-0"
-                                   placeholder="john@email.com"
-                                   autocomplete="email" />
-                        <ValidationMessage For="() => Input.Email" class="text-danger" />
-                    </div>
-
-                    <!-- Accept Terms -->
-                    <div class="flex items-start">
-                        <div class="flex items-center h-5">
-                            <InputCheckbox @bind-Value="Input.AcceptTerms"
-                                           id="Input.AcceptTerms"
-                                           class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                                       placeholder="john"/>
+                            <ValidationMessage For="() => Input.Username" class="text-danger"/>
                         </div>
-                        <div class="ml-3 text-sm">
-                            <label for="Input.AcceptTerms" class="text-[var(--text)]">
-                                I accept the
-                                <a href="/TermsAndConditions" class="font-medium text-[var(--main)] hover:underline">Terms and Conditions</a>
-                            </label>
-                        </div>
-                        <ValidationMessage For="() => Input.AcceptTerms" class="text-danger block" />
-                    </div>
 
-                    <!-- Submit -->
-                    <div>
-                        <button type="submit"
-                                class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-                            Register
-                        </button>
-                    </div>
-                </EditForm>
+                        <!-- Display Name -->
+                        <div>
+                            <label for="Input.DisplayName" class="block mb-2 text-sm font-medium text-[var(--text)]">Display
+                                Name</label>
+                            <InputText @bind-Value="Input.DisplayName"
+                                       id="Input.DisplayName"
+                                       class="block w-full p-2.5 rounded-lg
+                                    bg-[var(--section-secondary)]
+                                    text-[var(--text)]
+                                    focus:border-[var(--main)]
+                                    focus:ring-1 focus:ring-[var(--main)]
+                                    focus:outline-none
+                                    border-0"
+                                       placeholder="john doe"/>
+                            <ValidationMessage For="() => Input.DisplayName" class="text-danger"/>
+                        </div>
+
+                        <!-- Email -->
+                        <div>
+                            <label for="Input.Email"
+                                   class="block mb-2 text-sm font-medium text-[var(--text)]">Email</label>
+                            <InputText @bind-Value="Input.Email"
+                                       id="Input.Email"
+                                       type="email"
+                                       class="block w-full p-2.5 rounded-lg
+                                    bg-[var(--section-secondary)]
+                                    text-[var(--text)]
+                                    focus:border-[var(--main)]
+                                    focus:ring-1 focus:ring-[var(--main)]
+                                    focus:outline-none
+                                    border-0"
+                                       placeholder="john@email.com"
+                                       autocomplete="email"/>
+                            <ValidationMessage For="() => Input.Email" class="text-danger"/>
+                        </div>
+
+                        <!-- Accept Terms -->
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <InputCheckbox @bind-Value="Input.AcceptTerms"
+                                               id="Input.AcceptTerms"
+                                               class="w-4 h-4 text-[var(--main-hover)] bg-gray-100 hover:text-[var(--main-hover)] border-gray-300 rounded-sm focus:ring-0"/>
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="Input.AcceptTerms" class="text-[var(--text)]">
+                                    I accept the
+                                    <a href="/TermsAndConditions"
+                                       class="font-medium text-[var(--main)] hover:underline">Terms and Conditions</a>
+                                </label>
+                            </div>
+                            <ValidationMessage For="() => Input.AcceptTerms" class="text-danger block"/>
+                        </div>
+
+                        <!-- Submit -->
+                        <div>
+                            <button type="submit"
+                                    class="w-full text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                                Register
+                            </button>
+                        </div>
+                    </EditForm>
+                }
             </div>
         </div>
     </div>
@@ -121,9 +128,9 @@
     private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
     private ExternalLoginInfo? _externalLoginInfo;
 
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
 
-    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] private InputModel? Input { get; set; }
 
     [SupplyParameterFromQuery] private string? RemoteError { get; set; }
 
@@ -135,6 +142,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Input ??= new InputModel();
         if (RemoteError is not null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
@@ -164,9 +172,15 @@
 
     private async Task OnLoginCallbackAsync()
     {
+        if (Input is null)
+        {
+            return;
+        }
+
         if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            return;
         }
 
         // Sign in the user with this external login provider if the user already has a login.
@@ -195,9 +209,9 @@
         {
             Input.Email = _externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email) ?? "";
         }
-        
+
         // Try to get display name from external provider (Google, etc. might provide this)
-        var nameClaim = _externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Name) 
+        var nameClaim = _externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Name)
                         ?? _externalLoginInfo.Principal.FindFirstValue("name")
                         ?? _externalLoginInfo.Principal.Identity?.Name;
         if (!string.IsNullOrEmpty(nameClaim))
@@ -208,6 +222,11 @@
 
     private async Task OnValidSubmitAsync()
     {
+        if (Input is null)
+        {
+            return;
+        }
+
         if (_externalLoginInfo is null)
         {
             RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information during confirmation.", HttpContext);

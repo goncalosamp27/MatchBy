@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>aspnet-MatchBy-db35119d-08ef-4074-b3c3-d673bfb6010e</UserSecretsId>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <MinVerTagPrefix>v</MinVerTagPrefix>
+        <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,7 +19,9 @@
         <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+        <PackageReference Include="Microsoft.Build" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+        <PackageReference Include="Microsoft.Playwright" />
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
         <PackageReference Include="MinVer">
           <PrivateAssets>all</PrivateAssets>
@@ -61,6 +64,7 @@
         <Link>.dockerignore</Link>
       </Content>
       <Content Remove="Areas\**" />
+      <Content Remove="wwwroot\images\login\loginImage.svg" />
     </ItemGroup>
 
     <ItemGroup>
@@ -68,5 +72,14 @@
       <_ContentIncludedByDefault Remove="Pages\Shared\_LoginPartial.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\Shared\_ValidationScriptsPartial.cshtml" />
       <_ContentIncludedByDefault Remove="Pages\_ViewImports.cshtml" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Data\Migrations\20251121145218_notificationschange.cs" />
+      <Compile Remove="Data\Migrations\20251121145218_notificationschange.Designer.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Components\Pages\AboutUs\" />
     </ItemGroup>
 </Project>

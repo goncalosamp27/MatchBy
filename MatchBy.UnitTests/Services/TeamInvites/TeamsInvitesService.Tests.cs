@@ -12,7 +12,6 @@ namespace MatchBy.UnitTests.Services.TeamInvites;
 public class TeamsInvitesServiceTests : IDisposable
 {
     private readonly Mock<IValidator<CreateTeamInviteDto>> _createValidatorMock;
-    private readonly Mock<IDbContextFactory<ApplicationDbContext>> _dbContextFactoryMock;
     private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
     private readonly ApplicationDbContext _dbContext;
     private readonly TeamsInvitesService _teamsInvitesService;
@@ -20,9 +19,8 @@ public class TeamsInvitesServiceTests : IDisposable
     public TeamsInvitesServiceTests()
     {
         _createValidatorMock = new Mock<IValidator<CreateTeamInviteDto>>();
-        var updateValidatorMock = new Mock<IValidator<UpdateTeamInviteDto>>();
         var notificationServiceMock = new Mock<INotificationService>();
-        _dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
+        var dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
         // Setup in-memory database with a unique name per test class
         // All contexts created with these options will share the same database
@@ -37,14 +35,13 @@ public class TeamsInvitesServiceTests : IDisposable
 
         // Setup the factory to return a new instance each time
         // This prevents the service from disposing the test's context instance
-        _dbContextFactoryMock
+        dbContextFactoryMock
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
 
         _teamsInvitesService = new TeamsInvitesService(
-            _dbContextFactoryMock.Object,
+            dbContextFactoryMock.Object,
             _createValidatorMock.Object,
-            updateValidatorMock.Object,
             notificationServiceMock.Object);
     }
 
@@ -402,128 +399,7 @@ public class TeamsInvitesServiceTests : IDisposable
     }
 
     #endregion
-
-    #region DeclineInvite Tests
-
-    [Fact]
-    public async Task DeclineInvite_WithValidInvite_ShouldDeclineInvite()
-    {
-        // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
-        var team = new Team 
-        { 
-            Id = "team1", 
-            Name = "Test Team",
-            Description = "Test Description",
-            OwnerId = "sender1", 
-            MaxMembers = 10,
-            Privacy = TeamPrivacy.Public,
-            CreatedAtUtc = DateTime.UtcNow,
-            Members = new List<ApplicationUser> { sender }
-        };
-        
-        var invite = new TeamInvite
-        {
-            Id = "invite1",
-            SenderId = "sender1",
-            ReceiverId = "receiver1",
-            TeamId = "team1",
-            Content = "Join us!",
-            Status = InviteStatus.Pending,
-            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
-
-        // Act
-        Result<TeamInviteDto> result = await _teamsInvitesService.DeclineInvite("invite1", "receiver1");
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Equal(InviteStatus.Declined, result.Data!.Status);
-        Assert.NotNull(result.Data.DeclinedAtUtc);
-    }
-
-    #endregion
-
-    #region CancelInvite Tests
-
-    [Fact]
-    public async Task CancelInvite_WithValidInvite_ShouldCancelInvite()
-    {
-        // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
-        var team = new Team 
-        { 
-            Id = "team1", 
-            Name = "Test Team",
-            Description = "Test Description",
-            OwnerId = "sender1", 
-            MaxMembers = 10,
-            Privacy = TeamPrivacy.Public,
-            CreatedAtUtc = DateTime.UtcNow,
-            Members = new List<ApplicationUser> { sender }
-        };
-        
-        var invite = new TeamInvite
-        {
-            Id = "invite1",
-            SenderId = "sender1",
-            ReceiverId = "receiver1",
-            TeamId = "team1",
-            Content = "Join us!",
-            Status = InviteStatus.Pending,
-            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
-
-        // Act
-        Result<TeamInviteDto> result = await _teamsInvitesService.CancelInvite("invite1", "sender1");
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Equal(InviteStatus.Cancelled, result.Data!.Status);
-    }
-
-    [Fact]
-    public async Task CancelInvite_WithNonSender_ShouldReturnFailure()
-    {
-        // Arrange
-        var invite = new TeamInvite
-        {
-            Id = "invite1",
-            SenderId = "sender1",
-            ReceiverId = "receiver1",
-            TeamId = "team1",
-            Content = "Join us!",
-            Status = InviteStatus.Pending,
-            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
-
-        // Act
-        Result<TeamInviteDto> result = await _teamsInvitesService.CancelInvite("invite1", "user2");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Only the sender", result.ErrorMessages[0]);
-    }
-
-    #endregion
+    
 }
 
 

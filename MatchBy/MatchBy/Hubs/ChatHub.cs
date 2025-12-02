@@ -19,6 +19,17 @@ public class ChatHub(
     private static readonly ConcurrentDictionary<string, HashSet<string>> UserConnections = new();
     private static readonly ConcurrentDictionary<string, string> ConnectionUsers = new();
 
+    /// <summary>
+    /// Handles client disconnection by removing the connection from user tracking dictionaries.
+    /// </summary>
+    /// <param name="exception">Optional exception that caused the disconnection.</param>
+    /// <returns>
+    /// A task representing the asynchronous disconnection operation.
+    /// </returns>
+    /// <remarks>
+    /// This method removes the connection from both the connection-to-user mapping and the user-to-connections mapping.
+    /// If a user has no remaining connections, their entry is removed from the UserConnections dictionary.
+    /// </remarks>
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         if (!ConnectionUsers.TryRemove(Context.ConnectionId, out string? userId) ||
@@ -39,6 +50,17 @@ public class ChatHub(
         return base.OnDisconnectedAsync(exception);
     }
 
+    /// <summary>
+    /// Registers a client connection with a specific user ID for chat message routing.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to register this connection for.</param>
+    /// <returns>
+    /// A task representing the asynchronous registration operation. Sends a "Registered" message to the caller.
+    /// </returns>
+    /// <remarks>
+    /// This method associates the current SignalR connection with a user ID, allowing chat messages
+    /// to be routed to all active connections for that user. Multiple connections per user are supported.
+    /// </remarks>
     public async Task Register(string userId)
     {
         ConnectionUsers[Context.ConnectionId] = userId;
@@ -59,11 +81,28 @@ public class ChatHub(
         await Clients.Caller.SendAsync("Registered", new { userId });
     }
 
+    /// <summary>
+    /// Ensures that the current connection is registered with a user ID.
+    /// </summary>
+    /// <returns>
+    /// The user ID associated with the current connection.
+    /// </returns>
+    /// <exception cref="HubException">Thrown when the connection is not registered with a user ID.</exception>
     private string EnsureUser()
         => ConnectionUsers.TryGetValue(Context.ConnectionId, out string? uid)
             ? uid
             : throw new HubException("Connection not registered.");
 
+    /// <summary>
+    /// Gets all active SignalR connection IDs for a specific user.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user.</param>
+    /// <returns>
+    /// A collection of connection IDs for the user, or an empty collection if the user has no active connections.
+    /// </returns>
+    /// <remarks>
+    /// This method returns a thread-safe snapshot of the user's connections.
+    /// </remarks>
     private IEnumerable<string> GetUserConnections(string userId)
     {
         if (!UserConnections.TryGetValue(userId, out HashSet<string>? connections))
@@ -77,6 +116,13 @@ public class ChatHub(
         }
     }
 
+    /// <summary>
+    /// Gets all active SignalR connection IDs for a list of conversation participants.
+    /// </summary>
+    /// <param name="participants">List of conversation participants to get connections for.</param>
+    /// <returns>
+    /// A collection of unique connection IDs for all participants, or an empty collection if no participants have active connections.
+    /// </returns>
     private IEnumerable<string> GetParticipantsConnections(List<ConversationParticipantDto> participants)
     {
         return participants.SelectMany(p => GetUserConnections(p.Id)).Distinct();
@@ -84,14 +130,47 @@ public class ChatHub(
 
     //--------------------- Conversation Methods -----------------
 
+    /// <summary>
+    /// Adds the current client connection to a conversation group for receiving real-time updates.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to join.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <remarks>
+    /// Once joined to a conversation group, the client will receive all real-time updates (messages, updates, deletions)
+    /// for that conversation through SignalR group messaging.
+    /// </remarks>
     public async Task JoinConversation(string conversationId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(conversationId));
     }
 
+    /// <summary>
+    /// Removes the current client connection from a conversation group.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to leave.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <remarks>
+    /// After leaving a conversation group, the client will no longer receive real-time updates for that conversation.
+    /// </remarks>
     public async Task LeaveConversation(string conversationId)
         => await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(conversationId));
 
+    /// <summary>
+    /// Creates a new chat message and broadcasts it to all conversation participants.
+    /// </summary>
+    /// <param name="createChatMessageDto">DTO containing the message creation details (content, conversation ID, reply to message, etc.).</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends "MessageCreated" event to all conversation participants.
+    /// </returns>
+    /// <remarks>
+    /// This method validates the sender, creates the message via the chat message service, and broadcasts it to all
+    /// active connections of conversation participants. If the message is a reply, a notification is sent to the
+    /// original message sender (if they are not the current sender).
+    /// </remarks>
     public async Task CreateMessage(CreateChatMessageDto createChatMessageDto)
     {
         string userId = EnsureUser();
@@ -150,6 +229,17 @@ public class ChatHub(
         }
     }
 
+    /// <summary>
+    /// Updates an existing chat message and broadcasts the update to all conversation participants.
+    /// </summary>
+    /// <param name="updateChatMessageDto">DTO containing the message update details (message ID, new content, creator user ID).</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends "MessageUpdated" event to all conversation participants.
+    /// </returns>
+    /// <remarks>
+    /// This method validates the sender, updates the message via the chat message service, and broadcasts the update
+    /// to all active connections of conversation participants. Only the message sender can update their own messages.
+    /// </remarks>
     public async Task UpdateMessage(UpdateChatMessageDto updateChatMessageDto)
     {
         string userId = EnsureUser();
@@ -186,6 +276,17 @@ public class ChatHub(
 
     public record MessageDeletedDto(ConversationDto Conversation, string MessageId);
 
+    /// <summary>
+    /// Deletes a chat message and broadcasts the deletion to all conversation participants.
+    /// </summary>
+    /// <param name="chatMessageId">The unique identifier of the message to delete.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends "MessageDeleted" event with conversation and message ID to all conversation participants.
+    /// </returns>
+    /// <remarks>
+    /// This method validates the sender, deletes the message via the chat message service, and broadcasts the deletion
+    /// to all active connections of conversation participants. Only the message sender can delete their own messages.
+    /// </remarks>
     public async Task DeleteMessage(string chatMessageId)
     {
         string userId = EnsureUser();
@@ -224,8 +325,26 @@ public class ChatHub(
             )));
     }
 
+    /// <summary>
+    /// Generates a SignalR group name for a conversation.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation.</param>
+    /// <returns>
+    /// The group name (currently the conversation ID itself).
+    /// </returns>
     private static string Group(string conversationId) => conversationId;
 
+    /// <summary>
+    /// Creates a new conversation and notifies all participants.
+    /// </summary>
+    /// <param name="dto">DTO containing conversation creation details (type, title, participants, team).</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends "ConversationCreated" event to all participants.
+    /// </returns>
+    /// <remarks>
+    /// This method validates the creator, creates the conversation via the conversation service, adds the creator
+    /// to the conversation group, and notifies all participants (including the creator) via their active connections.
+    /// </remarks>
     public async Task CreateConversation(CreateConversationDto dto)
     {
         string userId = EnsureUser();
@@ -257,6 +376,18 @@ public class ChatHub(
         }
     }
 
+    /// <summary>
+    /// Updates a conversation and broadcasts the update to all participants.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to update.</param>
+    /// <param name="userId">The unique identifier of the user requesting the update.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends "ConversationUpdated" event to all conversation participants.
+    /// </returns>
+    /// <remarks>
+    /// This method retrieves the updated conversation and broadcasts it to all active connections of conversation participants.
+    /// Each participant receives the conversation data formatted for their perspective.
+    /// </remarks>
     public async Task UpdateConversation(string conversationId, string userId)
     {
         Result<ConversationDto> conv = await conversationService.GetConversationByIdAsync(conversationId, userId);
@@ -277,6 +408,17 @@ public class ChatHub(
         }
     }
 
+    /// <summary>
+    /// Deletes a conversation and notifies all participants.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to delete.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends "ConversationDeleted" event with the conversation ID to all participants.
+    /// </returns>
+    /// <remarks>
+    /// This method retrieves the conversation participants before deletion, deletes the conversation via the conversation service,
+    /// and notifies all participants via their active connections. Only users with permission can delete conversations.
+    /// </remarks>
     public async Task DeleteConversation(string conversationId)
     {
         string userId = EnsureUser();
@@ -304,6 +446,18 @@ public class ChatHub(
             .SendAsync("ConversationDeleted", Result<string>.Ok(conversationId));
     }
 
+    /// <summary>
+    /// Removes a user from a conversation and notifies all participants. If the user is the last participant, the conversation is deleted.
+    /// </summary>
+    /// <param name="conversationId">The unique identifier of the conversation to leave.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. Sends either "ConversationDeleted" or "ConversationLeft" event to all participants.
+    /// </returns>
+    /// <remarks>
+    /// This method retrieves the conversation participants before leaving, removes the user via the conversation service,
+    /// removes all user connections from the conversation group, and notifies all participants. If the conversation is deleted
+    /// (last participant left), a "ConversationDeleted" event is sent. Otherwise, a "ConversationLeft" event is sent with the updated conversation.
+    /// </remarks>
     public async Task LeaveConversationAndNotify(string conversationId)
     {
         string userId = EnsureUser();

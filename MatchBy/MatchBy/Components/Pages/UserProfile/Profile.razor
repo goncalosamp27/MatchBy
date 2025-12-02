@@ -1,7 +1,6 @@
 @page "/profile"
 @page "/profile/{id}"
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Authorization
 @using MatchBy.Components.Pages.Matches
 @using MatchBy.DTOs.Match
 @using MatchBy.DTOs.User
@@ -12,6 +11,7 @@
 @inject IMatchesService MatchesService
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Profile> Logger
+@attribute [StreamRendering]
 @using MatchBy.DTOs.Friend
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IFriendService FriendService
@@ -28,7 +28,9 @@
 
         @if (_profile is null && _loading)
         {
-            <p class="text-[var(--text)]">Loading profile...</p>
+            <div class="flex items-center justify-center min-h-screen">
+                <Loading></Loading>
+            </div>
         }
         else if (_profile is null)
         {
@@ -127,6 +129,7 @@
                         </div>
                     </div>
 
+                    <!-- Public Bio -->
                     @if (!string.IsNullOrWhiteSpace(_profile.Bio))
                     {
                         <div class="mt-6">
@@ -141,6 +144,7 @@
                         </div>
                     }
 
+                    <!-- Email: only for the owner -->
                     @if (_isOwner && !string.IsNullOrWhiteSpace(_ownEmail))
                     {
                         <div class="mt-4">
@@ -156,6 +160,7 @@
                     }
                 </div>
 
+                <!-- Right Column -->
                 <div class="bg-[var(--section)] shadow-sm rounded-2xl p-6 border-2 border-[var(--main)]
                             transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
                     <h3 class="font-semibold mb-4 text-[var(--text)]">Preferred Sports</h3>
@@ -165,7 +170,7 @@
                             @foreach (var sport in _profile.PreferredSports)
                             {
                                 <div class="flex items-center justify-center border-2 border-[var(--main)]
-                                            rounded-xl p-2 text-[var(--text)] bg-[var(--section-secondary)]
+                                            rounded-xl p-3 text-[var(--text)] bg-[var(--section-secondary)]
                                             transition duration-200 ease-out
                                             hover:shadow-[0_0px_10px_-4px_var(--main)]">
                                     @sport
@@ -180,6 +185,7 @@
                 </div>
             </div>
 
+            <!-- Matches -->
             <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                     <h3 class="font-semibold mb-4 text-[var(--text)]">Previous Matches</h3>
@@ -220,7 +226,7 @@
                 }
             </div>
         }
-    </div> 
+    </div>
 </section>
 
 @if (_showFriendsModal)
@@ -610,8 +616,28 @@
 
                 _isOwner = _userId == targetId;
                 _ownEmail = null;
+                var current = await UserManager.GetUserAsync(HttpContext.User);
+                if (current is null)
+                {
+                    _profile = null;
+                    _matches = null;
+                    _loading = false;
+                    return;
+                }
+                _isOwner = current.Id == targetId;
+                if (_isOwner)
+                {
+                    targetId = current.Id;
+                    _isOwner = true;
+                    _ownEmail = current.Email;
+                }
+                else
+                {
+                    _ownEmail = null;   
+                }
             }
 
+            // Fetch public profile via service (does not expose everything)
             _profile = await UsersService.GetUser(targetId, CancellationToken.None);
 
             if (_profile is not null)

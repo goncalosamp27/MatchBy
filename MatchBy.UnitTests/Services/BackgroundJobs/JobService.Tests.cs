@@ -126,8 +126,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -174,8 +174,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Basketball,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -229,8 +229,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Tennis,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 4,
+            MinPlayers = 2,
+            MaxPlayers = 4,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -276,8 +276,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Volleyball,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 6,
-            maxPlayers = 12,
+            MinPlayers = 6,
+            MaxPlayers = 12,
             CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
         };
 
@@ -320,8 +320,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Private,
-            minPlayers = 4,
-            maxPlayers = 8,
+            MinPlayers = 4,
+            MaxPlayers = 8,
             CreatedAtUtc = DateTime.UtcNow.AddDays(-1)
         };
 
@@ -364,8 +364,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
         };
 
@@ -406,8 +406,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
         };
 
@@ -448,8 +448,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -505,8 +505,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -569,8 +569,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Football,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -586,8 +586,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Basketball,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 10,
+            MinPlayers = 2,
+            MaxPlayers = 10,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -603,8 +603,8 @@ public class JobServiceTests : IDisposable
             Location = new Location(0,0,"City","Country"),
             Sport = Sports.Tennis,
             Privacy = MatchPrivacy.Public,
-            minPlayers = 2,
-            maxPlayers = 4,
+            MinPlayers = 2,
+            MaxPlayers = 4,
             CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
         };
 

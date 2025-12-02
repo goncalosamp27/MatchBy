@@ -24,7 +24,6 @@ public static class MatchInviteMappings
             CreatedAtUtc = matchInvite.CreatedAtUtc,
             UpdatedAtUtc = matchInvite.UpdatedAtUtc,
             AcceptedAtUtc = matchInvite.AcceptedAtUtc,
-            DeclinedAtUtc = matchInvite.DeclinedAtUtc,
             DeletedAtUtc = matchInvite.DeletedAtUtc
         };
     }
@@ -45,34 +44,7 @@ public static class MatchInviteMappings
             CreatedAtUtc = DateTime.UtcNow
         };
     }
-
-    public static void UpdateEntity(this Models.MatchInvite matchInvite, UpdateMatchInviteDto updateDto)
-    {
-        if (!string.IsNullOrWhiteSpace(updateDto.Content))
-        {
-            matchInvite.Content = updateDto.Content;
-        }
-
-        if (updateDto.Status.HasValue)
-        {
-            matchInvite.Status = updateDto.Status.Value;
-            
-            // Set appropriate timestamp based on status
-            if (updateDto.Status.Value == InviteStatus.Accepted)
-            {
-                matchInvite.AcceptedAtUtc = DateTime.UtcNow;
-            }
-            else if (updateDto.Status.Value == InviteStatus.Declined)
-            {
-                matchInvite.DeclinedAtUtc = DateTime.UtcNow;
-            }
-        }
-
-        if (updateDto.ExpiresAtUtc.HasValue)
-        {
-            matchInvite.ExpiresAtUtc = updateDto.ExpiresAtUtc.Value;
-        }
-
-        matchInvite.UpdatedAtUtc = DateTime.UtcNow;
-    }
 }
+
+
+

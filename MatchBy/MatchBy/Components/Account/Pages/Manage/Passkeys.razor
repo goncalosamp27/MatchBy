@@ -1,0 +1,200 @@
+﻿@page "/Account/Manage/Passkeys"
+
+@using Microsoft.AspNetCore.Identity
+@using System.Buffers.Text
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Manage your passkeys</PageTitle>
+
+<section class="space-y-6">
+    <h2 class="text-lg font-medium text-[var(--text)] mb-2">Passkeys</h2>
+
+    <StatusMessage/>
+
+    @if (_currentPasskeys is { Count: > 0 })
+    {
+        <div class="space-y-4">
+            @foreach (var passkey in _currentPasskeys)
+            {
+                var credentialId = Base64Url.EncodeToString(passkey.CredentialId);
+                <div class="rounded-lg border border-[var(--section)] bg-[var(--section-secondary)] p-4">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="font-medium text-[var(--text)]">@(passkey.Name ?? "Unnamed passkey")</p>
+                        </div>
+                        <form class="flex flex-wrap gap-3" @formname="@($"update-passkey-{credentialId}")" @onsubmit="UpdatePasskey" method="post">
+                            <AntiforgeryToken/>
+                            <input type="hidden" name="CredentialId" value="@credentialId"/>
+                            <button type="submit"
+                                    name="Action"
+                                    value="rename"
+                                    class="inline-flex justify-center px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--main)]"
+                                    title="Rename this passkey">
+                                Rename
+                            </button>
+                            <button type="submit"
+                                    name="Action"
+                                    value="delete"
+                                    class="inline-flex justify-center px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-contrast)] bg-[var(--error)] hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--error)]"
+                                    title="Remove this passkey from your account">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="rounded-lg border border-dashed border-[var(--main)]/40 bg-[var(--section-secondary)] p-6 text-center text-[var(--text)]">
+            <p class="text-base text-[var(--text)]">No passkeys are registered.</p>
+            <p class="text-sm text-[var(--text)] mt-2">Add a passkey below to sign in securely without a password.</p>
+        </div>
+    }
+
+    <form class="rounded-lg border border-[var(--section)]"
+          @formname="add-passkey"
+          @onsubmit="AddPasskey"
+          method="post">
+        <AntiforgeryToken/>
+        @if (_currentPasskeys is { Count: >= MaxPasskeyCount })
+        {
+            <p class="rounded-lg border border-[var(--error)]/30 bg-[var(--error)]/10 p-3 text-sm text-[var(--error)]">
+                You have reached the maximum number of allowed passkeys. Please delete one before adding a new one.
+            </p>
+        }
+        else
+        {
+            <PasskeySubmit Operation="PasskeyOperation.Create"
+                           Name="Input"
+                           class="inline-flex justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--main-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--main)]">
+                Add a new passkey
+            </PasskeySubmit>
+        }
+    </form>
+</section>
+
+@code {
+    private const int MaxPasskeyCount = 100;
+
+    private ApplicationUser? _user;
+    private IList<UserPasskeyInfo>? _currentPasskeys;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = null!;
+
+    [SupplyParameterFromForm]
+    private string? Action { get; set; }
+
+    [SupplyParameterFromForm]
+    private string? CredentialId { get; set; }
+
+    [SupplyParameterFromForm(FormName = "add-passkey")]
+    private PasskeyInputModel Input { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new PasskeyInputModel();
+
+        _user = await UserManager.GetUserAsync(HttpContext.User);
+        if (_user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+        _currentPasskeys = await UserManager.GetPasskeysAsync(_user);
+    }
+
+    private async Task AddPasskey()
+    {
+        if (_user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(Input.Error))
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus($"Error: {Input.Error}", HttpContext);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(Input.CredentialJson))
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: The browser did not provide a passkey.", HttpContext);
+            return;
+        }
+
+        if (_currentPasskeys!.Count >= MaxPasskeyCount)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus($"Error: You have reached the maximum number of allowed passkeys.", HttpContext);
+            return;
+        }
+
+        var attestationResult = await SignInManager.PerformPasskeyAttestationAsync(Input.CredentialJson);
+        if (!attestationResult.Succeeded)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus($"Error: Could not add the passkey: {attestationResult.Failure.Message}", HttpContext);
+            return;
+        }
+
+        var addPasskeyResult = await UserManager.AddOrUpdatePasskeyAsync(_user, attestationResult.Passkey);
+        if (!addPasskeyResult.Succeeded)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: The passkey could not be added to your account.", HttpContext);
+            return;
+        }
+
+        // Immediately prompt the user to enter a name for the credential
+        var credentialIdBase64Url = Base64Url.EncodeToString(attestationResult.Passkey.CredentialId);
+        RedirectManager.RedirectTo($"Account/Manage/RenamePasskey/{credentialIdBase64Url}");
+    }
+
+    private async Task UpdatePasskey()
+    {
+        switch (Action)
+        {
+            case "rename":
+                RedirectManager.RedirectTo($"Account/Manage/RenamePasskey/{CredentialId}");
+                break;
+            case "delete":
+                await DeletePasskey();
+                break;
+            default:
+                RedirectManager.RedirectToCurrentPageWithStatus($"Error: Unknown action '{Action}'.", HttpContext);
+                break;
+        }
+    }
+
+    private async Task DeletePasskey()
+    {
+        if (_user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        byte[] credentialId;
+        try
+        {
+            credentialId = Base64Url.DecodeFromChars(CredentialId);
+        }
+        catch (FormatException)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: The specified passkey ID had an invalid format.", HttpContext);
+            return;
+        }
+
+        var result = await UserManager.RemovePasskeyAsync(_user, credentialId);
+        if (!result.Succeeded)
+        {
+            RedirectManager.RedirectToCurrentPageWithStatus("Error: The passkey could not be deleted.", HttpContext);
+            return;
+        }
+
+        RedirectManager.RedirectToCurrentPageWithStatus("Passkey deleted successfully.", HttpContext);
+    }
+}
