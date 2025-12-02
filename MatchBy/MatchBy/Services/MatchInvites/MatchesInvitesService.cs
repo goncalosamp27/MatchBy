@@ -291,7 +291,7 @@ public class MatchesInvitesService(
         await dbContext.SaveChangesAsync(ct);
 
         // Send notification to the receiver
-        string matchName = $"{match.Sport} em {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}";
+        string matchName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}";
         
         string? sender = await dbContext.Users
             .Where(u => u.Id == createDto.SenderId)

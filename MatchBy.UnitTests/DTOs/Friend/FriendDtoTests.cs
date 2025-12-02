@@ -1,5 +1,6 @@
 using MatchBy.DTOs.Friend;
 using MatchBy.DTOs.User;
+using MatchBy.Enums;
 
 namespace MatchBy.UnitTests.DTOs.Friend;
 
@@ -23,7 +24,8 @@ public class FriendDtoTests
             Receiver = receiver,
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            DeletedAtUtc = null,
+            Status = FriendStatus.Pending
         };
 
         // Assert
@@ -50,7 +52,8 @@ public class FriendDtoTests
             Receiver = null,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            DeletedAtUtc = null,
+            Status = FriendStatus.Pending
         };
 
         // Assert
@@ -75,7 +78,8 @@ public class FriendDtoTests
             Receiver = null,
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            DeletedAtUtc = null,
+            Status = FriendStatus.Pending
         };
 
         var dto2 = new FriendDto
@@ -87,7 +91,8 @@ public class FriendDtoTests
             Receiver = null,
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            DeletedAtUtc = null,
+            Status = FriendStatus.Pending
         };
 
         // Assert
@@ -107,7 +112,8 @@ public class FriendDtoTests
             Receiver = null,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            DeletedAtUtc = null,
+            Status = FriendStatus.Pending
         };
 
         DateTime updatedAt = DateTime.UtcNow;

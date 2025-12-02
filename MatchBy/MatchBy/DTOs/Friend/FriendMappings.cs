@@ -15,7 +15,8 @@ public static class FriendMappings
             Receiver = friend.Receiver?.ToDto(),
             CreatedAtUtc = friend.CreatedAtUtc,
             UpdatedAtUtc = friend.UpdatedAtUtc,
-            DeletedAtUtc = friend.DeletedAtUtc
+            DeletedAtUtc = friend.DeletedAtUtc,
+            Status = friend.Status
         };
     }
 
@@ -26,7 +27,8 @@ public static class FriendMappings
             Id = $"friend_{Guid.CreateVersion7()}",
             SenderId = createDto.SenderId,
             ReceiverId = createDto.ReceiverId,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = Enums.FriendStatus.Pending
         };
     }
 

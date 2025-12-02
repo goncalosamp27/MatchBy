@@ -3,13 +3,22 @@
 @using Microsoft.AspNetCore.Identity
 @using MatchBy.Components.Pages.Matches
 @using MatchBy.DTOs.Match
+@using MatchBy.DTOs.User
 @using MatchBy.Services.Matches
 @using MatchBy.Services.Users
+@using MatchBy.Services.Friends
 @inject IUsersService UsersService
 @inject IMatchesService MatchesService
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Profile> Logger
 @attribute [StreamRendering]
+@using MatchBy.DTOs.Friend
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IFriendService FriendService
+@using Blazorise
+@inject IToastService ToastService
+@rendermode InteractiveServer
+@inject NavigationManager NavigationManager
 
 <PageTitle>Profile</PageTitle>
 
@@ -30,9 +39,8 @@
         else
         {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Left Column -->
                 <div class="bg-[var(--section)] shadow rounded-2xl p-6 border-2 border-[var(--main)] transition duration-200 ease-out hover:shadow-[0_0px_10px_-4px_var(--main)]">
-                    <div class="flex items-center gap-4">
+                    <div class="flex flex-col md:flex-row items-start gap-4 w-full">
                         <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                             @if (_profile.ProfileImage is not null)
                             {
@@ -45,30 +53,76 @@
                                 </svg>
                             }
                         </div>
+
                         <div>
                             <h2 class="font-bold text-lg text-[var(--text)]">@_profile.DisplayName</h2>
                             <p class="text-sm text-gray-500">@_profile.UserName</p>
                         </div>
+
+                        @if (!_isOwner && _userId is not null) {   
+                            @if (_friendship is null) {                     
+                                <button @onclick="SendFriendRequest" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:text-[var(--text)] hover:bg-[var(--main-hover)] cursor-pointer">
+                                    <div class="flex items-center gap-2">
+                                        Add friend
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4H7Zm8-1a1 1 0 0 1 1-1h1v-1a1 1 0 1 1 2 0v1h1a1 1 0 1 1 0 2h-1v1a1 1 0 1 1-2 0v-1h-1a1 1 0 0 1-1-1Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                            else if (_friendship.Status == FriendStatus.Pending && _friendship.SenderId == _userId)
+                            {
+                                <button disabled class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--success)] text-[var(--text-contrast)] cursor-default">
+                                    <div class="flex items-center gap-2">
+                                        Request sent
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.793-1.793a1 1 0 0 0-1.414 1.414l2.5 2.5a1 1 0 0 0 1.414 0l4-4Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                            else if (_friendship.Status == FriendStatus.Pending && _friendship.ReceiverId == _userId)
+                            {
+                                <button @onclick="AcceptFriendRequest" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--success)] cursor-pointer">
+                                    <div class="flex items-center gap-2">
+                                        Accept request
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M18 14a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2h-2v-2Z" clip-rule="evenodd"/>
+                                            <path fill-rule="evenodd" d="M15.026 21.534A9.994 9.994 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2c2.51 0 4.802.924 6.558 2.45l-7.635 7.636L7.707 8.87a1 1 0 0 0-1.414 1.414l3.923 3.923a1 1 0 0 0 1.414 0l8.3-8.3A9.956 9.956 0 0 1 22 12a9.994 9.994 0 0 1-.466 3.026A2.49 2.49 0 0 0 20 14.5h-.5V14a2.5 2.5 0 0 0-5 0v.5H14a2.5 2.5 0 0 0 0 5h.5v.5c0 .578.196 1.11.526 1.534Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                            else if(_friendship.Status == FriendStatus.Accepted){
+                                <button @onclick="RemoveFriend" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--error)] text-[var(--text-contrast)] cursor-pointer hover:bg-[var(--reset)]">
+                                    <div class="flex items-center gap-2">
+                                        Remove friend
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M5 8a4 4 0 1 1 8 0 4 4 0 0 1-8 0Zm-2 9a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1Zm13-6a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-4Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            }
+                        }
+                        @if (_isOwner) {
+                            <button @onclick="ToggleFriendsModal" class="self-start mt-2 md:mt-0 md:ml-auto py-2 px-4 rounded-lg bg-[var(--main)] text-[var(--text-contrast)] hover:text-[var(--text)] hover:bg-[var(--main-hover)] cursor-pointer">
+                                <div class="flex items-center gap-2">
+                                    Friends list
+                                    <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fill-rule="evenodd" d="M8 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4H6Zm7.25-2.095c.478-.86.75-1.85.75-2.905a5.973 5.973 0 0 0-.75-2.906 4 4 0 1 1 0 5.811ZM15.466 20c.34-.588.535-1.271.535-2v-1a5.978 5.978 0 0 0-1.528-4H18a4 4 0 0 1 4 4v1a2 2 0 0 1-2 2h-4.535Z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </button>
+                        }
                     </div>
 
                     <div class="mt-4 flex flex-wrap gap-4 items-center">
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">@_profile.Status</span>
 
-                        @if (_profile.BaseLocation is not null)
-                        {
-                            <span class="text-gray-600 flex items-center text-sm">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 7 7 13 7 13s7-6 7-13c0-3.87-3.13-7-7-7z" />
-                                </svg>
-                                @_profile.BaseLocation.City, @_profile.BaseLocation.Country
-                            </span>
-                        }
-
                         <div class="flex items-center">
                             <span class="text-sm font-medium mr-1 text-[var(--text)]">@_profile.Rating.ToString("0.0")</span>
-                            <div class="flex text-yellow-400">
-                                @for (int i = 1; i <= 5; i++)
-                                {
+                            <div class="flex text-[var(--main)]">
+                                @for (int i = 1; i <= 5; i++) {
                                     <span class="@(i <= Math.Round(_profile.Rating) ? "" : "text-gray-500 dark:text-gray-600")">★</span>
                                 }
                             </div>
@@ -175,6 +229,307 @@
     </div>
 </section>
 
+@if (_showFriendsModal)
+{
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center">
+        <div class="w-[90%] max-w-xl bg-[var(--section)] rounded-xl border-2 border-[var(--main)] shadow-xl p-6">
+            <div class="flex flex-wrap gap-4 mx-auto">
+                <button
+                    type="button"
+                    @onclick='() => SetFriendsModalTab("list")'
+                    class="
+                        flex-1 text-center
+                        px-4 py-2 rounded-lg text-sm font-medium border transition-colors
+                        border-[var(--main)]
+                        @(_friendsModalTab == "list"
+                            ? "bg-[var(--main)] text-[var(--text-contrast)] cursor-default font-medium"
+                            : "bg-[var(--section-secondary)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)] border-[var(--text)] font-medium")
+                    ">
+                    Friends list
+                </button>
+
+                @if(_friendRequestsReceived is not null && _friendRequestsReceived.Any()) {
+                    <button
+                        type="button"
+                        @onclick='() => SetFriendsModalTab("received")'
+                        class="
+                            flex-1 text-center
+                            px-4 py-2 rounded-lg text-sm font-medium border transition-colors
+                            border-[var(--main)]
+                            @(_friendsModalTab == "received"
+                                ? "bg-[var(--main)] text-[var(--text-contrast)] cursor-default font-medium"
+                                : "bg-[var(--section-secondary)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)] border-[var(--text)] font-medium")
+                        ">
+                        Received 
+                    </button>
+                }
+
+                @if(_friendRequestsSent is not null && _friendRequestsSent.Any()) {
+                    <button
+                        type="button"
+                        @onclick='() => SetFriendsModalTab("sent")'
+                        class="
+                            flex-1 text-center
+                            px-4 py-2 rounded-lg text-sm font-medium border transition-colors
+                            border-[var(--main)]
+                            @(_friendsModalTab == "sent"
+                                ? "bg-[var(--main)] text-[var(--text-contrast)] cursor-default font-medium"
+                                : "bg-[var(--section-secondary)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)] border-[var(--text)] font-medium")
+                        ">
+                        Pending
+                    </button>
+                }
+            </div>
+
+            @if(_friendsModalTab == "list") {
+                <div class="mt-6 space-y-4 max-h-80 overflow-y-auto pr-2">
+                    @if (_friendsList is null || !_friendsList.Any())
+                    {   
+                        <div>
+                            <p class="text-[var(--text)] text-center">You have not added any friends yet...</p> 
+                            <p class="text-[var(--text)] text-center"> Find other
+                                <a href="/users" class="text-[var(--main)] underline hover:text-[var(--success)] cursor-pointer"> users</a>
+                                or join 
+                                <a href="/matches" class="text-[var(--main)] underline hover:text-[var(--success)] cursor-pointer">matches</a>
+                                to make new friends!
+                            </p>
+                        </div>
+                    }
+                    else if (_friendsList is not null && _friendsList.Any())
+                    {   
+                        <p class="text-xl text-[var(--text)] font-medium">Your friends (@_friendsList.Count):</p>   
+                        @foreach (var friendship in _friendsList)
+                        {
+                            var p = GetOtherUser(friendship);
+                            if (p is null)
+                            {
+                                continue;
+                            }
+                            <div class="flex items-center justify-between gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)]">
+                                <a href="@($"/profile/{p.Id}")" target="_blank" rel="noopener noreferrer">
+                                        <div class="flex items-center gap-3 cursor-pointer">
+                                            <div
+                                                class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
+                                                @if (!string.IsNullOrEmpty(p.AvatarUrl))
+                                                {
+                                                    <img src="@p.AvatarUrl" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
+                                                }
+                                                else
+                                                {
+                                                    <img src="images/user-avatar.png" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
+                                                }
+                                            </div>
+
+                                            <div class="flex flex-col">
+                                                <div
+                                                    class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
+                                                    @p.DisplayName
+                                                </div>
+                                                @if (p.PlayerRating > 0)
+                                                {
+                                                    <div class="flex items-center gap-1 text-sm text-[var(--text)]">
+                                                        <svg class="w-4 h-4 text-[var(--main)]" fill="currentColor"
+                                                            viewBox="0 0 20 20">
+                                                            <path
+                                                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                        </svg>
+                                                        <span>@p.PlayerRating</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                </a>
+                                <button 
+                                        type="button"
+                                        @onclick="() => RemoveFriendFromModal(friendship)"
+                                        class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--text-contrast)] bg-[var(--error)] hover:bg-[var(--reset)]">
+                                        <div class="flex items-center gap-2">
+                                            Remove friend
+                                            <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                                <path fill-rule="evenodd" d="M5 8a4 4 0 1 1 8 0 4 4 0 0 1-8 0Zm-2 9a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1Zm13-6a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-4Z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </div>
+                                    </button>
+                            </div>
+                        }
+                    }
+                </div>
+
+                @if (_friendsTotalCount > _friendsPageSize)
+                {
+                    <div class="flex justify-center mt-4">
+                        <OffsetPagination
+                            CurrentPage="@_friendsCurrentPage"
+                            OnPageChanged="@OnFriendsPageChanged"
+                            PageSize="@_friendsPageSize"
+                            TotalItems="@_friendsTotalCount" />
+                    </div>
+                }
+            }
+            @if(_friendRequestsReceived is not null && _friendRequestsReceived.Any() && _friendsModalTab == "received")
+            {
+                <h3 class="text-xl font-semibold text-[var(--text)] mt-6 mb-4">
+                    Friend requests received (@_friendRequestsReceived.Count):
+                </h3>
+                <div class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                        @foreach (var friendship in _friendRequestsReceived)
+                        {
+                            var p = GetOtherUser(friendship);
+                            if (p is null)
+                            {
+                                continue;
+                            }
+                            <div class="flex items-center justify-between gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)]">
+                                <a href="@($"/profile/{p.Id}")"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex items-center gap-3 cursor-pointer flex-1">
+                                    <div
+                                        class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
+                                        @if (!string.IsNullOrEmpty(p.AvatarUrl))
+                                        {
+                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
+                                        }
+                                        else
+                                        {
+                                            <img src="images/user-avatar.png" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
+                                        }
+                                    </div>
+
+                                    <div class="flex flex-col">
+                                        <div class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
+                                            @p.DisplayName
+                                        </div>
+                                        @if (p.PlayerRating > 0)
+                                        {
+                                            <div class="flex items-center gap-1 text-sm text-[var(--text)]">
+                                                <svg class="w-4 h-4 text-[var(--main)]" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                                <span>@p.PlayerRating</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </a>
+
+                                <button 
+                                    type="button"
+                                    @onclick="() => AcceptFriendRequestFromModal(friendship)"
+                                    class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--text-contrast)] bg-[var(--main)] hover:bg-[var(--success)]">
+                                    <div class="flex items-center gap-2">
+                                        Add friend
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M18 14a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2h-2v-2Z" clip-rule="evenodd"/>
+                                            <path fill-rule="evenodd" d="M15.026 21.534A9.994 9.994 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2c2.51 0 4.802.924 6.558 2.45l-7.635 7.636L7.707 8.87a1 1 0 0 0-1.414 1.414l3.923 3.923a1 1 0 0 0 1.414 0l8.3-8.3A9.956 9.956 0 0 1 22 12a9.994 9.994 0 0 1-.466 3.026A2.49 2.49 0 0 0 20 14.5h-.5V14a2.5 2.5 0 0 0-5 0v.5H14a2.5 2.5 0 0 0 0 5h.5v.5c0 .578.196 1.11.526 1.534Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            </div>
+                        }
+                </div>
+
+                @if (_receivedTotalCount > ReceivedPageSize)
+                {
+                    <div class="flex justify-center mt-4">
+                        <OffsetPagination
+                            CurrentPage="@_receivedCurrentPage"
+                            OnPageChanged="@OnReceivedPageChanged"
+                            PageSize="@ReceivedPageSize"
+                            TotalItems="@_receivedTotalCount" />
+                    </div>
+                }
+
+            }
+
+            @if (_friendRequestsSent is not null && _friendRequestsSent.Any() && _friendsModalTab == "sent")
+            {
+                <h3 class="text-xl font-semibold text-[var(--text)] mt-6 mb-4">
+                    Pending friend requests (@_friendRequestsSent.Count):
+                </h3>
+                <div class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                    
+                        @foreach (var friendship in _friendRequestsSent)
+                        {
+                            var p = GetOtherUser(friendship);
+                            if (p is null)
+                            {
+                                continue;
+                            }
+                            <div class="flex items-center justify-between gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)]">
+                                <a href="@($"/profile/{p.Id}")"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex items-center gap-3 cursor-pointer flex-1">
+                                    <div
+                                        class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
+                                        @if (!string.IsNullOrEmpty(p.AvatarUrl))
+                                        {
+                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
+                                        }
+                                        else
+                                        {
+                                            <img src="images/user-avatar.png" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
+                                        }
+                                    </div>
+
+                                    <div class="flex flex-col">
+                                        <div class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
+                                            @p.DisplayName
+                                        </div>
+                                        @if (p.PlayerRating > 0)
+                                        {
+                                            <div class="flex items-center gap-1 text-sm text-[var(--text)]">
+                                                <svg class="w-4 h-4 text-[var(--main)]" fill="currentColor"
+                                                    viewBox="0 0 20 20">
+                                                    <path
+                                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l-2.8-2.034a1 1 0 00-.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                                <span>@p.PlayerRating</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </a>
+
+                                <button
+                                    type="button"
+                                    @onclick="() => CancelFriendRequestFromModal(friendship)"
+                                    class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--text-contrast)] bg-[var(--error)] hover:bg-[var(--reset)]">
+                                    <div class="flex items-center gap-2">
+                                        Cancel request
+                                        <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fill-rule="evenodd" d="M8.586 2.586A2 2 0 0 1 10 2h4a2 2 0 0 1 2 2v2h3a1 1 0 1 1 0 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a1 1 0 0 1 0-2h3V4a2 2 0 0 1 .586-1.414ZM10 6h4V4h-4v2Zm1 4a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Zm4 0a1 1 0 1 0-2 0v8a1 1 0 1 0 2 0v-8Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            </div>
+
+                        }
+                </div>
+                @if (_sentTotalCount > SentPageSize)
+                {
+                    <div class="flex justify-center mt-4">
+                        <OffsetPagination
+                            CurrentPage="@_sentCurrentPage"
+                            OnPageChanged="@OnSentPageChanged"
+                            PageSize="@SentPageSize"
+                            TotalItems="@_sentTotalCount" />
+                    </div>
+                }
+            }
+
+            <div class="flex justify-end mt-6 mr-2">
+                <button @onclick="ToggleFriendsModal"
+                        class="px-4 py-2 rounded-md bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)] hover:text-[var(--text)]">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
 @code {
     [Parameter] public string? Id { get; set; }
 
@@ -183,10 +538,36 @@
     private bool _isOwner;
     private string? _ownEmail;
     private bool _loading = true;
+    private string? _userId;
+    private FriendDto? _friendship;
+    private bool _showFriendsModal;
 
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private void ToggleFriendsModal() { 
+        _showFriendsModal = !_showFriendsModal; 
+        _friendsModalTab = "list";
+    }
 
-    protected override async Task OnParametersSetAsync()
+    private void SetFriendsModalTab(string tab) => _friendsModalTab = tab;
+
+    private List<FriendDto>? _friendRequestsReceived;
+    private List<FriendDto>? _friendRequestsSent;
+    private List<FriendDto>? _friendsList;
+
+    private string _friendsModalTab = "list";
+
+    private int _friendsCurrentPage = 1;
+    private readonly int _friendsPageSize = 5;
+    private int _friendsTotalCount;
+
+    private int _receivedCurrentPage = 1;
+    private const int ReceivedPageSize = 5;
+    private int _receivedTotalCount;
+
+    private int _sentCurrentPage = 1;
+    private const int SentPageSize = 5;
+    private int _sentTotalCount;
+
+    protected override async Task OnInitializedAsync()
     {
         _loading = true;
 
@@ -194,9 +575,22 @@
         {
             string targetId;
 
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
             if (Id is null)
             {
-                var current = await UserManager.GetUserAsync(HttpContext.User);
+                if (!user.Identity?.IsAuthenticated ?? true)
+                {
+                    _profile = null;
+                    _matches = null;
+                    _loading = false;
+                    var returnUrl = "/profile";
+                    NavigationManager.NavigateTo($"/Account/Login?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+                    return;
+                }
+
+                var current = await UserManager.GetUserAsync(user);
                 if (current is null)
                 {
                     _profile = null;
@@ -208,11 +602,19 @@
                 targetId = current.Id;
                 _isOwner = true;
                 _ownEmail = current.Email;
+                _userId  = current.Id; 
             }
             else
             {
                 targetId = Id;
-                var current = await UserManager.GetUserAsync(HttpContext.User);
+
+                _userId = user.Identity?.IsAuthenticated == true
+                    ? UserManager.GetUserId(user)
+                    : null;
+
+                _isOwner = _userId == targetId;
+                _ownEmail = null;
+                var current = await UserManager.GetUserAsync(user);
                 if (current is null)
                 {
                     _profile = null;
@@ -238,12 +640,41 @@
 
             if (_profile is not null)
             {
-                var result = await MatchesService.GetMatchesForUser(_profile.Id, null, 1, 5, CancellationToken.None);
-                if (!result.Success)
+                var result = await MatchesService.GetMatchesForUser(
+                    _profile.Id, null, 1, 5, CancellationToken.None);
+
+                if (result is { Success: true, Data: not null })
                 {
-                    _matches = result.Data!.Data;
+                    _matches = result.Data.Data;
+                }
+                else
+                {
+                    _matches = new List<MatchDto>();
+                    Logger.LogWarning("Failed to load matches for user {UserId}", _profile.Id);
                 }
             }
+
+            if (_profile is not null && _userId is not null && !_isOwner)
+            {
+                var friendshipResult = await FriendService.GetFriendshipBetweenUsers(_userId, _profile.Id, CancellationToken.None);
+
+                if (friendshipResult.Success)
+                {
+                    _friendship = friendshipResult.Data;
+                }
+                else
+                {
+                    Logger.LogWarning("Failed to load friendship between {UserId} and {ProfileId}", _userId, _profile.Id);
+                }
+            }
+
+            if (_isOwner && _userId is not null)
+        {
+            await LoadFriendsAsync(CancellationToken.None);
+            await LoadFriendRequestsReceivedAsync(CancellationToken.None);
+            await LoadFriendRequestsSentAsync(CancellationToken.None);
+        }
+
         }
         catch (Exception ex)
         {
@@ -255,5 +686,300 @@
         {
             _loading = false;
         }
+    }
+
+    private async Task SendFriendRequest()
+    {   
+        if (_profile is null || _userId is null)
+        {
+            await ToastService.Error("You must be logged in to add friends.");
+            return;
+        }
+        if (_isOwner)
+        {
+            await ToastService.Info("You cannot add yourself.");
+            return;
+        }
+
+        var createDto = new CreateFriendDto {
+            SenderId = _userId,
+            ReceiverId = _profile.Id
+        };
+
+        var result = await FriendService.CreateFriendRequest(createDto, CancellationToken.None);
+        if (!result.Success || result.Data is null)
+        {   
+            await ToastService.Error("Failed to send friend request.");
+            return;
+        }
+
+        _friendship = result.Data;
+
+        await ToastService.Success($"Friend request sent to {_profile.DisplayName}!", "Friend request sent!");
+    }
+
+
+    private async Task AcceptFriendRequest()
+    {
+        if (_friendship is null || _userId is null)
+        {
+            await ToastService.Error("Invalid friend request.");
+            return;
+        }
+
+        var friendship = _friendship;
+        var otherUserName = friendship.Sender?.DisplayName ?? "this user";
+
+        try
+        {
+            var result = await FriendService.AcceptRequest(friendship.Id, _userId, CancellationToken.None);
+
+            if (!result.Success || result.Data is null)
+            {
+                await ToastService.Error("Failed to accept friend request.");
+                return;
+            }
+
+            _friendship = result.Data;
+
+            await ToastService.Success($"You are now friends with {otherUserName}!", "You have a new friend!");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error accepting friend request for friendship {FriendshipId}", friendship.Id);
+            await ToastService.Error("Unexpected error while accepting friend request.");
+        }
+    }
+
+    private async Task AcceptFriendRequestFromModal(FriendDto friendship)
+    {
+        if (_userId is null)
+        {
+            await ToastService.Error("You must be logged in to accept friend requests.");
+            return;
+        }
+
+        try
+        {
+            var result = await FriendService.AcceptRequest(friendship.Id, _userId, CancellationToken.None);
+
+            if (!result.Success || result.Data is null)
+            {
+                await ToastService.Error("Failed to accept friend request.");
+                return;
+            }
+
+            _friendRequestsReceived?.RemoveAll(f => f.Id == friendship.Id);
+            _friendsList ??= [];
+            _friendsList.Add(friendship);
+
+            var otherUserName = friendship.Sender?.DisplayName ?? "this user";
+            await ToastService.Success(
+                $"You are now friends with {otherUserName}!",
+                "Friend request accepted"
+            );
+
+            _friendsModalTab = "list";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error accepting friend request from modal for friendship {FriendshipId}", friendship.Id);
+            await ToastService.Error("Unexpected error while accepting friend request.");
+        }
+    }
+
+    private async Task RemoveFriendFromModal(FriendDto friendship)
+    {
+        if (_userId is null)
+        {
+            await ToastService.Error("You must be logged in to remove friends.");
+            return;
+        }
+
+        var otherUserIsSender = friendship.SenderId == _userId;
+
+        var otherUserName = otherUserIsSender
+            ? (friendship.Receiver?.DisplayName ?? "this user")
+            : (friendship.Sender?.DisplayName   ?? "this user");
+
+        try
+        {   
+            var result = await FriendService.RemoveFriend(friendship.Id, _userId, CancellationToken.None);
+
+            if (!result.Success || !result.Data)
+            {
+                await ToastService.Error("Failed to remove friend.");
+                return;
+            }
+
+            _friendsList?.RemoveAll(f => f.Id == friendship.Id);
+
+            await ToastService.Success(
+                $"{otherUserName} has been removed from your friends.",
+                "Friend removed."
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error removing friend from modal for friendship {FriendshipId}", friendship.Id);
+            await ToastService.Error("Unexpected error while removing friend.");
+        }
+    }
+
+    private async Task CancelFriendRequestFromModal(FriendDto friendship)
+    {
+        if (_userId is null)
+        {
+            await ToastService.Error("You must be logged in.");
+            return;
+        }
+
+        var otherUserName = friendship.Receiver?.DisplayName ?? "this user";
+        var result = await FriendService.CancelFriendRequest(friendship.Id, _userId, CancellationToken.None);
+
+        if (!result.Success || !result.Data)
+        {
+            await ToastService.Error("Failed to cancel friend request.");
+            return;
+        }
+
+        _friendRequestsSent?.Remove(friendship);
+
+        await ToastService.Success($"Friend request to {otherUserName} removed.", "Request cancelled.");
+    }
+
+    private async Task RemoveFriend()
+    {
+        if (_friendship is null || _userId is null)
+        {
+            await ToastService.Error("Invalid friendship.");
+            return;
+        }
+
+        var friendship = _friendship;
+        var otherUserIsSender = friendship.SenderId == _userId;
+
+        var otherUserName = otherUserIsSender
+            ? (friendship.Receiver?.DisplayName ?? "this user")
+            : (friendship.Sender?.DisplayName   ?? "this user");
+
+        try
+        {
+            var result = await FriendService.RemoveFriend(friendship.Id, _userId, CancellationToken.None);
+
+            if (!result.Success || !result.Data)
+            {
+                await ToastService.Error("Failed to remove friend.");
+                return;
+            }
+
+            _friendship = null;
+
+            await ToastService.Success(
+                $"{otherUserName} has been removed from your friends.",
+                "Friend removed."
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error removing friend.");
+            await ToastService.Error("Unexpected error while removing friend.");
+        }
+    }
+
+    private UserDto? GetOtherUser(FriendDto friendship)
+    {
+        if (_userId is null)
+        {
+            return null;
+        }
+
+        return friendship.SenderId == _userId
+            ? friendship.Receiver
+            : friendship.Sender;
+    }
+
+    private async Task LoadFriendsAsync(CancellationToken ct = default)
+    {
+        if (_userId is null) return;
+
+        var result = await FriendService.GetUserFriends(
+            _userId,
+            page: _friendsCurrentPage,
+            pageSize: _friendsPageSize,
+            ct: ct);
+
+        if (result is { Success: true, Data: not null })
+        {
+            _friendsList = result.Data.Data;
+            _friendsTotalCount = result.Data.TotalCount;
+        }
+        else
+        {
+            _friendsList = [];
+            _friendsTotalCount = 0;
+        }
+    }
+
+
+    private async Task LoadFriendRequestsReceivedAsync(CancellationToken ct = default)
+    {
+        if (_userId is null) return;
+
+        var result = await FriendService.GetFriendRequestsReceived(
+            _userId,
+            page: _receivedCurrentPage,
+            pageSize: ReceivedPageSize,
+            ct: ct);
+
+        if (result is { Success: true, Data: not null })
+        {
+            _friendRequestsReceived = result.Data.Data;
+            _receivedTotalCount = result.Data.TotalCount;
+        }
+        else
+        {
+            _friendRequestsReceived = new List<FriendDto>();
+            _receivedTotalCount = 0;
+        }
+    }
+
+    private async Task LoadFriendRequestsSentAsync(CancellationToken ct = default)
+    {
+        if (_userId is null) return;
+
+        var result = await FriendService.GetFriendRequestsSent(
+            _userId,
+            page: _sentCurrentPage,
+            pageSize: SentPageSize,
+            ct: ct);
+
+        if (result is { Success: true, Data: not null })
+        {
+            _friendRequestsSent = result.Data.Data;
+            _sentTotalCount = result.Data.TotalCount;
+        }
+        else
+        {
+            _friendRequestsSent = new List<FriendDto>();
+            _sentTotalCount = 0;
+        }
+    }
+    private async Task OnFriendsPageChanged(int page)
+    {
+        _friendsCurrentPage = page;
+        await LoadFriendsAsync();
+    }
+
+    private async Task OnReceivedPageChanged(int page)
+    {
+        _receivedCurrentPage = page;
+        await LoadFriendRequestsReceivedAsync();
+    }
+
+    private async Task OnSentPageChanged(int page)
+    {
+        _sentCurrentPage = page;
+        await LoadFriendRequestsSentAsync();
     }
 }

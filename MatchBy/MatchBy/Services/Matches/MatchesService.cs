@@ -345,9 +345,15 @@ public class MatchesService(
         }
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
+        ApplicationUser? creator = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == createMatchDto.CreatorId, ct);
+
+        if (creator is null)
+        {
+            return Result<MatchDto>.Fail($"Creator with id {createMatchDto.CreatorId} not found.");
+        }
+
         Match match = createMatchDto.ToEntity();
-        match.Participants = (List<ApplicationUser>)
-            [await dbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
+        match.Participants = (List<ApplicationUser>) [await dbContext.Users.FirstAsync(u => u.Id == createMatchDto.CreatorId, ct)];
         await dbContext.Matches.AddAsync(match, ct);
         await dbContext.SaveChangesAsync(ct);
         
@@ -366,6 +372,50 @@ public class MatchesService(
         if (!conversationResult.Success)
         {
             return Result<MatchDto>.Fail("Failed to create conversation for the match: " + string.Join(", ", conversationResult.ErrorMessages));
+        }
+        if (match.Privacy == MatchPrivacy.Public)
+        {
+            List<Friend> friendships = await dbContext.Friends
+                .Where(f =>
+                    f.Status == FriendStatus.Accepted &&
+                    f.DeletedAtUtc == null &&
+                    (f.SenderId == creator.Id || f.ReceiverId == creator.Id))
+                .ToListAsync(ct);
+
+            if (friendships.Count > 0)
+            {
+                string creatorName = creator.DisplayName ?? creator.UserName ?? "Your friend";
+                string matchName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}";
+
+                var friendIds = friendships
+                    .Select(f => f.SenderId == creator.Id ? f.ReceiverId : f.SenderId)
+                    .Distinct()
+                    .ToList();
+
+                foreach (string friendId in friendIds)
+                {
+                    var notification = new CreateNotificationDto
+                    {
+                        Type = NotificationType.FriendMatchCreated,
+                        ReceiverUserId = friendId,
+                        SenderUserId = creator.Id,
+                        RelatedEntityId = match.Id,
+                        RelatedEntityName = matchName,
+                        Title = "Your friend created a new match",
+                        Message = $"{creatorName} created a new match: {matchName}",
+                        ActionUrl = $"/matches/{match.Id}"
+                    };
+
+                    try
+                    {
+                        await notificationService.SendNotificationAsync(notification, ct);
+                    }
+                    catch
+                    {
+                        // Ignore notification failures
+                    }
+                }
+            }
         }
 
         match.ConversationId = conversationResult.Data!.Id; // since we set the conversation's ID to be the same as the match's ID
@@ -533,15 +583,22 @@ public class MatchesService(
 
         await dbContext.SaveChangesAsync(ct);
 
+        string matchName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}";
+        
+        string? newParticipant = await dbContext.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.DisplayName)
+            .FirstOrDefaultAsync(ct);
+        
         var notification = new CreateNotificationDto
         {
             Type = NotificationType.MatchJoined,
             ReceiverUserId = match.CreatorId,
             SenderUserId = userId,
             RelatedEntityId = match.Id,
-            RelatedEntityName = $"{match.Sport} in {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}",
+            RelatedEntityName = matchName,
             Title = "New participant",
-            Message = $"{user.DisplayName} joined the match {match.Sport} in {match.MatchDateTimeUtc:dd/MM/yyyy HH:mm}",
+            Message = $"{newParticipant} joined the match {matchName}",
             ActionUrl = $"/matches/{match.Id}"
         };
 

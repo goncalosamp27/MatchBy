@@ -1,4 +1,5 @@
-﻿namespace MatchBy.Models;
+﻿using MatchBy.Enums;
+namespace MatchBy.Models;
 
 public class Friend
 {
@@ -12,4 +13,6 @@ public class Friend
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public DateTime? DeletedAtUtc { get; set; }
+
+    public FriendStatus Status { get; set; }
 }
