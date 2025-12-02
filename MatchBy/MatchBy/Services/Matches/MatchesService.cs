@@ -345,11 +345,11 @@ public class MatchesService(
         }
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var creator = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == createMatchDto.CreatorId, ct);
+        ApplicationUser? creator = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == createMatchDto.CreatorId, ct);
 
         if (creator is null)
         {
-            return Result<bool>.Fail($"Creator with id {createMatchDto.CreatorId} not found.");
+            return Result<MatchDto>.Fail($"Creator with id {createMatchDto.CreatorId} not found.");
         }
 
         Match match = createMatchDto.ToEntity();
@@ -373,9 +373,9 @@ public class MatchesService(
         {
             return Result<MatchDto>.Fail("Failed to create conversation for the match: " + string.Join(", ", conversationResult.ErrorMessages));
         }
-         if (match.Privacy == MatchPrivacy.Public)
+        if (match.Privacy == MatchPrivacy.Public)
         {
-            var friendships = await dbContext.Friends
+            List<Friend> friendships = await dbContext.Friends
                 .Where(f =>
                     f.Status == FriendStatus.Accepted &&
                     f.DeletedAtUtc == null &&
@@ -392,7 +392,7 @@ public class MatchesService(
                     .Distinct()
                     .ToList();
 
-                foreach (var friendId in friendIds)
+                foreach (string friendId in friendIds)
                 {
                     var notification = new CreateNotificationDto
                     {

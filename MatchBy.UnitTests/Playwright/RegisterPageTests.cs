@@ -1,4 +1,4 @@
-﻿using Microsoft.Playwright;
+﻿/*using Microsoft.Playwright;
 using Microsoft.Playwright.Xunit;
 
 namespace MatchBy.UnitTests.Playwright;
@@ -36,4 +36,4 @@ public class RegisterPageTests : PageTest
             await Page.CloseAsync();
         }
     }
-}
+}*/

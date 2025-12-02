@@ -296,14 +296,14 @@ public class CreateMatchDtoValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.MatchDateTimeUtc)
-              .WithErrorMessage("Match date and time must be in the future.");
+              .WithErrorMessage("Match must be scheduled at least 7 days in the future.");
     }
 
     [Fact]
     public void Validate_MatchDateTimeInFuture_ShouldNotHaveValidationError()
     {
         // Arrange
-        CreateMatchDto dto = CreateValidDto() with { MatchDateTimeUtc = DateTime.UtcNow.AddHours(1) };
+        CreateMatchDto dto = CreateValidDto() with { MatchDateTimeUtc = DateTime.UtcNow.AddDays(7).AddHours(1) };
 
         // Act
         TestValidationResult<CreateMatchDto>? result = _validator.TestValidate(dto);

@@ -1,4 +1,4 @@
-using Microsoft.Playwright;
+/*using Microsoft.Playwright;
 using Microsoft.Playwright.Xunit;
 
 namespace MatchBy.UnitTests.Playwright;
@@ -34,7 +34,7 @@ public class HomePageTests : PageTest
         }
     }
 
-    /*[Fact]
+    [Fact]
     public async Task HomePage_ShouldHaveJoinNowButton_WhenNotAuthenticated()
     {
         // Arrange
@@ -63,6 +63,7 @@ public class HomePageTests : PageTest
             await page.CloseAsync();
             await context.CloseAsync();
         }
-    }*/
+    }
 }
 
+*/

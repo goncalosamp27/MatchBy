@@ -17,7 +17,7 @@ namespace MatchBy.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.10")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -90,7 +90,8 @@ namespace MatchBy.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
@@ -303,8 +304,23 @@ namespace MatchBy.Data.Migrations
                     b.Property<DateTime>("MatchDateTimeUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("MaxPlayers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinPlayers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinimumPlayersRating")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Privacy")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("Reminder30MinSent")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Reminder3DaysSent")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Sport")
                         .HasColumnType("integer");
@@ -314,12 +330,6 @@ namespace MatchBy.Data.Migrations
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("maxPlayers")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("minPlayers")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -343,9 +353,6 @@ namespace MatchBy.Data.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeclinedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeletedAtUtc")
@@ -560,9 +567,6 @@ namespace MatchBy.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DeclinedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime?>("DeletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -695,10 +699,12 @@ namespace MatchBy.Data.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("ProviderDisplayName")
                         .HasColumnType("text");
@@ -712,6 +718,23 @@ namespace MatchBy.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AspNetUserLogins", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserPasskey<string>", b =>
+                {
+                    b.Property<byte[]>("CredentialId")
+                        .HasMaxLength(1024)
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("CredentialId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserPasskeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -735,10 +758,12 @@ namespace MatchBy.Data.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Value")
                         .HasColumnType("text");
@@ -1205,6 +1230,55 @@ namespace MatchBy.Data.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserPasskey<string>", b =>
+                {
+                    b.HasOne("MatchBy.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("Microsoft.AspNetCore.Identity.IdentityPasskeyData", "Data", b1 =>
+                        {
+                            b1.Property<byte[]>("IdentityUserPasskeyCredentialId");
+
+                            b1.Property<byte[]>("AttestationObject")
+                                .IsRequired();
+
+                            b1.Property<byte[]>("ClientDataJson")
+                                .IsRequired();
+
+                            b1.Property<DateTimeOffset>("CreatedAt");
+
+                            b1.Property<bool>("IsBackedUp");
+
+                            b1.Property<bool>("IsBackupEligible");
+
+                            b1.Property<bool>("IsUserVerified");
+
+                            b1.Property<string>("Name");
+
+                            b1.Property<byte[]>("PublicKey")
+                                .IsRequired();
+
+                            b1.Property<long>("SignCount");
+
+                            b1.PrimitiveCollection<string>("Transports");
+
+                            b1.HasKey("IdentityUserPasskeyCredentialId");
+
+                            b1.ToTable("AspNetUserPasskeys");
+
+                            b1.ToJson("Data");
+
+                            b1.WithOwner()
+                                .HasForeignKey("IdentityUserPasskeyCredentialId");
+                        });
+
+                    b.Navigation("Data")
                         .IsRequired();
                 });
 

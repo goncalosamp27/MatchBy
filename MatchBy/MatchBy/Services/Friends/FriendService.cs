@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using MatchBy.DTOs.Notification;
 using MatchBy.Services.Notifications;
 
-
 namespace MatchBy.Services.Friends;
 
 public class FriendService(
@@ -171,11 +170,9 @@ public class FriendService(
         await dbContext.Friends.AddAsync(friend, ct);
         await dbContext.SaveChangesAsync(ct);
 
-        var sender = await dbContext.Users
+        ApplicationUser sender = await dbContext.Users
         .AsNoTracking()
         .FirstAsync(u => u.Id == friend.SenderId, ct);
-
-        var senderName = sender.DisplayName ?? sender.UserName ?? "Someone";
 
         var notification = new CreateNotificationDto
         {
@@ -185,7 +182,7 @@ public class FriendService(
             RelatedEntityId = friend.Id,
             RelatedEntityName = "Friendship",
             Title = "You received a friend request",
-            Message = $"{senderName} wants to be your friend!",
+            Message = $"{sender.DisplayName} wants to be your friend!",
             ActionUrl = $"/profile/{friend.SenderId}"
         };
 
@@ -196,9 +193,9 @@ public class FriendService(
 
     public async Task<Result<FriendDto>> AcceptRequest(string friendshipId, string receiverId, CancellationToken ct = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var friend = await dbContext.Friends.FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
+        Friend? friend = await dbContext.Friends.FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
 
         if (friend == null || friend.DeletedAtUtc != null) {
             return Result<FriendDto>.Fail("Request not found.");
@@ -213,11 +210,9 @@ public class FriendService(
 
         await dbContext.SaveChangesAsync(ct);
 
-        var receiver = await dbContext.Users
+        ApplicationUser receiver = await dbContext.Users
         .AsNoTracking()
         .FirstAsync(u => u.Id == friend.ReceiverId, ct);
-
-        var receiverName = receiver.DisplayName ?? receiver.UserName ?? "Someone";
 
         var notification = new CreateNotificationDto
         {
@@ -227,7 +222,7 @@ public class FriendService(
             RelatedEntityId = friend.Id,
             RelatedEntityName = "Friendship",
             Title = "Friend request accepted",
-            Message = $"{receiverName} is your new friend!",
+            Message = $"{receiver.DisplayName} is your new friend!",
             ActionUrl = $"/profile/{friend.ReceiverId}"
         };
 
@@ -238,11 +233,11 @@ public class FriendService(
 
     public async Task<Result<bool>> RejectRequest(string friendshipId, string receiverId, CancellationToken ct = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var friend = await dbContext.Friends.FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
+        Friend? friend = await dbContext.Friends.FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
 
-        if (friend == null || friend.DeletedAtUtc != null) {
+        if (friend is not { DeletedAtUtc: null }) {
             return Result<bool>.Fail("Request not found.");
         }
 
@@ -286,7 +281,7 @@ public class FriendService(
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
         bool areFriends = await dbContext.Friends
-            .AnyAsync(f => f.DeletedAtUtc == null && f.Status == Enums.FriendStatus.Accepted && ((f.SenderId == userId1 && f.ReceiverId == userId2) ||
+            .AnyAsync(f => f.DeletedAtUtc == null && f.Status == FriendStatus.Accepted && ((f.SenderId == userId1 && f.ReceiverId == userId2) ||
                           (f.SenderId == userId2 && f.ReceiverId == userId1)), ct);
 
         return Result<bool>.Ok(areFriends);
@@ -294,9 +289,9 @@ public class FriendService(
 
     public async Task<Result<FriendDto?>> GetFriendshipBetweenUsers(string userId1, string userId2, CancellationToken ct = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var friend = await dbContext.Friends
+        Friend? friend = await dbContext.Friends
             .AsNoTracking()
             .Include(f => f.Sender)
             .Include(f => f.Receiver)
@@ -313,9 +308,9 @@ public class FriendService(
 
     public async Task<Result<bool>> CancelFriendRequest(string friendshipId, string senderId, CancellationToken ct = default)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var friend = await dbContext.Friends
+        Friend? friend = await dbContext.Friends
             .FirstOrDefaultAsync(f => f.Id == friendshipId, ct);
 
         if (friend == null || friend.DeletedAtUtc != null)

@@ -121,7 +121,7 @@
 
                         <div class="flex items-center">
                             <span class="text-sm font-medium mr-1 text-[var(--text)]">@_profile.Rating.ToString("0.0")</span>
-                            <div class="flex text-yellow-400">
+                            <div class="flex text-[var(--main)]">
                                 @for (int i = 1; i <= 5; i++) {
                                     <span class="@(i <= Math.Round(_profile.Rating) ? "" : "text-gray-500 dark:text-gray-600")">★</span>
                                 }
@@ -241,7 +241,7 @@
                         flex-1 text-center
                         px-4 py-2 rounded-lg text-sm font-medium border transition-colors
                         border-[var(--main)]
-                        @(friendsModalTab == "list"
+                        @(_friendsModalTab == "list"
                             ? "bg-[var(--main)] text-[var(--text-contrast)] cursor-default font-medium"
                             : "bg-[var(--section-secondary)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)] border-[var(--text)] font-medium")
                     ">
@@ -256,7 +256,7 @@
                             flex-1 text-center
                             px-4 py-2 rounded-lg text-sm font-medium border transition-colors
                             border-[var(--main)]
-                            @(friendsModalTab == "received"
+                            @(_friendsModalTab == "received"
                                 ? "bg-[var(--main)] text-[var(--text-contrast)] cursor-default font-medium"
                                 : "bg-[var(--section-secondary)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)] border-[var(--text)] font-medium")
                         ">
@@ -272,7 +272,7 @@
                             flex-1 text-center
                             px-4 py-2 rounded-lg text-sm font-medium border transition-colors
                             border-[var(--main)]
-                            @(friendsModalTab == "sent"
+                            @(_friendsModalTab == "sent"
                                 ? "bg-[var(--main)] text-[var(--text-contrast)] cursor-default font-medium"
                                 : "bg-[var(--section-secondary)] text-[var(--text)] hover:border-[var(--main)] hover:text-[var(--main)] border-[var(--text)] font-medium")
                         ">
@@ -281,7 +281,7 @@
                 }
             </div>
 
-            @if(friendsModalTab == "list") {
+            @if(_friendsModalTab == "list") {
                 <div class="mt-6 space-y-4 max-h-80 overflow-y-auto pr-2">
                     @if (_friendsList is null || !_friendsList.Any())
                     {   
@@ -290,7 +290,7 @@
                             <p class="text-[var(--text)] text-center"> Find other
                                 <a href="/users" class="text-[var(--main)] underline hover:text-[var(--success)] cursor-pointer"> users</a>
                                 or join 
-                                <a href="/matches/search" class="text-[var(--main)] underline hover:text-[var(--success)] cursor-pointer">matches</a>
+                                <a href="/matches" class="text-[var(--main)] underline hover:text-[var(--success)] cursor-pointer">matches</a>
                                 to make new friends!
                             </p>
                         </div>
@@ -312,11 +312,11 @@
                                                 class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
                                                 @if (!string.IsNullOrEmpty(p.AvatarUrl))
                                                 {
-                                                    <img src="@p.AvatarUrl" class="w-full h-full object-cover"/>
+                                                    <img src="@p.AvatarUrl" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
                                                 }
                                                 else
                                                 {
-                                                    <img src="images/user-avatar.png" class="w-full h-full object-cover"/>
+                                                    <img src="images/user-avatar.png" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
                                                 }
                                             </div>
 
@@ -325,15 +325,15 @@
                                                     class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
                                                     @p.DisplayName
                                                 </div>
-                                                @if (p.PlayerRating is > 0)
+                                                @if (p.PlayerRating > 0)
                                                 {
                                                     <div class="flex items-center gap-1 text-sm text-[var(--text)]">
-                                                        <svg class="w-4 h-4 text-yellow-400" fill="currentColor"
+                                                        <svg class="w-4 h-4 text-[var(--main)]" fill="currentColor"
                                                             viewBox="0 0 20 20">
                                                             <path
                                                                 d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                                                         </svg>
-                                                        <span>@p.PlayerRating.Value.ToString("F1")</span>
+                                                        <span>@p.PlayerRating</span>
                                                     </div>
                                                 }
                                             </div>
@@ -366,7 +366,7 @@
                     </div>
                 }
             }
-            @if(_friendRequestsReceived is not null && _friendRequestsReceived.Any() && friendsModalTab == "received")
+            @if(_friendRequestsReceived is not null && _friendRequestsReceived.Any() && _friendsModalTab == "received")
             {
                 <h3 class="text-xl font-semibold text-[var(--text)] mt-6 mb-4">
                     Friend requests received (@_friendRequestsReceived.Count):
@@ -388,11 +388,11 @@
                                         class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
                                         @if (!string.IsNullOrEmpty(p.AvatarUrl))
                                         {
-                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover" />
+                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
                                         }
                                         else
                                         {
-                                            <img src="images/user-avatar.png" class="w-full h-full object-cover" />
+                                            <img src="images/user-avatar.png" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
                                         }
                                     </div>
 
@@ -400,14 +400,14 @@
                                         <div class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
                                             @p.DisplayName
                                         </div>
-                                        @if (p.PlayerRating is > 0)
+                                        @if (p.PlayerRating > 0)
                                         {
                                             <div class="flex items-center gap-1 text-sm text-[var(--text)]">
-                                                <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg class="w-4 h-4 text-[var(--main)]" fill="currentColor" viewBox="0 0 20 20">
                                                     <path
                                                         d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                                 </svg>
-                                                <span>@p.PlayerRating.Value.ToString("F1")</span>
+                                                <span>@p.PlayerRating</span>
                                             </div>
                                         }
                                     </div>
@@ -429,20 +429,20 @@
                         }
                 </div>
 
-                @if (_receivedTotalCount > _receivedPageSize)
+                @if (_receivedTotalCount > ReceivedPageSize)
                 {
                     <div class="flex justify-center mt-4">
                         <OffsetPagination
                             CurrentPage="@_receivedCurrentPage"
                             OnPageChanged="@OnReceivedPageChanged"
-                            PageSize="@_receivedPageSize"
+                            PageSize="@ReceivedPageSize"
                             TotalItems="@_receivedTotalCount" />
                     </div>
                 }
 
             }
 
-            @if (_friendRequestsSent is not null && _friendRequestsSent.Any() && friendsModalTab == "sent")
+            @if (_friendRequestsSent is not null && _friendRequestsSent.Any() && _friendsModalTab == "sent")
             {
                 <h3 class="text-xl font-semibold text-[var(--text)] mt-6 mb-4">
                     Pending friend requests (@_friendRequestsSent.Count):
@@ -465,11 +465,11 @@
                                         class="w-10 h-10 rounded-full overflow-hidden border border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)]">
                                         @if (!string.IsNullOrEmpty(p.AvatarUrl))
                                         {
-                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover" />
+                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
                                         }
                                         else
                                         {
-                                            <img src="images/user-avatar.png" class="w-full h-full object-cover" />
+                                            <img src="images/user-avatar.png" class="w-full h-full object-cover" alt="Avatar of @p.DisplayName"/>
                                         }
                                     </div>
 
@@ -477,15 +477,15 @@
                                         <div class="text-lg font-medium text-[var(--text)] group-hover:text-[var(--main)]">
                                             @p.DisplayName
                                         </div>
-                                        @if (p.PlayerRating is > 0)
+                                        @if (p.PlayerRating > 0)
                                         {
                                             <div class="flex items-center gap-1 text-sm text-[var(--text)]">
-                                                <svg class="w-4 h-4 text-yellow-400" fill="currentColor"
+                                                <svg class="w-4 h-4 text-[var(--main)]" fill="currentColor"
                                                     viewBox="0 0 20 20">
                                                     <path
                                                         d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l-2.8-2.034a1 1 0 00-.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                                 </svg>
-                                                <span>@p.PlayerRating.Value.ToString("F1")</span>
+                                                <span>@p.PlayerRating</span>
                                             </div>
                                         }
                                     </div>
@@ -506,13 +506,13 @@
 
                         }
                 </div>
-                @if (_sentTotalCount > _sentPageSize)
+                @if (_sentTotalCount > SentPageSize)
                 {
                     <div class="flex justify-center mt-4">
                         <OffsetPagination
                             CurrentPage="@_sentCurrentPage"
                             OnPageChanged="@OnSentPageChanged"
-                            PageSize="@_sentPageSize"
+                            PageSize="@SentPageSize"
                             TotalItems="@_sentTotalCount" />
                     </div>
                 }
@@ -538,35 +538,33 @@
     private bool _isOwner;
     private string? _ownEmail;
     private bool _loading = true;
-    private string? _userId = null;
+    private string? _userId;
     private FriendDto? _friendship;
-    private bool _showFriendsModal = false;
+    private bool _showFriendsModal;
 
     private void ToggleFriendsModal() { 
         _showFriendsModal = !_showFriendsModal; 
-        friendsModalTab = "list";
+        _friendsModalTab = "list";
     }
 
-    private void SetFriendsModalTab(string tab) {
-        friendsModalTab = tab;
-    }
+    private void SetFriendsModalTab(string tab) => _friendsModalTab = tab;
 
     private List<FriendDto>? _friendRequestsReceived;
     private List<FriendDto>? _friendRequestsSent;
     private List<FriendDto>? _friendsList;
 
-    private string friendsModalTab = "list";
+    private string _friendsModalTab = "list";
 
     private int _friendsCurrentPage = 1;
     private readonly int _friendsPageSize = 5;
     private int _friendsTotalCount;
 
     private int _receivedCurrentPage = 1;
-    private readonly int _receivedPageSize = 5;
+    private const int ReceivedPageSize = 5;
     private int _receivedTotalCount;
 
     private int _sentCurrentPage = 1;
-    private readonly int _sentPageSize = 5;
+    private const int SentPageSize = 5;
     private int _sentTotalCount;
 
     protected override async Task OnInitializedAsync()
@@ -616,7 +614,7 @@
 
                 _isOwner = _userId == targetId;
                 _ownEmail = null;
-                var current = await UserManager.GetUserAsync(HttpContext.User);
+                var current = await UserManager.GetUserAsync(user);
                 if (current is null)
                 {
                     _profile = null;
@@ -645,9 +643,9 @@
                 var result = await MatchesService.GetMatchesForUser(
                     _profile.Id, null, 1, 5, CancellationToken.None);
 
-                if (result.Success && result.Data is not null)
+                if (result is { Success: true, Data: not null })
                 {
-                    _matches = result.Data.Data ?? new List<MatchDto>();
+                    _matches = result.Data.Data;
                 }
                 else
                 {
@@ -716,9 +714,8 @@
         }
 
         _friendship = result.Data;
-        var receiverName = _profile.DisplayName ?? _profile.UserName ?? "this user";
 
-        await ToastService.Success($"Friend request sent to {receiverName}!", "Friend request sent!");
+        await ToastService.Success($"Friend request sent to {_profile.DisplayName}!", "Friend request sent!");
     }
 
 
@@ -773,22 +770,16 @@
             }
 
             _friendRequestsReceived?.RemoveAll(f => f.Id == friendship.Id);
-
-            if (_friendsList is null)
-            {
-                _friendsList = new List<FriendDto>();
-            }
-
+            _friendsList ??= [];
             _friendsList.Add(friendship);
 
             var otherUserName = friendship.Sender?.DisplayName ?? "this user";
-
             await ToastService.Success(
                 $"You are now friends with {otherUserName}!",
                 "Friend request accepted"
             );
 
-            friendsModalTab = "list";
+            _friendsModalTab = "list";
         }
         catch (Exception ex)
         {
@@ -918,14 +909,14 @@
             pageSize: _friendsPageSize,
             ct: ct);
 
-        if (result.Success && result.Data is not null)
+        if (result is { Success: true, Data: not null })
         {
-            _friendsList = result.Data.Data ?? new List<FriendDto>();
+            _friendsList = result.Data.Data;
             _friendsTotalCount = result.Data.TotalCount;
         }
         else
         {
-            _friendsList = new List<FriendDto>();
+            _friendsList = [];
             _friendsTotalCount = 0;
         }
     }
@@ -938,12 +929,12 @@
         var result = await FriendService.GetFriendRequestsReceived(
             _userId,
             page: _receivedCurrentPage,
-            pageSize: _receivedPageSize,
+            pageSize: ReceivedPageSize,
             ct: ct);
 
-        if (result.Success && result.Data is not null)
+        if (result is { Success: true, Data: not null })
         {
-            _friendRequestsReceived = result.Data.Data ?? new List<FriendDto>();
+            _friendRequestsReceived = result.Data.Data;
             _receivedTotalCount = result.Data.TotalCount;
         }
         else
@@ -960,12 +951,12 @@
         var result = await FriendService.GetFriendRequestsSent(
             _userId,
             page: _sentCurrentPage,
-            pageSize: _sentPageSize,
+            pageSize: SentPageSize,
             ct: ct);
 
-        if (result.Success && result.Data is not null)
+        if (result is { Success: true, Data: not null })
         {
-            _friendRequestsSent = result.Data.Data ?? new List<FriendDto>();
+            _friendRequestsSent = result.Data.Data;
             _sentTotalCount = result.Data.TotalCount;
         }
         else

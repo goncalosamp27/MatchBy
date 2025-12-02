@@ -210,8 +210,11 @@ public sealed class CreateTeamViewModel(
 
     public void RemoveMember(string userId)
     {
-        _model.MembersIds.Remove(userId);
-        
+        if (!_model.MembersIds.Remove(userId))
+        {
+            return;
+        }
+
         SelectedUsers = AvailableUsers.Data
             .Where(u => _model.MembersIds.Contains(u.Id))
             .ToList();
