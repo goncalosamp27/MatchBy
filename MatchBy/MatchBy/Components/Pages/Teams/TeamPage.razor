@@ -336,11 +336,11 @@ else
 }
 
 <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
-
 @code {
     [Parameter] public string TeamId { get; set; } = string.Empty;
 
-    private TeamPageViewModel? _viewModel;
+    [PersistentState]
+    public TeamPageViewModel? _viewModel { get; set; }
     private PropertyChangedEventHandler? _propertyChangedHandler;
 
     protected override async Task OnInitializedAsync()
@@ -355,12 +355,13 @@ else
             return;
         }
 
-        _viewModel = new TeamPageViewModel(TeamService, TeamInvitesService, ToastService);
+        ViewModel ??= new TeamPageViewModel(TeamService, TeamInvitesService, ToastService);
         _propertyChangedHandler = async (_, _) => await InvokeAsync(StateHasChanged);
-        _viewModel.PropertyChanged += _propertyChangedHandler;
+        ViewModel.PropertyChanged += _propertyChangedHandler;
 
-        await _viewModel.InitializeAsync(TeamId, userId);
+        await ViewModel.InitializeAsync(TeamId, userId);
     }
+
 
     private async Task RetryLoadTeam()
     {
