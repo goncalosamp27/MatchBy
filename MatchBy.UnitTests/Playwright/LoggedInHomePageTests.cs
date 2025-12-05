@@ -8,8 +8,8 @@ public class LoggedInHomePageTests : PageTest
     private const string BaseUrl = "http://localhost:5029";
     private const string HomeUrl = BaseUrl + "/";
     private const string LoginUrl = BaseUrl + "/Account/Login";
-    private const string ValidEmail = "admin@admin.com";
-    private const string ValidPassword = "Admin!123";
+    private const string ValidEmail = "test1@test.com";
+    private const string ValidPassword = "Test!123";
 
     #region Authenticated User Tests
 

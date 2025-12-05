@@ -22,8 +22,8 @@ public class ViewPlayerProfileTests : PageTest
     private const string MatchesUrl = BaseUrl + "/Matches";
 
     // Test user credentials - admin user
-    private const string TestEmail = "admin@admin.com";
-    private const string TestPassword = "Admin!123";
+    private const string TestEmail = "test1@test.com";
+    private const string TestPassword = "Test!123";
 
     #region View Player Profile Flow Tests
 
@@ -33,7 +33,7 @@ public class ViewPlayerProfileTests : PageTest
         try
         {
             // Arrange - Login as admin
-            await LoginAsAdmin();
+            await LoginAsTestUser();
 
             // Act - Navigate to Matches page
             await Page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Matches" }).ClickAsync();
@@ -60,7 +60,7 @@ public class ViewPlayerProfileTests : PageTest
         try
         {
             // Arrange - Login, navigate to match, expand participants
-            await LoginAsAdmin();
+            await LoginAsTestUser();
             await Page.GotoAsync(MatchesUrl);
             await Page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Football image Football Match" }).ClickAsync();
             await Task.Delay(2000);
@@ -99,7 +99,7 @@ public class ViewPlayerProfileTests : PageTest
 
     #region Helper Methods
 
-    private async Task LoginAsAdmin()
+    private async Task LoginAsTestUser()
     {
         await LoginWithCredentials(TestEmail, TestPassword);
     }

@@ -20,8 +20,8 @@ public class AddBioToProfileTests : PageTest
     private const string LoginUrl = BaseUrl + "/Account/Login";
     
     // Test user credentials - admin user
-    private const string TestEmail = "admin@admin.com";
-    private const string TestPassword = "Admin!123";
+    private const string TestEmail = "test1@test.com";
+    private const string TestPassword = "Test!123";
 
     [Fact]
     public async Task AddBioToProfile_UserAddsAndSavesBio_BioIsSavedAndDisplayed()

@@ -23,8 +23,8 @@ public class AccountDeletionTests : PageTest
     private const string DeletePersonalDataUrl = BaseUrl + "/Account/Manage/DeletePersonalData";
     
     // Test user credentials - using a unique user for deletion tests
-    private const string TestEmail = "admin@admin.com";
-    private const string TestPassword = "Admin!123";
+    private const string TestEmail = "test1@test.com";
+    private const string TestPassword = "Test!123";
 
     #region Account Deletion Flow Tests
 
@@ -298,36 +298,6 @@ public class AccountDeletionTests : PageTest
         
         // Give the page a moment to fully settle after login
         await Task.Delay(1000);
-    }
-
-    /// <summary>
-    /// Helper method to register a new user.
-    /// Used for creating disposable test users that will be deleted.
-    /// </summary>
-    private async Task RegisterNewUser(string email, string username, string password)
-    {
-        string registerUrl = BaseUrl + "/Account/Register";
-        await Page.GotoAsync(registerUrl);
-
-        // Fill registration form
-        await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Email" })
-            .FillAsync(email);
-        await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Username" })
-            .FillAsync(username);
-        await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Display Name" })
-            .FillAsync(username);
-        await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Password", Exact = true })
-            .FillAsync(password);
-        await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Confirm Password" })
-            .FillAsync(password);
-        await Page.GetByRole(AriaRole.Checkbox, new PageGetByRoleOptions { Name = "I accept the Terms and" })
-            .CheckAsync();
-        await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Create account" })
-            .ClickAsync();
-
-        // Wait for registration confirmation
-        await Expect(Page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions { Name = "Confirmation email sent" }))
-            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
     }
 
     #endregion

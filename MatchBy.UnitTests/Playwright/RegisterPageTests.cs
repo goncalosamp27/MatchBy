@@ -9,34 +9,7 @@ public class RegisterPageTests : PageTest
     private const string RegisterUrl = BaseUrl + "/Account/Register";
     
     
-    // private const string Username = "joao3";
-
-
-    // [Fact]
-    // public async Task RegisterPage_ShouldLoadSuccessfully()
-    // {
-    //     try
-    //     {
-    //         await Page.GotoAsync(RegisterUrl);
-    //
-    //         string title = await Page.TitleAsync();
-    //         Assert.Contains("MatchBy", title);
-    //
-    //         ILocator heading = Page.Locator("h1").First;
-    //         await Assertions.Expect(heading).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
-    //         {
-    //             Timeout = 30000
-    //         });
-    //
-    //         string? bodyText = await Page.TextContentAsync("body");
-    //         Assert.NotNull(bodyText);
-    //         Assert.Contains("Create your account", bodyText, StringComparison.OrdinalIgnoreCase);
-    //     }
-    //     finally
-    //     {
-    //         await Page.CloseAsync();
-    //     }
-    // }
+  
 
     [Fact]
     public async Task RegisterPage_ShouldRegisterSuccessfullyWithValidData()

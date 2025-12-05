@@ -27,11 +27,11 @@ public class UserSeederTests : IDisposable
 
         var userStore = new Mock<IUserStore<ApplicationUser>>();
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-            userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var roleStore = new Mock<IRoleStore<IdentityRole>>();
         _roleManagerMock = new Mock<RoleManager<IdentityRole>>(
-            roleStore.Object, null!, null!, null!, null!);
+        roleStore.Object, null!, null!, null!, null!);
 
         _loggerMock = new Mock<ILogger<UserSeeder>>();
         _serviceProviderMock = new Mock<IServiceProvider>();
@@ -42,7 +42,7 @@ public class UserSeederTests : IDisposable
             .Returns(_roleManagerMock.Object);
     }
 
-    [Fact]
+[Fact]
     public async Task SeedAsync_WhenRolesDoNotExist_ShouldCreateRoles()
     {
         // Arrange

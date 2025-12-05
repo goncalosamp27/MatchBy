@@ -1,4 +1,4 @@
-﻿using MatchBy.Enums;
+﻿﻿using MatchBy.Enums;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -22,9 +22,20 @@ public class UserSeeder(ILogger<UserSeeder> logger) : ISeeder
             return;
         }
 
+        // Create admin user
         await CreateUserIfNotExists(userManager, "admin@admin.com", "admin@admin.com", "Admin!123", Roles.Admin);
+        
+        // Create regular test users
         await CreateUserIfNotExists(userManager, "user1@user.com", "user1@user.com", "User1!123", Roles.Member);
         await CreateUserIfNotExists(userManager, "user2@user.com", "user2@user.com", "User2!123", Roles.Member);
+        
+        // Create test user for Playwright account deletion tests
+        await CreateUserIfNotExists(userManager, "test1@test.com", "test1@test.com", "Test!123", Roles.Member);
+        await CreateUserIfNotExists(userManager, "test2@test.com", "test2@test.com", "Test!123", Roles.Member);
+
+        
+
+
     }
 
     private async Task CreateUserIfNotExists(
