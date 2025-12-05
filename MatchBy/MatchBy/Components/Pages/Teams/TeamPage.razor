@@ -334,7 +334,6 @@ else
 }
 
 <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
-
 @code {
     [Parameter] public string TeamId { get; set; } = string.Empty;
 
@@ -363,6 +362,7 @@ else
         _propertyChangedHandler = async (_, _) => await InvokeAsync(StateHasChanged);
         ViewModel.PropertyChanged += _propertyChangedHandler;
     }
+
 
     private async Task RetryLoadTeam()
     {
