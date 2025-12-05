@@ -3,8 +3,6 @@
 @inject ITeamsInvitesService TeamInvitesService
 @using System.ComponentModel
 @using System.Security.Claims
-@using MatchBy.DTOs.Team
-@using MatchBy.DTOs.TeamInvite
 @using MatchBy.Services.Teams
 @using MatchBy.Services.TeamInvites
 @rendermode InteractiveServer
@@ -15,13 +13,13 @@
 @inject NavigationManager NavigationManager
 @implements IDisposable
 
-@if (_viewModel is null || _viewModel.IsLoading)
+@if (ViewModel is null || ViewModel.IsLoading)
 {
     <div class="min-h-screen flex items-center justify-center">
         <Loading/>
     </div>
 }
-else if (_viewModel.HasError)
+else if (ViewModel.HasError)
 {
     <div class="min-h-screen bg-[var(--background)] px-4 py-8">
         <div class="max-w-2xl mx-auto">
@@ -34,12 +32,12 @@ else if (_viewModel.HasError)
                     </svg>
                 </div>
                 <h2 class="text-2xl font-bold text-[var(--text)] mb-2">Unable to Load Team</h2>
-                <p class="text-[var(--text)] mb-2 opacity-75">@_viewModel.ErrorMessage</p>
+                <p class="text-[var(--text)] mb-2 opacity-75">@ViewModel.ErrorMessage</p>
                 <div class="flex gap-3 justify-center mt-6">
                     <button @onclick="RetryLoadTeam"
-                            disabled="@_viewModel.IsRetrying"
+                            disabled="@ViewModel.IsRetrying"
                             class="px-6 py-2 bg-[var(--main)] hover:bg-[var(--main-hover)] text-[var(--text-contrast)] font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
-                        @if (_viewModel.IsRetrying)
+                        @if (ViewModel.IsRetrying)
                         {
                             <span>Retrying...</span>
                         }
@@ -57,7 +55,7 @@ else if (_viewModel.HasError)
         </div>
     </div>
 }
-else if (_viewModel.Team == null)
+else if (ViewModel.Team == null)
 {
     <div class="min-h-screen flex items-center justify-center">
         <div class="text-center">
@@ -71,7 +69,7 @@ else if (_viewModel.Team == null)
 }
 else
 {
-    var viewModel = _viewModel!;
+    var viewModel = ViewModel!;
     var team = viewModel.Team!;
     <div class="min-h-screen bg-[var(--background)] px-4 py-8">
         <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -340,7 +338,7 @@ else
     [Parameter] public string TeamId { get; set; } = string.Empty;
 
     [PersistentState]
-    public TeamPageViewModel? _viewModel { get; set; }
+    public TeamPageViewModel? ViewModel { get; set; }
     private PropertyChangedEventHandler? _propertyChangedHandler;
 
     protected override async Task OnInitializedAsync()
@@ -355,44 +353,47 @@ else
             return;
         }
 
-        ViewModel ??= new TeamPageViewModel(TeamService, TeamInvitesService, ToastService);
+        if (ViewModel is null)
+        {
+            ViewModel = new TeamPageViewModel(TeamService, TeamInvitesService, ToastService);
+            await ViewModel.InitializeAsync(TeamId, userId);
+        }
+        
         _propertyChangedHandler = async (_, _) => await InvokeAsync(StateHasChanged);
         ViewModel.PropertyChanged += _propertyChangedHandler;
-
-        await ViewModel.InitializeAsync(TeamId, userId);
     }
 
 
     private async Task RetryLoadTeam()
     {
-        if (_viewModel is null)
+        if (ViewModel is null)
         {
             return;
         }
 
-        await _viewModel.RetryLoadTeamAsync();
+        await ViewModel.RetryLoadTeamAsync();
     }
 
     private async Task JoinTeam()
     {
-        if (_viewModel is null)
+        if (ViewModel is null)
         {
             return;
         }
 
-        await _viewModel.JoinTeamAsync();
+        await ViewModel.JoinTeamAsync();
     }
 
     private async Task LeaveTeam()
     {
-        if (_viewModel is null)
+        if (ViewModel is null)
         {
             return;
         }
 
-        await _viewModel.LeaveTeamAsync();
+        await ViewModel.LeaveTeamAsync();
 
-        if (_viewModel.Team is null)
+        if (ViewModel.Team is null)
         {
             NavigationManager.NavigateTo("/teams");
         }
@@ -400,9 +401,9 @@ else
 
     public void Dispose()
     {
-        if (_viewModel != null && _propertyChangedHandler != null)
+        if (ViewModel != null && _propertyChangedHandler != null)
         {
-            _viewModel.PropertyChanged -= _propertyChangedHandler;
+            ViewModel.PropertyChanged -= _propertyChangedHandler;
         }
     }
 }
