@@ -6,6 +6,14 @@ root = true
 #### Core EditorConfig Options ####
 
 dotnet_diagnostic.IDE0161.severity = none
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = true:error
+csharp_style_expression_bodied_properties = true:error
+csharp_style_expression_bodied_indexers = true:error
+csharp_style_expression_bodied_accessors = true:error
+csharp_style_expression_bodied_lambdas = true:none
+csharp_style_expression_bodied_local_functions = true:error
 [**/Migrations/*.cs]
 dotnet_diagnostic.CA1861.severity = none
 

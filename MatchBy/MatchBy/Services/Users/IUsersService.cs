@@ -1,9 +1,16 @@
-﻿using MatchBy.Models;
+﻿// Services/Users/IUsersService.cs
+
+using MatchBy.Models;
 
 namespace MatchBy.Services.Users;
 
 public interface IUsersService
 {
-    Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(string q, int page=1, int pageSize=5, CancellationToken ct = default);
-    Task<ApplicationUser?> GetUser(string userId, CancellationToken cancellationToken);
+    Task<Result<ApplicationUser>> GetUser(string userId, CancellationToken cancellationToken = default);
+
+    Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
+        string? search = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }

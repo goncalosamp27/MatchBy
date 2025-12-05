@@ -636,7 +636,18 @@
             }
 
             // Fetch public profile via service (does not expose everything)
-            _profile = await UsersService.GetUser(targetId, CancellationToken.None);
+            var profileResult = await UsersService.GetUser(targetId, CancellationToken.None);
+            if (profileResult is { Success: true, Data: not null })
+            {
+                _profile = profileResult.Data;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to load profile for user {UserId}", targetId);
+                _profile = null;
+                _matches = null;
+                return;
+            }
 
             if (_profile is not null)
             {

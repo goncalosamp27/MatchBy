@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authorization
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider Auth
 @using System.Security.Claims
@@ -197,6 +197,13 @@
                         <NavLink href="/matches" Match="NavLinkMatch.Prefix" ActiveClass="!text-[var(--main)]"
                                  class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0">
                             Matches
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink href="/users" Match="NavLinkMatch.Prefix"
+                                 ActiveClass="!text-[var(--main)]"
+                                 class="block py-2 pr-4 pl-3 text-[var(--text)] border-b border-[var(--section-secondary)] lg:hover:bg-transparent lg:border-0 lg:hover:text-[var(--main)] lg:p-0">
+                            Users
                         </NavLink>
                     </li>
                     <li>

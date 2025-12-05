@@ -1,0 +1,162 @@
+@page "/users"
+@inject IUsersService UsersService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+@using Blazorise
+@using MatchBy.Services.Users
+@inject IToastService ToastService
+@implements IDisposable
+
+<PageTitle>Users</PageTitle>
+
+<section class="bg-[var(--background)] min-h-screen">
+    <div class="max-w-screen-xl px-4 m-8 mx-auto">
+        <h1 class="text-4xl font-bold text-[var(--main)] mb-6">
+            Discover Players
+        </h1>
+
+        <div class="mb-6">
+            <div class="relative">
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg class="w-5 h-5 text-[var(--text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <input type="text"
+                       @bind="_searchTerm"
+                       @bind:event="oninput"
+                       @onkeyup="HandleSearchDebounced"
+                       placeholder="Search users by name, username, or location..."
+                       class="w-full pl-10 pr-10 py-3 bg-[var(--section-secondary)] text-[var(--text)] rounded-lg border-2 border-[var(--main)] focus:ring-2 focus:ring-[var(--main)] focus:border-transparent"/>
+
+                @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                {
+                    <button @onclick="ClearSearch"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text)] hover:text-[var(--main)]">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                }
+            </div>
+
+            @if (_users != null)
+            {
+                <p class="text-[var(--text)] mt-2 text-sm">
+                    Showing @_users.Count of @_totalUsers @(_totalUsers == 1 ? "user" : "users")
+                    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                    {
+                        <span> matching "@_searchTerm"</span>
+                    }
+                </p>
+            }
+        </div>
+
+        @if (_loading)
+        {
+            <div class="flex justify-center items-center py-12">
+                <Loading></Loading>
+            </div>
+        }
+        else if (_users != null && _users.Any())
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                @foreach (var user in _users)
+                {
+                    <UserCard User="@user" OnClick="NavigateToProfile"></UserCard>
+                }
+            </div>
+
+            <div class="flex justify-center items-center gap-2 mt-8">
+                <OffsetPagination CurrentPage="_currentPage" OnPageChanged="GoToPage" PageSize="PageSize"
+                                  TotalItems="_totalUsers"></OffsetPagination>
+            </div>
+        }
+        else if (!_loading)
+        {
+            <UsersEmptyState SearchTerm="_searchTerm"></UsersEmptyState>
+        }
+    </div>
+</section>
+
+<ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
+
+@code {
+    private List<ApplicationUser>? _users;
+    private string _searchTerm = string.Empty;
+    private bool _loading = true;
+    private int _currentPage = 1;
+    private int _totalUsers;
+    private const int PageSize = 20;
+    private Timer? _debounceTimer;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            _loading = true;
+            StateHasChanged();
+
+            var result = await UsersService.GetUsers(
+                search: string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm,
+                page: _currentPage,
+                pageSize: PageSize,
+                CancellationToken.None);
+
+            if (!result.Success || result.Data == null)
+            {
+                await ToastService.Error(result.ErrorMessages.FirstOrDefault() ?? "Error loading users.");
+                _users = [];
+                return;
+            }
+
+            _users = result.Data.Data;
+            _totalUsers = result.Data.TotalCount;
+        }
+        catch
+        {
+            await ToastService.Error("An error occurred while loading users.");
+            _users = [];
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleSearchDebounced()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(async _ =>
+        {
+            _currentPage = 1;
+            await InvokeAsync(async () => { await LoadUsers(); });
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        _currentPage = 1;
+        await LoadUsers();
+    }
+
+    private void NavigateToProfile(string userId) => NavigationManager.NavigateTo($"/profile/{userId}");
+
+    private async Task GoToPage(int page)
+    {
+        _currentPage = page;
+        await LoadUsers();
+    }
+
+    public void Dispose() => _debounceTimer?.Dispose();
+}

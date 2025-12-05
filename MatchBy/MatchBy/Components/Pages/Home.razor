@@ -1,5 +1,4 @@
-﻿@page "/"
-@page "/home"
+@page "/"
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider Auth
 @using System.Security.Claims
@@ -118,5 +117,5 @@
         selectedSlide = randomSlideIndex.ToString();
     }
 
-    private void GoToCreateMatch() => NavigationManager.NavigateTo("/matches/create");
+    private void GoToCreateMatch() => NavigationManager.NavigateTo("/CreateMatch");
 }
