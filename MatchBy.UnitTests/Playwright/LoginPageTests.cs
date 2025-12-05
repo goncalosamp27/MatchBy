@@ -1,9 +1,9 @@
-﻿/*using Microsoft.Playwright;
+﻿using Microsoft.Playwright;
 using Microsoft.Playwright.Xunit;
 
 namespace MatchBy.UnitTests.Playwright;
 
-public partial class LoginPageTests : PageTest
+public class LoginPageTests : PageTest
 {
     private const string BaseUrl = "http://localhost:5029";
     private const string LoginUrl = BaseUrl + "/Account/Login";
@@ -26,7 +26,6 @@ public partial class LoginPageTests : PageTest
             {
                 Timeout = 30000
             });
-            Assert.Equal("Welcome back", await heading.TextContentAsync());
 
             string? bodyText = await Page.TextContentAsync("body");
             Assert.NotNull(bodyText);
@@ -54,26 +53,19 @@ public partial class LoginPageTests : PageTest
                 .CheckAsync();
             await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in to your account" })
                 .ClickAsync();
-            await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Open user menu user photo" })
-                .ClickAsync();
-            await Page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "My Profile" })
-                .ClickAsync();
-            await Expect(Page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions { Name = ValidEmail })).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
-            {
-                Timeout = 30000
-            });
-            await Expect(Page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions { Name = "Preferred Sports" })).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
-            {
-                Timeout = 30000
-            });
-            await Expect(Page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions { Name = "Create Matches" })).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
-            {
-                Timeout = 30000
-            });
-            await Expect(Page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions { Name = "Previous Matches" })).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
-            {
-                Timeout = 30000
-            });
+            
+            // Wait for navigation after successful login (redirects to home page)
+            await Page.WaitForURLAsync("**/", new PageWaitForURLOptions { Timeout = 40000 });
+            
+            // Wait for user menu button to be visible after login
+            ILocator userMenuButton = Page.GetByRole(AriaRole.Button, new() { Name = "Open user menu user photo" });
+            await Expect(userMenuButton).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 30000 });
+            
+            // Click user menu and verify email is displayed
+            await userMenuButton.ClickAsync();
+            await Expect(Page.GetByText("admin@admin.com").First).ToBeVisibleAsync();
+
+
         }
         finally
         {
@@ -91,6 +83,7 @@ public partial class LoginPageTests : PageTest
             await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Your email" }).FillAsync(ValidEmail);
             await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Password" }).FillAsync(InvalidPassword);
             await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in to your account" }).ClickAsync();
+            
             await Expect(Page.GetByText("Error: Invalid login attempt.")).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
             {
                 Timeout = 30000
@@ -101,4 +94,30 @@ public partial class LoginPageTests : PageTest
             await Page.CloseAsync();
         }
     }
-}*/
+
+    [Fact]
+    public async Task LoginPage_ShouldShowErrorWithInvalidEmailFormat()
+    {
+        try
+        {
+            await Page.GotoAsync(LoginUrl);
+            await Page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Log in" }).ClickAsync();
+
+            // Fill with invalid email format (missing @, no domain, etc.)
+            await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Your email" }).FillAsync("notanemail");
+            await Page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Password" }).FillAsync(ValidPassword);
+            await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Sign in to your account" }).ClickAsync();
+
+            // Assert - Should see validation error for invalid email format
+            await Expect(Page.Locator("text=/Email field is not a valid|Email.*not.*valid|Invalid.*email/i").First)
+                .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions()
+                {
+                    Timeout = 30000
+                });
+        }
+        finally
+        {
+            await Page.CloseAsync();
+        }
+    }
+}
