@@ -179,7 +179,8 @@ jobs:
             --no-build \
             --verbosity normal \
             --logger "trx;LogFileName=test-results.trx" \
-            --collect:"XPlat Code Coverage;Format=cobertura,opencover"
+            --collect:"XPlat Code Coverage;Format=cobertura,opencover" \
+            --filter "FullyQualifiedName!~Playwright"
 
           "$SCANNER" end /d:sonar.token="$SONAR_TOKEN"
 
