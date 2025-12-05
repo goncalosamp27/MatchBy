@@ -65,6 +65,8 @@ jobs:
       - name: Build
         run: dotnet build MatchBy.sln --configuration Release --no-restore
 
+      # Os E2E tests, não são executados na pipeline, pois a sua execução demora muito.
+      # Eles apenas são executados em ambiente de desenvolvimento
       - name: Run tests with coverage
         run: |
           dotnet test MatchBy.sln \
@@ -72,7 +74,8 @@ jobs:
             --no-build \
             --verbosity normal \
             --logger "trx;LogFileName=test-results.trx" \
-            --collect:"XPlat Code Coverage;Format=cobertura,opencover"
+            --collect:"XPlat Code Coverage;Format=cobertura,opencover" \
+            --filter "FullyQualifiedName!~Playwright"
 
       - name: Collect coverage files
         run: |
