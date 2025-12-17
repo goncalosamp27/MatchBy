@@ -30,6 +30,7 @@
         <PackageReference Include="QRCoder" />
         <PackageReference Include="Resend" />
         <PackageReference Include="Sentry.AspNetCore" />
+        <PackageReference Include="SixLabors.ImageSharp" />
         <PackageReference Include="TimeZoneConverter" />
         <PackageReference Include="Toolbelt.Blazor.LocalTimeText.Server" />
         <PackageReference Include="Blazorise.FluentValidation" />

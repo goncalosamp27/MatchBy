@@ -11,13 +11,13 @@
 @inject IMatchesService MatchesService
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Profile> Logger
+@rendermode @(new InteractiveServerRenderMode(false))
 @attribute [StreamRendering]
 @using MatchBy.DTOs.Friend
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IFriendService FriendService
 @using Blazorise
 @inject IToastService ToastService
-@rendermode InteractiveServer
 @inject NavigationManager NavigationManager
 
 <PageTitle>Profile</PageTitle>
@@ -619,19 +619,20 @@
                 {
                     _profile = null;
                     _matches = null;
-                    _loading = false;
-                    return;
-                }
-                _isOwner = current.Id == targetId;
-                if (_isOwner)
-                {
-                    targetId = current.Id;
-                    _isOwner = true;
-                    _ownEmail = current.Email;
                 }
                 else
                 {
-                    _ownEmail = null;   
+                    _isOwner = current.Id == targetId;
+                    if (_isOwner)
+                    {
+                        targetId = current.Id;
+                        _isOwner = true;
+                        _ownEmail = current.Email;
+                    }
+                    else
+                    {
+                        _ownEmail = null;   
+                    }   
                 }
             }
 

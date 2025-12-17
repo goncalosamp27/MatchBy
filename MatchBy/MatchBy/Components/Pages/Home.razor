@@ -2,8 +2,6 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider Auth
 @using System.Security.Claims
-@inject NavigationManager Nav
-@inject IJSRuntime JS
 @using Blazorise
 @rendermode @(new InteractiveServerRenderMode(false))
 
@@ -36,28 +34,28 @@
             <div class="border-l-3 border-[var(--main)] lg:mt-0 lg:col-span-5 lg:flex items-center hidden justify-center relative overflow-hidden">
                 <Carousel @bind-SelectedSlide="@selectedSlide" Width="Width.Is50" AutoRepeat="true" Autoplay="true" Crossfade="true" ShowControls="false" ShowIndicators="false">
                     <CarouselSlide Name="1">
-                        <Image Source="images/carousel/football.png" Text="Football" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/football.avif" Text="Football" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="2"  Height="Height.Auto">
-                        <Image Source="images/carousel/volleyball.png" Text="Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/volleyball.avif" Text="Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="3" Height="Height.Auto">
-                        <Image Source="images/carousel/tennis.png" Text="Tennis" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/tennis.avif" Text="Tennis" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="4" Height="Height.Auto">
-                        <Image Source="images/carousel/futsal.png" Text="Futsal" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/futsal.avif" Text="Futsal" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="5" Height="Height.Auto">
-                        <Image Source="images/carousel/beachvolleyball.png" Text="Beach Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/beachvolleyball.avif" Text="Beach Volleyball" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="6" Height="Height.Auto">
-                        <Image Source="images/carousel/paddle.png" Text="Paddle" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/paddle.avif" Text="Paddle" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="7" Height="Height.Auto">
-                        <Image Source="images/carousel/rugby.png" Text="Rugby" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/rugby.avif" Text="Rugby" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                     <CarouselSlide Name="8" Height="Height.Auto">
-                        <Image Source="images/carousel/basketball.png" Text="Basketball" Display="Display.Block" Fit="ObjectFit.Contain"/>
+                        <Image Source="images/carousel/basketball.avif" Text="Basketball" Display="Display.Block" Fit="ObjectFit.Contain"/>
                     </CarouselSlide>
                 </Carousel>
             </div>

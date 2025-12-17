@@ -107,26 +107,26 @@ else
     private string GetMatchImage(bool isDarkMode) =>
         (Match?.Sport, isDarkMode) switch
         {
-            (Sports.Football, false) => "/images/sports/light/football.png",
-            (Sports.Football, true) => "/images/sports/dark/football.png",
+            (Sports.Football, false) => "/images/sports/light/football.avif",
+            (Sports.Football, true) => "/images/sports/dark/football.avif",
 
-            (Sports.Basketball, false) => "/images/sports/light/basketball.png",
-            (Sports.Basketball, true) => "/images/sports/dark/basketball.png",
+            (Sports.Basketball, false) => "/images/sports/light/basketball.avif",
+            (Sports.Basketball, true) => "/images/sports/dark/basketball.avif",
 
-            (Sports.Tennis, false) => "/images/sports/light/tennis.png",
-            (Sports.Tennis, true) => "/images/sports/dark/tennis.png",
+            (Sports.Tennis, false) => "/images/sports/light/tennis.avif",
+            (Sports.Tennis, true) => "/images/sports/dark/tennis.avif",
 
-            (Sports.Volleyball, false) => "/images/sports/light/volleyball.png",
-            (Sports.Volleyball, true) => "/images/sports/dark/volleyball.png",
+            (Sports.Volleyball, false) => "/images/sports/light/volleyball.avif",
+            (Sports.Volleyball, true) => "/images/sports/dark/volleyball.avif",
 
-            (Sports.Paddle, false) => "/images/sports/light/paddle.png",
-            (Sports.Paddle, true) => "/images/sports/dark/paddle.png",
+            (Sports.Paddle, false) => "/images/sports/light/paddle.avif",
+            (Sports.Paddle, true) => "/images/sports/dark/paddle.avif",
 
-            (Sports.Rugby, false) => "/images/sports/light/rugby.png",
-            (Sports.Rugby, true) => "/images/sports/dark/rugby.png",
+            (Sports.Rugby, false) => "/images/sports/light/rugby.avif",
+            (Sports.Rugby, true) => "/images/sports/dark/rugby.avif",
 
-            (_, false) => "/images/sports/light/default.png",
-            (_, true) => "/images/sports/dark/default.png"
+            (_, false) => "/images/sports/light/default.avif",
+            (_, true) => "/images/sports/dark/default.avif"
         };
 
 }

@@ -1,7 +1,8 @@
 @page "/users"
 @inject IUsersService UsersService
 @inject NavigationManager NavigationManager
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
 @using Blazorise
 @using MatchBy.Services.Users
 @inject IToastService ToastService

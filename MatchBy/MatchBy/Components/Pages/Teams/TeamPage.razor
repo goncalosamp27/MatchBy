@@ -5,7 +5,7 @@
 @using System.Security.Claims
 @using MatchBy.Services.Teams
 @using MatchBy.Services.TeamInvites
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
 @attribute [StreamRendering]
 @using Blazorise
 @inject IToastService ToastService

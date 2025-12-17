@@ -1,6 +1,7 @@
 ﻿@page "/matches/edit/{id}"
 @attribute [Authorize]
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
 @inject IMatchesService MatchesService
 @inject IUsersService UsersService
 @inject IMatchesInvitesService MatchesInvitesService

@@ -7,7 +7,8 @@
 @using MatchBy.DTOs.User
 @using MatchBy.DTOs.PlayerRating
 @using MatchBy.Services.PlayerRatings
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
 @using Blazorise
 @inject IToastService ToastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -145,7 +146,7 @@ else
                         else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers && _userId is null)
                         {
                             <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] hover:!text-[var(--text)] !text-lg !font-semibold !rounded-lg"
+                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)]  !text-lg !font-semibold !rounded-lg"
                                 Clicked="GoToLogin">
                                 Login to Join Match!
                             </Button>
@@ -154,19 +155,19 @@ else
                         {
                             <div class="space-y-3">
                                 <Button
-                                    Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-lg !text-[var(--text-contrast)] hover:!text-[var(--text)] !font-semibold !rounded-lg"
+                                    Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-lg !text-[var(--text-contrast)]  !font-semibold !rounded-lg"
                                     Clicked="@(() => LeaveMatch(_match.Id))">
                                     Cancel Match
                                 </Button>
                                 @if (_match.Status == MatchStatus.Pendent)
                                 {
                                     <Button
-                                        Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] hover:!text-[var(--text)] !text-lg !font-semibold !rounded-lg"
+                                        Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
                                         Clicked="@(() => EditMatch(_match.Id))">
                                         Edit Match
                                     </Button>   
                                     <Button
-                                        Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] hover:!text-[var(--text)] !text-lg !font-semibold !rounded-lg"
+                                        Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
                                         Clicked="@(() => ConfirmMatch(_match.Id))">
                                         Confirm Match
                                     </Button>   
@@ -176,7 +177,7 @@ else
                         else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers)
                         {
                             <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] hover:!text-[var(--text)] !text-lg !font-semibold !rounded-lg"
+                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)]  !text-lg !font-semibold !rounded-lg"
                                 Clicked="@(() => JoinMatch(_match.Id))">
                                 Join Match!
                             </Button>
@@ -184,7 +185,7 @@ else
                         else if (_match.Participants.Any(p => p.Id == _userId))
                         {
                             <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-lg !font-semibold !rounded-lg"
+                                Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
                                 Clicked="@(() => LeaveMatch(_match.Id))">
                                 Leave Match
                             </Button>
@@ -192,7 +193,7 @@ else
                         else
                         {
                             <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--section)] !text-[var(--text)] !border-2 !border-[var(--text)]"
+                                Class="!py-4 !w-full !justify-center !bg-[var(--section)] !text-[var(--text-contrast)] !border-2 !border-[var(--text)]"
                                 Disabled="@true">
                                 <span class="text-lg font-semibold">Match Full</span>
                             </Button>

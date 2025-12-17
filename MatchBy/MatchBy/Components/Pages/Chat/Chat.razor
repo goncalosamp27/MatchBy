@@ -11,7 +11,8 @@
 @using Blazorise
 @using System.ComponentModel
 @attribute [Authorize]
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(false))
+@attribute [StreamRendering]
 @inject AuthenticationStateProvider Auth
 @inject IConversationService ConversationService
 @inject IChatMessageService ChatMessageService

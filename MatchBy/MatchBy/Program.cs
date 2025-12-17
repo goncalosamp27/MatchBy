@@ -192,23 +192,27 @@ builder.Services.AddScoped<ChatState>();
 builder.Services.AddScoped<IMatchReminderJob, MatchReminderJob>();
 builder.Services.AddHttpContextAccessor();
 
+string[] domains = builder.Configuration.GetSection("AllowedCorsOrigins").Get<string[]>() ??
+                   throw new InvalidOperationException(
+                       "AllowedCorsOrigins section not found in configuration.");
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("NewPolicy", corsPolicyBuilder =>
+    options.AddPolicy("Policy", corsPolicyBuilder =>
         corsPolicyBuilder
-            .AllowAnyOrigin()
+            .WithOrigins(domains)
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
 
 WebApplication app = builder.Build();
-
+app.UseCors("Policy");
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     //await app.RecreateDatabase();
     //await app.ApplyMigrationsAsync();
-    await app.SeedDatabaseAsync();
+    //await app.SeedDatabaseAsync();
 }
 else
 {
