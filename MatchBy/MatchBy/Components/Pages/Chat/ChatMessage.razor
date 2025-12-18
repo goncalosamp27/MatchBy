@@ -170,6 +170,7 @@
     {
         <Dropdown>
             <DropdownToggle ToggleIconVisible="false"
+                            aria-label="Message options"
                             class="inline-flex self-center items-center p-2 text-sm font-medium text-center rounded-lg focus:ring-4 focus:outline-none transition-colors"
                             style="background-color: var(--background); border: 1px solid var(--main); color: var(--text);">
                 <svg class="w-4 h-4 opacity-60" aria-hidden="true"
@@ -187,7 +188,8 @@
                         <li>
                             <Button Clicked="StartEdit"
                                     class="block px-4 py-2 w-full text-left transition-colors hover:opacity-80"
-                                    Style="background-color: transparent; color: var(--text);">
+                                    Style="background-color: transparent; color: var(--text);"
+                                    aria-label="Edit">
                                 Edit
                             </Button>
                         </li>
@@ -204,7 +206,8 @@
                         <li>
                             <Button Clicked="DeleteMessage"
                                     class="block px-4 py-2 w-full text-left transition-colors hover:opacity-80"
-                                    Style="background-color: transparent; color: var(--text);">
+                                    Style="background-color: transparent; color: var(--text);"
+                                    aria-label="Delete">
                                 Delete
                             </Button>
                         </li>

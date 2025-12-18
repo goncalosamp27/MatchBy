@@ -19,21 +19,21 @@
               class="space-y-4 rounded-lg border border-[var(--section)] bg-[var(--section-secondary)] p-6">
         <DataAnnotationsValidator/>
 
-        <div class="space-y-1">
-            @if (passkey?.Name is { } name)
-            {
-                <p class="text-sm font-medium text-[var(--text)]">
-                    Enter a new name for your "<span class="font-semibold">@name</span>" passkey.
-                </p>
-            }
-            else
-            {
-                <p class="text-sm font-medium text-[var(--text)]">
-                    Enter a friendly name for this passkey so you can recognize it later.
-                </p>
-            }
-            <p class="text-xs text-[var(--text)]/70">This name is only visible to you.</p>
-        </div>
+        @* <div class="space-y-1"> *@
+        @*     @if (passkey?.Name is { } name) *@
+        @*     { *@
+        @*         <p class="text-sm font-medium text-[var(--text)]"> *@
+        @*             Enter a new name for your "<span class="font-semibold">@name</span>" passkey. *@
+        @*         </p> *@
+        @*     } *@
+        @*     else *@
+        @*     { *@
+        @*         <p class="text-sm font-medium text-[var(--text)]"> *@
+        @*             Enter a friendly name for this passkey so you can recognize it later. *@
+        @*         </p> *@
+        @*     } *@
+        @*     <p class="text-xs text-[var(--text)]/70">This name is only visible to you.</p> *@
+        @* </div> *@
 
         <ValidationSummary class="text-[var(--error)] text-sm" role="alert"/>
 
