@@ -5,6 +5,8 @@ using MatchBy.Data;
 using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.User;
 using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.S3;
 using Microsoft.AspNetCore.Components.Forms;
@@ -17,87 +19,10 @@ public class ConversationService(
     IS3Service s3Service,
     IValidator<CreateConversationDto> createConversationValidator,
     IValidator<UpdateConversationDto> updateConversationValidator,
+    IUserRepository userRepository,
+    IConversationRepository conversationRepository,
     IImageRefreshService imageRefreshService) : IConversationService
 {
-    /// <summary>
-    /// Paginates conversations using cursor-based pagination with optional search filtering.
-    /// </summary>
-    /// <param name="baseQuery">The base queryable collection of conversations to paginate.</param>
-    /// <param name="pageSize">The number of conversations to retrieve per page.</param>
-    /// <param name="cursorReceived">Optional cursor for pagination. If provided, returns conversations before this cursor.</param>
-    /// <param name="query">Optional search query to filter conversations by title or participant names (case-insensitive).</param>
-    /// <param name="dbContext">The database context to save image refresh changes.</param>
-    /// <returns>
-    /// A cursor-paginated response with a list of conversation DTOs, ordered by last message date or creation date (newest first).
-    /// </returns>
-    /// <remarks>
-    /// Conversations are ordered by last message date (if available) or creation date, then by ID.
-    /// Images are refreshed in parallel for all conversations before returning.
-    /// </remarks>
-    private async Task<CursorPaginationResponse<List<ConversationDto>>> PaginateAsync(
-        IQueryable<Conversation> baseQuery,
-        int pageSize,
-        string? cursorReceived,
-        string? query,
-        ApplicationDbContext dbContext)
-    {
-        if (!string.IsNullOrWhiteSpace(cursorReceived))
-        {
-            var cursor = ConversationCursorDto.Decode(cursorReceived);
-            if (cursor != null)
-            {
-                baseQuery = baseQuery
-                    .Where(p =>
-                        p.LastMessageAtUtc != null
-                            ? p.LastMessageAtUtc < cursor.Date ||
-                              p.LastMessageAtUtc == cursor.Date &&
-                              string.Compare(p.Id, cursor.Id) <= 0
-                            : p.CreatedAtUtc < cursor.Date ||
-                              p.CreatedAtUtc == cursor.Date &&
-                              string.Compare(p.Id, cursor.Id) <= 0);
-            }
-        }
-
-        if (query != null)
-        {
-            baseQuery = baseQuery.Where(c => c.Title != null && c.Title.ToLower().Contains(query.ToLower()) ||
-                                             c.Participants.Any(p => p.DisplayName.ToLower().Contains(query.ToLower())));
-        }
-
-        List<Conversation> items = await baseQuery
-            .OrderByDescending(p => p.LastMessageAtUtc != null)
-            .ThenByDescending(p => p.LastMessageAtUtc ?? p.CreatedAtUtc) 
-            .ThenByDescending(p => p.Id)
-            .Take(pageSize + 1)
-            .ToListAsync();
-
-        bool hasNext = items.Count > pageSize;
-        string? nextCursor = null;
-        if (hasNext)
-        {
-            Conversation last = items[^1];
-            DateTime orderingDate = last.LastMessageAtUtc ?? last.CreatedAtUtc;
-            nextCursor = ConversationCursorDto.Encode(last.Id, orderingDate);
-            items.RemoveAt(items.Count - 1);
-        }
-
-        foreach (Conversation conv in items)
-        {
-            await imageRefreshService.RefreshConversationImagesAsync(conv);
-        }
-
-        await dbContext.SaveChangesAsync();
-
-        var conversationDtos = items.Select(conversation => conversation.ToDto()).ToList();
-        
-        return new CursorPaginationResponse<List<ConversationDto>>
-        {
-            Data = conversationDtos,
-            NextCursor = nextCursor
-        };
-    }
-
-
     /// <summary>
     /// Retrieves a paginated list of conversations for a specific user using cursor-based pagination.
     /// </summary>
@@ -117,17 +42,21 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        CursorPaginationResponse<List<Conversation>> result = await conversationRepository.GetConversationsForUserAsync(creatorUserId, pageSize, cursor, query, dbContext, ct);
+        foreach (Conversation conv in result.Data)
+        {
+            await imageRefreshService.RefreshConversationImagesAsync(conv);
+        }
         
-        IQueryable<Conversation> baseQuery = dbContext.Conversations
-            .Include(c => c.Participants)
-            .Include(c => c.Creator)
-            .Include(c => c.Messages)
-            .Include(m => m.Team)
-            .Include(m => m.Messages)
-            .Where(c => c.Participants.Any(p => p.Id == creatorUserId));
+        await dbContext.SaveChangesAsync(ct);
+        
+        var dtos = result.Data.Select(c => c.ToDto()).ToList();
 
-        return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(await PaginateAsync(baseQuery, pageSize,
-            cursor, query, dbContext));
+        return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(new CursorPaginationResponse<List<ConversationDto>>()
+        {
+            Data = dtos,
+            NextCursor = result.NextCursor
+        });
     }
 
     /// <summary>
@@ -147,28 +76,14 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        Conversation? conversation = await dbContext.Conversations
-            .Include(m => m.Participants)
-            .Include(m => m.Creator)
-            .Include(m => m.Messages)
-            .Include(m => m.Team)
-            .Include(m => m.Messages)
-            .Where(m => m.Id ==conversationId)
-            .Where(m => m.Participants.Any(p => p.Id == creatorUserId))
-            .FirstOrDefaultAsync(ct);
-
+        Conversation? conversation = await conversationRepository.GetByIdAsync(conversationId, creatorUserId, dbContext, ct);
         if (conversation is null)
         {
             return Result<ConversationDto>.Fail("No conversation found");
         }
         
         await imageRefreshService.RefreshConversationImagesAsync(conversation);
-
-        // For private conversations, set the title to the other participant's name
-        if (conversation.Type == ConversationType.Private)
-        {
-            conversation.Title = conversation.Participants.FirstOrDefault(p => p.Id != creatorUserId)?.DisplayName;
-        }
+        await dbContext.SaveChangesAsync(ct);
         
         return Result<ConversationDto>.Ok(conversation.ToDto());
     }
@@ -198,31 +113,34 @@ public class ConversationService(
         }
         
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-
-        Conversation conversation = createConversationDto.ToEntity();
-
-        //if already a private conversation between these users, return null
+        
         if (createConversationDto.ConversationType == ConversationType.Private)
         {
-            bool exists = await dbContext.Conversations
-                .Include(c => c.Participants)
-                .Where(c => c.Type == ConversationType.Private)
-                .AnyAsync(c => c.Participants.Count == createConversationDto.ParticipantIds.Count &&
-                               c.Participants.All(p => createConversationDto.ParticipantIds.Contains(p.Id)), ct);
+            bool exists = await conversationRepository.PrivateConversationExistsAsync(createConversationDto.ParticipantIds, dbContext, ct);
             if (exists)
             {
                 return Result<ConversationDto>.Fail("Private conversation between these users already exists.");
             }
         }
 
-        List<ApplicationUser> participants = await dbContext.Users
-            .Where(u => createConversationDto.ParticipantIds.Contains(u.Id))
-            .ToListAsync(ct);
+        Conversation conversation = createConversationDto.ToEntity();
 
+        List<string> participantIds = createConversationDto.ParticipantIds.Contains(conversation.CreatorId)
+            ? createConversationDto.ParticipantIds
+            : createConversationDto.ParticipantIds.Append(conversation.CreatorId).ToList();
+
+        List<ApplicationUser> participants = await userRepository.GetUsersByIdsAsync(participantIds, dbContext, ct);
         conversation.Participants = participants;
 
-        await dbContext.Conversations.AddAsync(conversation, ct);
+        conversationRepository.Add(conversation, dbContext);
         await dbContext.SaveChangesAsync(ct);
+
+        Conversation? created = await conversationRepository.GetByIdAsync(conversation.Id,createConversationDto.CreatorUserId, dbContext, ct);
+
+        if (created is null)
+        {
+            return Result<ConversationDto>.Fail("Failed to load created conversation.");
+        }
 
         return await GetConversationByIdAsync(conversation.Id, conversation.CreatorId, ct);
     }
