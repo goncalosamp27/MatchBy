@@ -191,7 +191,7 @@ public class ChatHub(
         }
 
         Result<ConversationDto> conv =
-            await conversationService.GetConversationByIdAsync(newMsg.Data!.ConversationId, userId);
+            await conversationService.GetConversationByIdAsync(newMsg.Data.ConversationId, userId);
 
         if (!conv.Success)
         {
@@ -200,22 +200,22 @@ public class ChatHub(
             return;
         }
 
-        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+        var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
         await Clients.Clients(participantConnections)
             .SendAsync("MessageCreated", newMsg);
 
         // Send notification if this is a reply to someone's message
-        if (!string.IsNullOrEmpty(newMsg.Data!.ReplyToMessageId) && 
+        if (!string.IsNullOrEmpty(newMsg.Data.ReplyToMessageId) && 
             newMsg.Data.ReplyToMessage != null && 
             newMsg.Data.ReplyToMessage.SenderId != userId)
         {
-            string senderName = newMsg.Data.Sender?.DisplayName ?? "Someone";
-            string conversationTitle = conv.Data?.Title ?? "conversation";
+            string senderName = newMsg.Data.Sender.DisplayName;
+            string conversationTitle = conv.Data.Title ?? "conversation";
             
             var replyNotification = new CreateNotificationDto
             {
-                Type = NotificationType.MessageReply,
+                Type = NotificationType.Message,
                 ReceiverUserId = newMsg.Data.ReplyToMessage.SenderId,
                 SenderUserId = userId,
                 RelatedEntityId = newMsg.Data.ConversationId,
@@ -242,36 +242,45 @@ public class ChatHub(
     /// </remarks>
     public async Task UpdateMessage(UpdateChatMessageDto updateChatMessageDto)
     {
-        string userId = EnsureUser();
-        if (updateChatMessageDto.CreatorUserId != userId)
+        try
         {
+            string userId = EnsureUser();
+            if (updateChatMessageDto.CreatorUserId != userId)
+            {
+                await Clients.Caller.SendAsync("MessageUpdated",
+                    Result<ChatMessageDto>.Fail("Invalid sender."));
+                return;
+            }
+
+            Result<ChatMessageDto> updatedMsg = await chatMessageService.UpdateChatMessageAsync(updateChatMessageDto);
+
+            if (!updatedMsg.Success)
+            {
+                await Clients.Caller.SendAsync("MessageUpdated", updatedMsg);
+                return;
+            }
+
+            Result<ConversationDto> conv =
+                await conversationService.GetConversationByIdAsync(updatedMsg.Data.ConversationId, userId);
+
+            if (!conv.Success)
+            {
+                await Clients.Caller.SendAsync("MessageUpdated",
+                    Result<ChatMessageDto>.Fail("Conversation not found."));
+                return;
+            }
+
+            var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
+
+            await Clients.Clients(participantConnections)
+                .SendAsync("MessageUpdated", updatedMsg);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating message: {ex.Message}");
             await Clients.Caller.SendAsync("MessageUpdated",
-                Result<ChatMessageDto>.Fail("Invalid sender."));
-            return;
+                Result<ChatMessageDto>.Fail("An error occurred while updating the message."));
         }
-
-        Result<ChatMessageDto> updatedMsg = await chatMessageService.UpdateChatMessageAsync(updateChatMessageDto);
-
-        if (!updatedMsg.Success)
-        {
-            await Clients.Caller.SendAsync("MessageUpdated", updatedMsg);
-            return;
-        }
-
-        Result<ConversationDto> conv =
-            await conversationService.GetConversationByIdAsync(updatedMsg.Data!.ConversationId, userId);
-
-        if (!conv.Success)
-        {
-            await Clients.Caller.SendAsync("MessageUpdated",
-                Result<ChatMessageDto>.Fail("Conversation not found."));
-            return;
-        }
-
-        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
-
-        await Clients.Clients(participantConnections)
-            .SendAsync("MessageUpdated", updatedMsg);
     }
 
     public record MessageDeletedDto(ConversationDto Conversation, string MessageId);
@@ -308,7 +317,7 @@ public class ChatHub(
         }
 
         Result<ConversationDto> conv =
-            await conversationService.GetConversationByIdAsync(msg.Data!.ConversationId, userId);
+            await conversationService.GetConversationByIdAsync(msg.Data.ConversationId, userId);
         if (!conv.Success)
         {
             await Clients.Caller.SendAsync("MessageDeleted",
@@ -316,11 +325,11 @@ public class ChatHub(
             return;
         }
 
-        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+        var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
         await Clients.Clients(participantConnections)
             .SendAsync("MessageDeleted", Result<MessageDeletedDto>.Ok(new MessageDeletedDto(
-                conv.Data!,
+                conv.Data,
                 chatMessageId
             )));
     }
@@ -363,7 +372,7 @@ public class ChatHub(
         }
 
         // Add creator to the group
-        await Groups.AddToGroupAsync(Context.ConnectionId, Group(conv.Data!.Id));
+        await Groups.AddToGroupAsync(Context.ConnectionId, Group(conv.Data.Id));
 
         var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
@@ -397,7 +406,7 @@ public class ChatHub(
             return;
         }
 
-        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+        var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
         foreach (string participant in participantConnections)
         {
@@ -440,7 +449,7 @@ public class ChatHub(
             return;
         }
 
-        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+        var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
         await Clients.Clients(participantConnections)
             .SendAsync("ConversationDeleted", Result<string>.Ok(conversationId));
@@ -471,7 +480,7 @@ public class ChatHub(
             return;
         }
 
-        var participantConnections = GetParticipantsConnections(conv.Data!.Participants).ToList();
+        var participantConnections = GetParticipantsConnections(conv.Data.Participants).ToList();
 
         Result<int> leaveResult = await conversationService.LeaveConversationAsync(conversationId, userId);
 
@@ -504,7 +513,7 @@ public class ChatHub(
                 }
 
                 await Clients.Clients(participantConnections)
-                    .SendAsync("ConversationLeft", Result<ConversationDto>.Ok(conv.Data!));
+                    .SendAsync("ConversationLeft", Result<ConversationDto>.Ok(conv.Data));
                 break;
         }
     }

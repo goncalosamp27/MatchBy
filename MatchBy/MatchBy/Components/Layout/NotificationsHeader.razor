@@ -6,6 +6,7 @@
 @inject INotificationService NotificationService
 @using Blazorise
 @implements IAsyncDisposable
+@inject IJSRuntime JS
 
 <Dropdown Display="Display.InlineBlock">
     <DropdownToggle ToggleIconVisible="false" class="p-2 mr-1 text-[var(--text)] rounded-lg hover:text-[var(--main)]">
@@ -56,10 +57,10 @@
                 </Button>
             }
         </div>
-        <div class="thin-scroll max-h-96 overflow-y-auto">
+        <div class="thin-scroll max-h-96 overflow-y-auto" @ref="_scrollContainer">
             @if (_notifications.Any())
             {
-                @foreach (var notification in _notifications.Take(10))
+                @foreach (var notification in _notifications)
                 {
                     <NotificationHeaderItem
                         Notification="notification"
@@ -74,10 +75,10 @@
                 </div>
             }
         </div>
-        <NavLink
-            href="#"
-            class="block py-3 px-4 text-sm font-semibold text-center text-[var(--main)] bg-[var(--section)] hover:bg-[var(--main)]/10 hover:text-[var(--main-hover)] transition-colors duration-150 border-t border-[var(--main)]/20">
-            <div class="inline-flex items-center justify-center w-full">
+        <button
+            @onclick="@(async () => await LoadNotificationsAsync(_cursor))"
+            class="block w-full py-3 px-4 text-sm font-semibold text-center text-[var(--main)] bg-[var(--section)] hover:bg-[var(--main)]/10 hover:text-[var(--main-hover)] transition-colors duration-150 border-t border-[var(--main)]/20">
+            <div class="inline-flex items-center justify-center w-full disabled:cursor-not-allowed">
                 <svg
                     aria-hidden="true"
                     class="mr-2 w-4 h-4"
@@ -92,7 +93,7 @@
                 </svg>
                 View more
             </div>
-        </NavLink>
+        </button>
     </DropdownMenu>
 </Dropdown>
 
@@ -100,26 +101,27 @@
 {
     [Parameter] public required string UserId { get; set; }
     private HubConnection? _notificationHubConnection;
-    private readonly List<NotificationDto> _notifications = new();
+    private readonly List<NotificationDto> _notifications = [];
     private int _unreadCount;
     private bool _isInitializing;
     private bool _isInitialized;
     private bool _isMarkingAllAsRead;
     private string? _lastUserId;
+    private string? _cursor;
+    private ElementReference _scrollContainer;
 
-    protected override async Task OnInitializedAsync() => await LoadNotificationsAsync();
+    protected override async Task OnInitializedAsync() => await LoadNotificationsAsync(_cursor);
 
     protected override async Task OnParametersSetAsync()
     {
-        // Only reload if UserId actually changed
         if (_isInitialized && !string.IsNullOrEmpty(UserId) && UserId != _lastUserId)
         {
             _lastUserId = UserId;
-            await LoadNotificationsAsync();
+            await LoadNotificationsAsync(_cursor);
         }
     }
 
-    private async Task LoadNotificationsAsync()
+    private async Task LoadNotificationsAsync(string? cursor)
     {
         if (_isInitializing || string.IsNullOrEmpty(UserId))
             return;
@@ -129,16 +131,23 @@
 
         try
         {
+            var resultNotifications = await NotificationService.GetNotifications(10, UserId, cursor, CancellationToken.None);
+            if (resultNotifications.Success)
+            {
+                foreach (var notification in resultNotifications.Data.Data)
+                {
+                    if (_notifications.All(n => n.Id != notification.Id))
+                    {
+                        _notifications.Add(notification);
+                    }
+                }
+                
+                _unreadCount = _notifications.Count(n => !n.IsRead);
+                _cursor = resultNotifications.Data.NextCursor;
+            }
+
             if (!_isInitialized)
             {
-                var resultNotifications = await NotificationService.GetNotifications(10, UserId, null, CancellationToken.None);
-                if (resultNotifications.Success)
-                {
-                    _notifications.Clear();
-                    _notifications.AddRange(resultNotifications.Data!.Data);
-                    _unreadCount = _notifications.Count(n => !n.IsRead);
-                }
-
                 await InitializeNotificationHub();
                 _isInitialized = true;
             }
@@ -150,6 +159,18 @@
         finally
         {
             _isInitializing = false;
+        }
+    }
+    
+    private async Task ScrollToTop()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $"document.querySelector('.thin-scroll').scrollTop = 0");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error scrolling to top: {ex.Message}");
         }
     }
 
@@ -164,6 +185,8 @@
         {
             return InvokeAsync(() =>
             {
+                if(_notifications.Any(n => n.Id == notification.Id))
+                    return;
                 _notifications.Insert(0, notification);
                 _unreadCount++;
                 StateHasChanged();

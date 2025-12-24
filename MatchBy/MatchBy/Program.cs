@@ -13,6 +13,16 @@ using MatchBy.Data.Seeders;
 using MatchBy.Extensions;
 using MatchBy.Hubs;
 using MatchBy.Models;
+using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.ChatMessage;
+using MatchBy.Repositories.Friend;
+using MatchBy.Repositories.Match;
+using MatchBy.Repositories.MatchInvite;
+using MatchBy.Repositories.Notification;
+using MatchBy.Repositories.PlayerRating;
+using MatchBy.Repositories.Team;
+using MatchBy.Repositories.TeamInvite;
+using MatchBy.Repositories.User;
 using MatchBy.Services.BackgroundJobs;
 using MatchBy.Services.ChatMessages;
 using MatchBy.Services.Conversations;
@@ -76,20 +86,6 @@ builder.Services.Configure<ResendClientOptions>(o =>
 });
 builder.Services.AddTransient<IResend, ResendClient>();
 
-/*builder.WebHost.UseSentry(options =>
-{
-    string? dsn = builder.Configuration["Sentry:DSN"];
-
-    if (string.IsNullOrEmpty(dsn))
-    {
-        throw new InvalidOperationException("Sentry DSN not found in configuration.");
-    }
-
-    options.Dsn = dsn;
-    options.TracesSampleRate = 1.0;
-    options.Debug = true;
-});*/
-
 builder.Services.AddLocalTimeZoneServer();
 
 builder.Services.AddAuthentication(options =>
@@ -129,7 +125,8 @@ string connectionString = builder.Configuration.GetConnectionString("DefaultConn
                           throw new InvalidOperationException(
                               "Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -174,6 +171,17 @@ builder.Services
 
 builder.Services.AddValidatorsFromAssembly(typeof(App).Assembly);
 
+builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
+builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+builder.Services.AddScoped<IFriendRepository, FriendRepository>();
+builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+builder.Services.AddScoped<IMatchInviteRepository, MatchInviteRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IPlayerRatingRepository, PlayerRatingRepository>();
+builder.Services.AddScoped<ITeamRepository, TeamRepository>();
+builder.Services.AddScoped<ITeamInviteRepository, TeamInviteRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IImageRefreshService, ImageRefreshService>();
@@ -192,27 +200,22 @@ builder.Services.AddScoped<ChatState>();
 builder.Services.AddScoped<IMatchReminderJob, MatchReminderJob>();
 builder.Services.AddHttpContextAccessor();
 
-string[] domains = builder.Configuration.GetSection("AllowedCorsOrigins").Get<string[]>() ??
-                   throw new InvalidOperationException(
-                       "AllowedCorsOrigins section not found in configuration.");
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Policy", corsPolicyBuilder =>
         corsPolicyBuilder
-            .WithOrigins(domains)
+            .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
 
 WebApplication app = builder.Build();
-app.UseCors("Policy");
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
-    //await app.RecreateDatabase();
+    await app.RecreateDatabase();
     //await app.ApplyMigrationsAsync();
-    //await app.SeedDatabaseAsync();
+    await app.SeedDatabaseAsync();
 }
 else
 {
@@ -236,7 +239,7 @@ using (IServiceScope scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("NewPolicy");
+app.UseCors("Policy");
 app.MapStaticAssets();
 app.MapControllers();
 app.UseStatusCodePagesWithReExecute("/error-page/{0}");

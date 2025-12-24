@@ -36,7 +36,7 @@ public interface IImageRefreshService
     /// </summary>
     /// <param name="conversation">The conversation to refresh images for.</param>
     Task RefreshConversationImagesAsync(Conversation conversation);
-    
+
     /// <summary>
     /// Refreshes the notification related images such as sender and receiver profile images.
     /// </summary>

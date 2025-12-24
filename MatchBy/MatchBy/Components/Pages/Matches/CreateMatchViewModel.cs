@@ -3,6 +3,7 @@ using Blazorise;
 using FluentValidation;
 using FluentValidation.Results;
 using MatchBy.DTOs.Match;
+using MatchBy.DTOs.User;
 using MatchBy.Models;
 using MatchBy.Services.Matches;
 using MatchBy.Services.Users;
@@ -99,13 +100,15 @@ public sealed class CreateMatchViewModel(
         }
     }
 
-    public PaginationResponse<List<ApplicationUser>> AvailableUsers { get; private set; } = new()
+    public PaginationResponse<List<UserDto>> AvailableUsers { get; private set; } = new()
     {
         Data = [],
-        TotalCount = 0
+        TotalCount = 0,
+        Page = 0,
+        PageSize = 0
     };
 
-    public List<ApplicationUser> SelectedUsers { get; private set; } = [];
+    public List<UserDto> SelectedUsers { get; private set; } = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -177,7 +180,7 @@ public sealed class CreateMatchViewModel(
         try
         {
             // Use GetUsers as defined in IUsersService interface
-            Result<PaginationResponse<List<ApplicationUser>>> result = await usersService.GetUsers(_memberSearch, _currentMemberPage, 10, CancellationToken.None);
+            Result<PaginationResponse<List<UserDto>>> result = await usersService.GetUsers(_memberSearch, _currentMemberPage, 10, CancellationToken.None);
             if (result.Success && result.Data != null)
             {
                 AvailableUsers = result.Data;
@@ -215,7 +218,7 @@ public sealed class CreateMatchViewModel(
         var currentMembers = Model.MembersIds.ToList();
         if (currentMembers.Remove(userId)) 
         {
-            ApplicationUser? userToRemove = SelectedUsers.FirstOrDefault(u => u.Id == userId);
+            UserDto? userToRemove = SelectedUsers.FirstOrDefault(u => u.Id == userId);
             if (userToRemove != null)
             {
                 SelectedUsers.Remove(userToRemove);
@@ -224,7 +227,7 @@ public sealed class CreateMatchViewModel(
         else
         {
             currentMembers.Add(userId);
-            ApplicationUser? user = AvailableUsers.Data.FirstOrDefault(u => u.Id == userId);
+            UserDto? user = AvailableUsers.Data.FirstOrDefault(u => u.Id == userId);
             if (user != null && SelectedUsers.All(u => u.Id != userId))
             {
                 SelectedUsers.Add(user);
@@ -244,7 +247,7 @@ public sealed class CreateMatchViewModel(
         }
 
         currentMembers.Remove(userId);
-        ApplicationUser? userToRemove = SelectedUsers.FirstOrDefault(u => u.Id == userId);
+        UserDto? userToRemove = SelectedUsers.FirstOrDefault(u => u.Id == userId);
         if (userToRemove != null)
         {
             SelectedUsers.Remove(userToRemove);

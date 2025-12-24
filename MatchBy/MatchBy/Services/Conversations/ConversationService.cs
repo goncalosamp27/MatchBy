@@ -6,6 +6,7 @@ using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.Enums;
 using MatchBy.Models;
 using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.ChatMessage;
 using MatchBy.Repositories.User;
 using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.S3;
@@ -20,6 +21,7 @@ public class ConversationService(
     IValidator<CreateConversationDto> createConversationValidator,
     IValidator<UpdateConversationDto> updateConversationValidator,
     IUserRepository userRepository,
+    IChatMessageRepository chatMessageRepository,
     IConversationRepository conversationRepository,
     IImageRefreshService imageRefreshService) : IConversationService
 {
@@ -42,21 +44,24 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        CursorPaginationResponse<List<Conversation>> result = await conversationRepository.GetConversationsForUserAsync(creatorUserId, pageSize, cursor, query, dbContext, ct);
+        CursorPaginationResponse<List<Conversation>> result =
+            await conversationRepository.GetConversationsForUserAsync(creatorUserId, pageSize, cursor, query, dbContext,
+                ct);
         foreach (Conversation conv in result.Data)
         {
             await imageRefreshService.RefreshConversationImagesAsync(conv);
         }
-        
+
         await dbContext.SaveChangesAsync(ct);
-        
+
         var dtos = result.Data.Select(c => c.ToDto()).ToList();
 
-        return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(new CursorPaginationResponse<List<ConversationDto>>()
-        {
-            Data = dtos,
-            NextCursor = result.NextCursor
-        });
+        return Result<CursorPaginationResponse<List<ConversationDto>>>.Ok(
+            new CursorPaginationResponse<List<ConversationDto>>()
+            {
+                Data = dtos,
+                NextCursor = result.NextCursor
+            });
     }
 
     /// <summary>
@@ -76,15 +81,16 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        Conversation? conversation = await conversationRepository.GetByIdAsync(conversationId, creatorUserId, dbContext, ct);
+        Conversation? conversation =
+            await conversationRepository.GetByIdAsync(conversationId, creatorUserId, dbContext, ct);
         if (conversation is null)
         {
             return Result<ConversationDto>.Fail("No conversation found");
         }
-        
+
         await imageRefreshService.RefreshConversationImagesAsync(conversation);
         await dbContext.SaveChangesAsync(ct);
-        
+
         return Result<ConversationDto>.Ok(conversation.ToDto());
     }
 
@@ -111,13 +117,15 @@ public class ConversationService(
         {
             return Result<ConversationDto>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToArray());
         }
-        
+
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        
+
         if (createConversationDto.ConversationType == ConversationType.Private)
         {
-            bool exists = await conversationRepository.PrivateConversationExistsAsync(createConversationDto.ParticipantIds, dbContext, ct);
-            if (exists)
+            string? existsId =
+                await conversationRepository.PrivateConversationExistsAsync(createConversationDto.ParticipantIds,
+                    dbContext, ct);
+            if (!string.IsNullOrEmpty(existsId))
             {
                 return Result<ConversationDto>.Fail("Private conversation between these users already exists.");
             }
@@ -135,7 +143,9 @@ public class ConversationService(
         conversationRepository.Add(conversation, dbContext);
         await dbContext.SaveChangesAsync(ct);
 
-        Conversation? created = await conversationRepository.GetByIdAsync(conversation.Id,createConversationDto.CreatorUserId, dbContext, ct);
+        Conversation? created =
+            await conversationRepository.GetByIdAsync(conversation.Id, createConversationDto.CreatorUserId, dbContext,
+                ct);
 
         if (created is null)
         {
@@ -143,6 +153,16 @@ public class ConversationService(
         }
 
         return await GetConversationByIdAsync(conversation.Id, conversation.CreatorId, ct);
+    }
+
+    public async Task<Result<string>> PrivateConversationExists(List<string> participantIds,
+        CancellationToken ct = default)
+    {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        string? existsId = await conversationRepository.PrivateConversationExistsAsync(participantIds, dbContext, ct);
+        return !string.IsNullOrEmpty(existsId)
+            ? Result<string>.Ok(existsId)
+            : Result<string>.Fail("No private conversation exists between these users.");
     }
 
     /// <summary>
@@ -167,27 +187,19 @@ public class ConversationService(
         {
             return Result<ConversationDto>.Fail(validationResult.Errors.Select(e => e.ErrorMessage).ToArray());
         }
-        
+
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
         // only the creator can update participants
-        Conversation? convo = await dbContext.Conversations
-            .Include(m => m.Participants)
-            .Include(m => m.Creator)
-            .Include(m => m.Messages)
-            .Include(m => m.Team)
-            .Include(m => m.Messages)
-            .Where(c => c.Id == updateConversationDto.ConversationId)
-            .Where(c => c.CreatorId == updateConversationDto.CreatorUserId)
-            .FirstOrDefaultAsync(ct);
+        Conversation? convo = await conversationRepository.GetByIdAsync(updateConversationDto.ConversationId,
+            updateConversationDto.CreatorUserId, dbContext, ct);
         if (convo is null)
         {
             return Result<ConversationDto>.Fail("Conversation not found or user is not the creator.");
         }
 
-        List<ApplicationUser> participants = await dbContext.Users
-            .Where(u => updateConversationDto.ParticipantIds.Contains(u.Id))
-            .ToListAsync(ct);
-        
+        List<ApplicationUser> participants =
+            await userRepository.GetUsersByIdsAsync(updateConversationDto.ParticipantIds, dbContext, ct);
+
         convo.Title = updateConversationDto.Title;
         convo.Participants = participants;
         convo.UpdatedAtUtc = DateTime.UtcNow;
@@ -198,8 +210,6 @@ public class ConversationService(
                 updateConversationDto.File, dbContext, ct);
         }
 
-        //inside updateConversationImageAsync we already save changes
-        //so we only need to save changes here if no image update
         await dbContext.SaveChangesAsync(ct);
         return await GetConversationByIdAsync(convo.Id, updateConversationDto.CreatorUserId, ct);
     }
@@ -217,32 +227,29 @@ public class ConversationService(
     /// </returns>
     public async Task<Result<bool>> DeleteConversationAsync(string conversationId, string userId,
         CancellationToken ct = default)
-    {await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        
-        Conversation? convo = await dbContext.Conversations
-            .Include(m => m.Participants)
-            .Where(c => c.Id == conversationId)
-            .FirstOrDefaultAsync(ct);
+    {
+        await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
+        Conversation? convo = await conversationRepository.GetByIdAsync(conversationId, userId, dbContext, ct);
         if (convo is null)
         {
             return Result<bool>.Fail("Conversation not found.");
         }
 
-        bool canDelete = convo.Type == ConversationType.Private
-            ? await dbContext.Conversations
-                .AnyAsync(c => c.Id == conversationId && c.Participants.Any(p => p.Id == userId), ct)
-            : await dbContext.Conversations
-                .AnyAsync(c => c.Id == conversationId && c.CreatorId == userId, ct);
-
+        bool canDelete =
+            await conversationRepository.CanDeleteConversation(conversationId, convo.Type, userId, dbContext, ct);
         if (!canDelete)
         {
             return Result<bool>.Fail("User does not have permission to delete this conversation.");
         }
 
-        int affected = await dbContext.Conversations
-            .Where(c => c.Id == conversationId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
+        conversationRepository.Remove(convo, dbContext);
+        foreach (ChatMessage msg in convo.Messages)
+        {
+            chatMessageRepository.Remove(msg, dbContext);
+        }
+
+        int affected = await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(affected > 0);
     }
@@ -265,10 +272,7 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        Conversation? convo = await dbContext.Conversations
-            .Include(c => c.Participants)
-            .FirstOrDefaultAsync(c => c.Id == conversationId, ct);
-
+        Conversation? convo = await conversationRepository.GetByIdAsync(conversationId, userId, dbContext, ct);
         if (convo is null)
         {
             return Result<int>.Fail("Conversation not found.");
@@ -285,16 +289,17 @@ public class ConversationService(
 
         // Se não ficou ninguém (ou conversa privada com menos de 2), faz soft-delete
         int remaining = convo.Participants.Count;
-
         bool mustSoftDelete = remaining == 1;
-
         if (mustSoftDelete)
         {
-            convo.DeletedAtUtc = DateTime.UtcNow;
+            conversationRepository.Remove(convo, dbContext);
+            foreach (ChatMessage msg in convo.Messages)
+            {
+                chatMessageRepository.Remove(msg, dbContext);
+            }
         }
 
         await dbContext.SaveChangesAsync(ct);
-
         return Result<int>.Ok(mustSoftDelete ? 1 : 2);
     }
 
@@ -323,7 +328,8 @@ public class ConversationService(
         CancellationToken ct = default)
     {
         // upload
-        Result<string> uploadedKey = await s3Service.UploadBrowserFileAsync(file, $"conversations/{conversation.Id}/image");
+        Result<string> uploadedKey =
+            await s3Service.UploadBrowserFileAsync(file, $"conversations/{conversation.Id}/image");
         if (!uploadedKey.Success)
         {
             return Result<ConversationDto>.Fail(uploadedKey.ErrorMessages.ToArray());
@@ -331,7 +337,8 @@ public class ConversationService(
 
         // URL presign
         Result<string> url =
-            await s3Service.GetPresignedUrlAsync($"conversations/{conversation.Id}/image/{uploadedKey.Data}", HttpVerb.GET);
+            await s3Service.GetPresignedUrlAsync($"conversations/{conversation.Id}/image/{uploadedKey.Data}",
+                HttpVerb.GET);
         if (!url.Success)
         {
             return Result<ConversationDto>.Fail(url.ErrorMessages.ToArray());
@@ -346,9 +353,9 @@ public class ConversationService(
 
         // store the image info
         conversation.Image = new FileStore(
-            Url: url.Data!,
+            Url: url.Data,
             ExpireDateTimeUtc: DateTime.UtcNow.AddMinutes(30),
-            Key: uploadedKey.Data!,
+            Key: uploadedKey.Data,
             FileCategory: FileCategory.ConversationImage,
             FileType: FileType.Image,
             CreatedAtUtc: DateTime.UtcNow
@@ -359,6 +366,4 @@ public class ConversationService(
 
         return await GetConversationByIdAsync(conversation.Id, userId, ct);
     }
-
-
 }

@@ -24,7 +24,6 @@ public static class TeamInviteMappings
             CreatedAtUtc = teamInvite.CreatedAtUtc,
             UpdatedAtUtc = teamInvite.UpdatedAtUtc,
             AcceptedAtUtc = teamInvite.AcceptedAtUtc,
-            DeletedAtUtc = teamInvite.DeletedAtUtc
         };
     }
 

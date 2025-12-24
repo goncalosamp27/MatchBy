@@ -29,7 +29,6 @@ public class ChatMessageMappingsTests
         Assert.Equal(chatMessage.ConversationId, dto.ConversationId);
         Assert.Equal(chatMessage.CreatedAtUtc, dto.CreatedAtUtc);
         Assert.Equal(chatMessage.UpdatedAtUtc, dto.UpdatedAtUtc);
-        Assert.Equal(chatMessage.DeletedAtUtc, dto.DeletedAtUtc);
     }
 
     [Fact]
@@ -133,7 +132,6 @@ public class ChatMessageMappingsTests
         Assert.Equal(dto.InviteUrl, entity.InviteUrl);
         Assert.NotEqual(default, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -253,8 +251,7 @@ public class ChatMessageMappingsTests
             Sender = sender,
             ConversationId = "conversation-id",
             CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
     }
 

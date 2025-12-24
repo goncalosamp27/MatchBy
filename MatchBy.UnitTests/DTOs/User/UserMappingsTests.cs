@@ -33,7 +33,7 @@ public class UserMappingsTests
         // Assert
         Assert.NotNull(dto);
         Assert.Equal(user.Id, dto.Id);
-        Assert.Equal(user.UserName, dto.DisplayName);
+        Assert.Equal(user.DisplayName, dto.DisplayName);
         Assert.Equal(user.ProfileImage.Url, dto.AvatarUrl);
     }
 
@@ -57,8 +57,8 @@ public class UserMappingsTests
         // Assert
         Assert.NotNull(dto);
         Assert.Equal(user.Id, dto.Id);
-        Assert.Equal(user.UserName, dto.DisplayName);
-        Assert.Null(dto.AvatarUrl);
+        Assert.Equal(user.DisplayName, dto.DisplayName);
+        Assert.Equal("/images/user-avatar.svg", dto.AvatarUrl);
     }
 
     [Fact]
@@ -80,8 +80,8 @@ public class UserMappingsTests
         // Assert
         Assert.NotNull(dto);
         Assert.Equal("user_456", dto.Id);
-        Assert.Equal("janedoe", dto.DisplayName);
-        Assert.Null(dto.AvatarUrl);
+        Assert.Equal("Jane Doe", dto.DisplayName);
+        Assert.Equal("/images/user-avatar.svg", dto.AvatarUrl);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ public interface IFriendService {
     Task<Result<bool>> RejectRequest(string friendshipId, string receiverId, CancellationToken ct = default);
     Task<Result<bool>> RemoveFriend(string friendshipId, string userId, CancellationToken ct = default);
     Task<Result<bool>> CheckFriendship(string userId1, string userId2, CancellationToken ct = default);
-    Task<Result<FriendDto?>> GetFriendshipBetweenUsers(string userId1, string userId2, CancellationToken ct = default);
+    Task<Result<FriendDto>> GetFriendshipBetweenUsers(string userId1, string userId2, CancellationToken ct = default);
     Task<Result<bool>> CancelFriendRequest(string friendshipId, string senderId, CancellationToken ct = default);
 }
 

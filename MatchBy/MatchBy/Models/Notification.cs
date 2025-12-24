@@ -18,5 +18,4 @@ public class Notification
     public string? ActionUrl { get; set; }
     public required DateTime CreatedAtUtc { get; set; }
     public DateTime? ReadAtUtc { get; set; }
-    public DateTime? DeletedAtUtc { get; set; }
 }

@@ -183,7 +183,6 @@ public class ConversationMappingsTests
         Assert.NotEqual(default, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
         Assert.Null(entity.LastMessageAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]

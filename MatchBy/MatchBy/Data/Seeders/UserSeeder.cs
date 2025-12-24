@@ -59,9 +59,7 @@ public class UserSeeder(ILogger<UserSeeder> logger) : ISeeder
             EmailConfirmed = true,
             DisplayName = username,
             PreferredSports = [Sports.Football, Sports.Basketball],
-            BaseLocation = new Location(40.7128, -74.0060, "New York", "USA"),
             Rating = 5.0f,
-            Status = AccountStatus.Available,
             CreatedAtUtc = DateTime.UtcNow
         };
 

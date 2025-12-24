@@ -23,7 +23,6 @@ public static class NotificationMappings
             ActionUrl = notification.ActionUrl,
             CreatedAtUtc = notification.CreatedAtUtc,
             ReadAtUtc = notification.ReadAtUtc,
-            DeletedAtUtc = notification.DeletedAtUtc
         };
     }
 
@@ -43,7 +42,6 @@ public static class NotificationMappings
             IsRead = false,
             ActionUrl = createDto.ActionUrl,
             ReadAtUtc = null,
-            DeletedAtUtc = null
         };
     }
 }

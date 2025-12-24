@@ -260,7 +260,6 @@ else
                                                         {
                                                             var isOwner = user.Id == _viewModel.Model.OwnerId;
                                                             var isSelected = _viewModel.Model.MembersIds.Contains(user.Id) || isOwner;
-                                                            var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
                                                             <div
                                                                 class="flex items-center gap-3 py-2 px-3 rounded-xl  text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer transition-all)"
                                                                 @onclick="@(() =>
@@ -274,8 +273,8 @@ else
                                                                               StateHasChanged();
                                                                           })"
                                                                 title="@(isOwner ? "Owner" : "Tap to toggle")">
-                                                                <img src="@photoUrl"
-                                                                     alt="@user.UserName"
+                                                                <img src="@user.AvatarUrl"
+                                                                     alt="@user.DisplayName"
                                                                      class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]/60"/>
                                                                 <span
                                                                     class="fw-500 truncate flex-1">@user.DisplayName @(isOwner ? "(Owner)" : "")</span>
@@ -302,10 +301,9 @@ else
                                                         <div class="flex flex-wrap gap-2">
                                                             @foreach (var member in _viewModel.SelectedUsers)
                                                             {
-                                                                var photoUrl = member.ProfileImage?.Url ?? "/images/user-avatar.png";
                                                                 <div
                                                                     class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
-                                                                    <img src="@photoUrl" alt="@member.UserName"
+                                                                    <img src="@member.AvatarUrl" alt="@member.DisplayName"
                                                                          class="rounded-full w-6 h-6 object-cover"/>
                                                                     <span class="text-sm">@member.DisplayName</span>
                                                                     <button @onclick="@(() =>

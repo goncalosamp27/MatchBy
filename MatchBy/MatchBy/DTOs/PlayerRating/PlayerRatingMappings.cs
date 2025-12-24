@@ -19,7 +19,6 @@ public static class PlayerRatingMappings
             Match = playerRating.Match?.ToDto(),
             CreatedAtUtc = playerRating.CreatedAtUtc,
             UpdatedAtUtc = playerRating.UpdatedAtUtc,
-            DeletedAtUtc = playerRating.DeletedAtUtc
         };
     }
 

@@ -3,13 +3,16 @@ using MatchBy.Data;
 using MatchBy.DTOs.Team;
 using MatchBy.DTOs.TeamInvite;
 using MatchBy.Models;
+using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.Team;
+using MatchBy.Repositories.TeamInvite;
+using MatchBy.Repositories.User;
 using MatchBy.Services.Conversations;
 using MatchBy.Services.ImageRefresh;
 using MatchBy.Services.Notifications;
 using MatchBy.Services.S3;
 using MatchBy.Services.TeamInvites;
 using MatchBy.Services.Teams;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 
@@ -21,9 +24,11 @@ public class TeamServiceTests : IDisposable
     private readonly Mock<ITeamsInvitesService> _teamInvitesServiceMock;
     private readonly Mock<IValidator<CreateTeamDto>> _createValidatorMock;
     private readonly Mock<IValidator<UpdateTeamDto>> _updateValidatorMock;
-    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
-    private readonly Mock<IDbContextFactory<ApplicationDbContext>> _dbContextFactoryMock;
     private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
+    private readonly Mock<ITeamInviteRepository> _teamInviteRepositoryMock;
+    private readonly Mock<ITeamRepository> _teamRepositoryMock;
+    private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<IConversationRepository> _conversationRepositoryMock;
     private readonly ApplicationDbContext _dbContext;
     private readonly TeamService _teamService;
 
@@ -34,9 +39,13 @@ public class TeamServiceTests : IDisposable
         _teamInvitesServiceMock = new Mock<ITeamsInvitesService>();
         _createValidatorMock = new Mock<IValidator<CreateTeamDto>>();
         _updateValidatorMock = new Mock<IValidator<UpdateTeamDto>>();
+        _teamInviteRepositoryMock = new Mock<ITeamInviteRepository>();
+        _teamRepositoryMock = new Mock<ITeamRepository>();
+        _userRepositoryMock = new Mock<IUserRepository>();
+        _conversationRepositoryMock = new Mock<IConversationRepository>();
         var imageRefreshServiceMock = new Mock<IImageRefreshService>();
         var notificationServiceMock = new Mock<INotificationService>();
-        _dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
+        var dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
         // Setup image refresh service to return completed tasks
         imageRefreshServiceMock
@@ -45,10 +54,6 @@ public class TeamServiceTests : IDisposable
         imageRefreshServiceMock
             .Setup(s => s.RefreshTeamImageAsync(It.IsAny<Team>()))
             .Returns(Task.CompletedTask);
-
-        var userStoreMock = new Mock<IUserStore<ApplicationUser>>();
-        _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-            userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         // Setup in-memory database with a unique name per test class
         // All contexts created with these options will share the same database
@@ -63,12 +68,16 @@ public class TeamServiceTests : IDisposable
 
         // Setup the factory to return a new instance each time
         // This prevents the service from disposing the test's context instance
-        _dbContextFactoryMock
+        dbContextFactoryMock
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
 
         _teamService = new TeamService(
-            _dbContextFactoryMock.Object,
+            _teamInviteRepositoryMock.Object,
+            _teamRepositoryMock.Object,
+            _userRepositoryMock.Object,
+            _conversationRepositoryMock.Object,
+            dbContextFactoryMock.Object,
             s3ServiceMock.Object,
             _conversationServiceMock.Object,
             _teamInvitesServiceMock.Object,
@@ -83,14 +92,6 @@ public class TeamServiceTests : IDisposable
         _dbContext.Dispose();
     }
 
-    /// <summary>
-    /// Helper method to create a fresh DbContext for verification.
-    /// This ensures we're querying the database directly rather than using cached entities from the change tracker.
-    /// </summary>
-    private ApplicationDbContext CreateFreshDbContext()
-    {
-        return new ApplicationDbContext(_dbContextOptions);
-    }
 
     #region GetTeamByIdAsync Tests
 
@@ -98,7 +99,7 @@ public class TeamServiceTests : IDisposable
     public async Task GetTeamByIdAsync_WithPublicTeam_ShouldReturnTeam()
     {
         // Arrange
-        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1" };
+        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1", EmailConfirmed = true };
         var team = new Team
         {
             Id = "team1",
@@ -111,9 +112,9 @@ public class TeamServiceTests : IDisposable
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        await _dbContext.Users.AddAsync(user);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.SaveChangesAsync();
+        _teamRepositoryMock
+            .Setup(r => r.GetByIdAsync("team1", "user1", false, It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
 
         _teamInvitesServiceMock
             .Setup(s => s.GetInvites(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
@@ -142,12 +143,7 @@ public class TeamServiceTests : IDisposable
     public async Task CreateTeamAsync_WithValidData_ShouldCreateTeam()
     {
         // Arrange
-        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1" };
-        await _dbContext.Users.AddAsync(user);
-        await _dbContext.SaveChangesAsync();
-
-        _userManagerMock.Setup(m => m.Users).Returns(_dbContext.Users);
-
+        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1", EmailConfirmed = true };
         var createDto = new CreateTeamDto
         {
             OwnerId = "user1",
@@ -158,22 +154,50 @@ public class TeamServiceTests : IDisposable
             MembersIds = ["user1"]
         };
 
+        var createdTeam = new Team
+        {
+            Id = "team1",
+            Name = "Test Team",
+            Description = "Test Description",
+            OwnerId = "user1",
+            Privacy = TeamPrivacy.Public,
+            MaxMembers = 10,
+            Members = new List<ApplicationUser> { user },
+            CreatedAtUtc = DateTime.UtcNow,
+            ConversationId = "team1"
+        };
+
         _createValidatorMock
             .Setup(v => v.ValidateAsync(It.IsAny<CreateTeamDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("user1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _teamRepositoryMock
+            .Setup(r => r.Add(It.IsAny<Team>(), It.IsAny<ApplicationDbContext>()))
+            .Callback<Team, ApplicationDbContext>((t, db) =>
+            {
+                t.Id = "team1";
+            });
 
         _conversationServiceMock
             .Setup(s => s.CreateConversationAsync(It.IsAny<MatchBy.DTOs.Chat.Conversations.CreateConversationDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<MatchBy.DTOs.Chat.Conversations.ConversationDto>.Ok(new MatchBy.DTOs.Chat.Conversations.ConversationDto
             {
-                Id = "conv1",
+                Id = "team1",
                 Type = ConversationType.Team,
-                CreatorId = "creator1",
+                CreatorId = "user1",
                 CreatedAtUtc = DateTime.UtcNow,
                 MessagesCount = 0
             }));
 
-        // Setup GetInvitesForTeam for GetTeamByIdAsync call
+        // Setup GetInvitesForTeam for GetTeamByIdAsync call (via service mock above)
+        _teamRepositoryMock
+            .Setup(r => r.GetByIdAsync("team1", "user1", false, It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(createdTeam);
+
         _teamInvitesServiceMock
             .Setup(s => s.GetInvites(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<PaginationResponse<List<TeamInviteDto>>>.Ok(new PaginationResponse<List<TeamInviteDto>>
@@ -191,6 +215,7 @@ public class TeamServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.NotNull(result.Data);
         Assert.Equal("Test Team", result.Data.Name);
+        _teamRepositoryMock.Verify(r => r.Add(It.IsAny<Team>(), It.IsAny<ApplicationDbContext>()), Times.Once);
     }
 
     [Fact]
@@ -229,7 +254,7 @@ public class TeamServiceTests : IDisposable
     public async Task UpdateTeamAsync_WithValidData_ShouldUpdateTeam()
     {
         // Arrange
-        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1" };
+        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1", EmailConfirmed = true };
         var team = new Team
         {
             Id = "team1",
@@ -239,7 +264,8 @@ public class TeamServiceTests : IDisposable
             Privacy = TeamPrivacy.Public,
             MaxMembers = 10,
             Members = new List<ApplicationUser> { user },
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            ConversationId = "team1"
         };
 
         var conversation = new Conversation
@@ -251,12 +277,18 @@ public class TeamServiceTests : IDisposable
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        team.ConversationId = "team1"; // Link team to conversation
-
-        await _dbContext.Users.AddAsync(user);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.Conversations.AddAsync(conversation);
-        await _dbContext.SaveChangesAsync();
+        var updatedTeam = new Team
+        {
+            Id = "team1",
+            Name = "New Name",
+            Description = "New Description",
+            OwnerId = "user1",
+            Privacy = TeamPrivacy.Public,
+            MaxMembers = 10,
+            Members = new List<ApplicationUser> { user },
+            CreatedAtUtc = DateTime.UtcNow,
+            ConversationId = "team1"
+        };
 
         var updateDto = new UpdateTeamDto
         {
@@ -273,6 +305,18 @@ public class TeamServiceTests : IDisposable
             .Setup(v => v.ValidateAsync(It.IsAny<UpdateTeamDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserOwnsByIdAsync("team1", "user1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
+
+        _conversationRepositoryMock
+            .Setup(r => r.GetByIdAsync("team1", "user1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(conversation);
+
+        _teamRepositoryMock
+            .Setup(r => r.GetByIdAsync("team1", "user1", false, It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updatedTeam);
+
         _teamInvitesServiceMock
             .Setup(s => s.GetInvites(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<PaginationResponse<List<TeamInviteDto>>>.Ok(new PaginationResponse<List<TeamInviteDto>>
@@ -288,30 +332,13 @@ public class TeamServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal("New Name", result.Data!.Name);
+        Assert.Equal("New Name", result.Data.Name);
     }
 
     [Fact]
     public async Task UpdateTeamAsync_WithNonOwner_ShouldReturnFailure()
     {
         // Arrange
-        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1" };
-        var team = new Team
-        {
-            Id = "team1",
-            Name = "Test Team",
-            Description = "Test Description",
-            OwnerId = "user1",
-            Privacy = TeamPrivacy.Public,
-            MaxMembers = 10,
-            Members = new List<ApplicationUser> { user },
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _dbContext.Users.AddAsync(user);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.SaveChangesAsync();
-
         var updateDto = new UpdateTeamDto
         {
             Id = "team1",
@@ -326,6 +353,10 @@ public class TeamServiceTests : IDisposable
         _updateValidatorMock
             .Setup(v => v.ValidateAsync(It.IsAny<UpdateTeamDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserOwnsByIdAsync("team1", "user2", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Team?)null);
 
         // Act
         Result<TeamDto> result = await _teamService.UpdateTeamAsync(updateDto);
@@ -343,22 +374,9 @@ public class TeamServiceTests : IDisposable
     public async Task DeleteTeamAsync_WithNonOwner_ShouldReturnFailure()
     {
         // Arrange
-        var user = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1" };
-        var team = new Team
-        {
-            Id = "team1",
-            Name = "Test Team",
-            Description = "Test Description",
-            OwnerId = "user1",
-            Privacy = TeamPrivacy.Public,
-            MaxMembers = 10,
-            Members = new List<ApplicationUser> { user },
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        await _dbContext.Users.AddAsync(user);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.SaveChangesAsync();
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserOwnsByIdAsync("team1", "user2", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Team?)null);
 
         // Act
         Result<bool> result = await _teamService.DeleteTeamAsync("team1", "user2");
@@ -376,8 +394,8 @@ public class TeamServiceTests : IDisposable
     public async Task LeaveTeamAsync_WithMember_ShouldRemoveMember()
     {
         // Arrange
-        var owner = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1" };
-        var member = new ApplicationUser { Id = "user2", UserName = "user2", Email = "user2@test.com", DisplayName = "User 2" };
+        var owner = new ApplicationUser { Id = "user1", UserName = "user1", Email = "user1@test.com", DisplayName = "User 1", EmailConfirmed = true };
+        var member = new ApplicationUser { Id = "user2", UserName = "user2", Email = "user2@test.com", DisplayName = "User 2", EmailConfirmed = true };
         var team = new Team
         {
             Id = "team1",
@@ -387,7 +405,8 @@ public class TeamServiceTests : IDisposable
             Privacy = TeamPrivacy.Public,
             MaxMembers = 10,
             Members = new List<ApplicationUser> { owner, member },
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            ConversationId = "team1"
         };
 
         var conversation = new Conversation
@@ -399,12 +418,13 @@ public class TeamServiceTests : IDisposable
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        team.ConversationId = "team1"; // Link team to conversation
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserParticipatesByIdAsync("team1", "user2", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
 
-        await _dbContext.Users.AddRangeAsync(owner, member);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.Conversations.AddAsync(conversation);
-        await _dbContext.SaveChangesAsync();
+        _conversationRepositoryMock
+            .Setup(r => r.GetByIdAsync("team1", "user2", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(conversation);
 
         // Act
         Result<int> result = await _teamService.LeaveTeamAsync("team1", "user2");
@@ -412,12 +432,8 @@ public class TeamServiceTests : IDisposable
         // Assert
         Assert.True(result.Success);
         Assert.Equal(2, result.Data); // Returns 2 when not soft-deleted
-        
-        // Use a fresh context to verify the changes were persisted
-        await using ApplicationDbContext freshContext = CreateFreshDbContext();
-        Team? updatedTeam = await freshContext.Teams.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == "team1");
-        Assert.NotNull(updatedTeam);
-        Assert.DoesNotContain(updatedTeam.Members, m => m.Id == "user2");
+        Assert.DoesNotContain(team.Members, m => m.Id == "user2");
+        Assert.DoesNotContain(conversation.Participants, p => p.Id == "user2");
     }
 
     #endregion

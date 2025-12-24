@@ -15,7 +15,6 @@ public static class FriendMappings
             Receiver = friend.Receiver?.ToDto(),
             CreatedAtUtc = friend.CreatedAtUtc,
             UpdatedAtUtc = friend.UpdatedAtUtc,
-            DeletedAtUtc = friend.DeletedAtUtc,
             Status = friend.Status
         };
     }

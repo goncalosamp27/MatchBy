@@ -64,12 +64,10 @@
 
     protected override void OnParametersSet()
     {
-        // Detectar novas mensagens
         var currentCount = ChatMessages.Count;
         if (_isInitialized && currentCount > _previousMessageCount)
         {
-            // New messages arrived - mark for auto-scroll
-            _shouldAutoScroll = _isUserAtBottom; // Only auto-scroll if already at the bottom
+            _shouldAutoScroll = _isUserAtBottom; 
         }
         _previousMessageCount = currentCount;
     }
@@ -80,15 +78,14 @@
         {
             _isInitialized = true;
             _previousMessageCount = ChatMessages.Count;
-            await Task.Delay(100); // Small delay to ensure the DOM is rendered
+            await Task.Delay(100);
             await ScrollToBottom();
             return;
         }
 
-        // Scroll only if auto-scroll was marked (new messages + user was at the bottom)
         if (_shouldAutoScroll)
         {
-            _shouldAutoScroll = false; // Reset flag
+            _shouldAutoScroll = false;
             await ScrollToBottom();
         }
     }
@@ -112,7 +109,6 @@
         {
             var position = await Js.InvokeAsync<ScrollPosition>("getScrollPosition", _scrollContainer);
             
-            // Considera "no fundo" se estiver a 100px do final
             var distanceFromBottom = position.ScrollHeight - position.ScrollTop - position.ClientHeight;
             _isUserAtBottom = distanceFromBottom < 100;
         }

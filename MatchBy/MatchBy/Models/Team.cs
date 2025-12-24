@@ -15,7 +15,6 @@ public class Team
     public FileStore? Image { get; set; } 
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
-    public DateTime? DeletedAtUtc { get; set; }
 }
 
 public enum TeamPrivacy

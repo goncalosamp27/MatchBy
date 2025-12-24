@@ -14,7 +14,7 @@ public class ChatMessageConfiguration: IEntityTypeConfiguration<ChatMessage>
             .HasMaxLength(500)
             .IsRequired();
 
-        builder.OwnsOne(u => u.Location);
+        builder.OwnsOne(c => c.Location);
         builder.Property(c => c.Content)
             .HasMaxLength(500);
         
@@ -28,7 +28,7 @@ public class ChatMessageConfiguration: IEntityTypeConfiguration<ChatMessage>
         builder.HasOne(c => c.Sender)
             .WithMany()
             .HasForeignKey(c => c.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         //MatchChatMessage can be associated with one ReplyToMessage
         builder.HasOne(c => c.ReplyToMessage)
@@ -40,13 +40,11 @@ public class ChatMessageConfiguration: IEntityTypeConfiguration<ChatMessage>
         builder.HasOne(c => c.Conversation)
             .WithMany()
             .HasForeignKey(c => c.ConversationId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         builder.Property(c => c.CreatedAtUtc)
             .IsRequired();
         
         builder.Property(i => i.UpdatedAtUtc);
-        builder.Property(i => i.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

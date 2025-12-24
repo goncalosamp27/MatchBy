@@ -1,4 +1,5 @@
 ﻿@using Blazorise
+@using MatchBy.DTOs.User
 
 <Modal @ref="ModalRef">
     <ModalContent Centered Class="rounded-3 shadow border border-[var(--main)]"
@@ -37,15 +38,14 @@
                         }
                         else
                         {
-                            foreach (var u in Users.Data ?? Enumerable.Empty<ApplicationUser>())
+                            foreach (var u in Users.Data)
                             {
-                                var photoUrl = u.ProfileImage?.Url ?? "/images/user-avatar.png";
                                 <ListGroupItem Name="@u.Id"
                                                class="flex items-center gap-3 py-2 cursor-pointer transition-opacity hover:opacity-70 contact-item"
                                                Style="color: var(--text);">
-                                    <Image Loading src="@photoUrl" Alt="@u.UserName"
+                                    <Image Loading src="@u.AvatarUrl" Alt="@u.DisplayName"
                                            class="rounded-full w-10 h-10 object-cover flex-shrink-0"/>
-                                    <span class="fw-500 truncate">@u.UserName</span>
+                                    <span class="fw-500 truncate">@u.DisplayName</span>
                                 </ListGroupItem>
                             }
                         }
@@ -97,7 +97,7 @@
 
     [Parameter] public EventCallback<string?> OnSearch { get; set; }
     [Parameter] public int PageSize { get; set; } = 10;
-    [Parameter] public required PaginationResponse<List<ApplicationUser>> Users { get; set; }
+    [Parameter] public required PaginationResponse<List<UserDto>> Users { get; set; }
     [Parameter] public EventCallback<string> OnCreate { get; set; }
     [Parameter] public EventCallback<UsersQuery> OnGetUsers { get; set; }
 

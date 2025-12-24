@@ -6,11 +6,13 @@ using MatchBy.Hubs;
 using Microsoft.EntityFrameworkCore;
 using MatchBy.Data;
 using MatchBy.Models;
+using MatchBy.Repositories.Notification;
 using MatchBy.Services.ImageRefresh;
 
 namespace MatchBy.Services.Notifications;
 
 public class NotificationService(
+    INotificationRepository notificationRepository,
     IHubContext<NotificationHub> hubContext,
     IValidator<CreateNotificationDto> createNotificationValidator,
     IImageRefreshService imageRefreshService,
@@ -33,47 +35,18 @@ public class NotificationService(
     {        
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
         
-        // Build the query first
-        IQueryable<Notification> query = dbContext
-            .Notifications
-            .Include(m => m.Sender)
-            .Include(m => m.Receiver)
-            .Where(m => m.ReceiverId == userId)
-            .AsNoTracking();
+        CursorPaginationResponse<List<Notification>> notifications = await notificationRepository.GetNotificationsAsync(userId, pageSize, cursor, dbContext, ct);
 
-        if (!string.IsNullOrEmpty(cursor))
-        {
-            query = query.Where(m => m.Id.CompareTo(cursor) < 0);
-        }
-
-        query = query
-            .OrderByDescending(m => m.Id)
-            .Take(pageSize + 1);
-
-        // Execute the query in a single operation
-        List<Notification> notifications = await query.ToListAsync(ct);
-
-        bool hasNextPage = notifications.Count > pageSize;
-
-        if (hasNextPage)
-        {
-            notifications.RemoveAt(notifications.Count - 1);
-        }
-
-        IEnumerable<Task> tasks = notifications.Select(imageRefreshService.RefreshNotificationImagesAsync);
+        IEnumerable<Task> tasks = notifications.Data.Select(imageRefreshService.RefreshNotificationImagesAsync);
         await Task.WhenAll(tasks);
         
-        var notificationsDtos = notifications.Select(m => m.ToDto()).ToList();
-
-        string? nextCursor = hasNextPage && notificationsDtos.Any()
-            ? notificationsDtos[0].Id
-            : null;
+        var notificationsDtos = notifications.Data.Select(m => m.ToDto()).ToList();
     
         return Result<CursorPaginationResponse<List<NotificationDto>>>.Ok(
             new CursorPaginationResponse<List<NotificationDto>>
             {
                 Data = notificationsDtos,
-                NextCursor = nextCursor
+                NextCursor = notifications.NextCursor
             });
     }
     /// <summary>
@@ -89,12 +62,7 @@ public class NotificationService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        Notification? notification = await dbContext
-            .Notifications
-            .Include(n => n.Sender)
-            .Include(n => n.Receiver)
-            .FirstOrDefaultAsync(n => n.Id == notificationId && n.ReceiverId == userId, ct);
-
+        Notification? notification = await notificationRepository.GetByIdAsync(notificationId, userId, dbContext, ct);
         if (notification == null)
         {
             return Result<NotificationDto>.Fail("Notification not found.");
@@ -102,6 +70,8 @@ public class NotificationService(
 
         notification.IsRead = true;
         notification.ReadAtUtc = DateTime.UtcNow;
+
+        await imageRefreshService.RefreshNotificationImagesAsync(notification);
 
         await dbContext.SaveChangesAsync(ct);
 
@@ -119,25 +89,24 @@ public class NotificationService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        List<Notification> unreadNotifications = await dbContext
-            .Notifications
-            .Where(n => n.ReceiverId == userId && !n.IsRead)
-            .ToListAsync(ct);
-
-        if (!unreadNotifications.Any())
+        CursorPaginationResponse<List<Notification>> unreadNotifications = await notificationRepository.GetUnreadNotificationsAsync( userId,int.MaxValue, null, dbContext, ct);
+        if (!unreadNotifications.Data.Any())
         {
             return Result<int>.Ok(0);
         }
 
         DateTime now = DateTime.UtcNow;
-        foreach (Notification notification in unreadNotifications)
+        foreach (Notification notification in unreadNotifications.Data)
         {
             notification.IsRead = true;
             notification.ReadAtUtc = now;
         }
+        
+        IEnumerable<Task> tasks = unreadNotifications.Data.Select(imageRefreshService.RefreshNotificationImagesAsync);
+        await Task.WhenAll(tasks);
 
         await dbContext.SaveChangesAsync(ct);
-        return Result<int>.Ok(unreadNotifications.Count);
+        return Result<int>.Ok(unreadNotifications.Data.Count);
     }
     /// <summary>
     /// Creates and sends a notification to a user via SignalR hub.
@@ -156,7 +125,7 @@ public class NotificationService(
         ValidationResult? result = await createNotificationValidator.ValidateAsync(notification, ct);
         if (!result.IsValid)
         {
-            string errorMessage = result.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed.";
+            string errorMessage = string.Join("; ", result.Errors.Select(e => e.ErrorMessage));
             return Result<bool>.Fail(errorMessage);
         }
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
@@ -164,15 +133,11 @@ public class NotificationService(
         
         Notification notificationEntity = notification.ToEntity();
         
-        await dbContext.Notifications.AddAsync(notificationEntity, ct);
+        notificationRepository.Add(notificationEntity, dbContext);
         await dbContext.SaveChangesAsync(ct);
         
         // Reload with Sender and Receiver for the DTO
-        Notification? notificationWithUsers = await dbContext.Notifications
-            .Include(n => n.Sender)
-            .Include(n => n.Receiver)
-            .FirstOrDefaultAsync(n => n.Id == notificationEntity.Id, ct);
-        
+        Notification? notificationWithUsers = await notificationRepository.GetByIdAsync(notificationEntity.Id, notification.ReceiverUserId, dbContext, ct);
         if (notificationWithUsers == null)
         {
             return Result<bool>.Fail("Failed to create notification.");
@@ -198,35 +163,9 @@ public class NotificationService(
     {
         // Get user connections from the hub's static dictionary
         var userConnections = NotificationHub.GetUserConnectionsStatic(userId).ToList();
-        
         if (userConnections.Any())
         {
             await hubContext.Clients.Clients(userConnections)
-                .SendAsync("NotificationReceived", notification, ct);
-        }
-    }
-    
-    /// <summary>
-    /// Sends a notification to multiple users via SignalR hub using their active connections.
-    /// </summary>
-    /// <param name="userIds">Collection of user IDs to send the notification to.</param>
-    /// <param name="notification">The notification DTO to send.</param>
-    /// <param name="ct">Cancellation token to cancel the operation.</param>
-    /// <remarks>
-    /// This method retrieves all active SignalR connections for all specified users and sends the notification
-    /// to all of them. Duplicate connections are removed before sending.
-    /// </remarks>
-    private async Task SendNotificationToUsersAsync(IEnumerable<string> userIds, NotificationDto notification, CancellationToken ct = default)
-    {
-        // Get all connections for the specified users
-        var allConnections = userIds
-            .SelectMany(NotificationHub.GetUserConnectionsStatic)
-            .Distinct()
-            .ToList();
-
-        if (allConnections.Any())
-        {
-            await hubContext.Clients.Clients(allConnections)
                 .SendAsync("NotificationReceived", notification, ct);
         }
     }

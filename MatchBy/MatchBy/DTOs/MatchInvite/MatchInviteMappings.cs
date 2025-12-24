@@ -24,7 +24,6 @@ public static class MatchInviteMappings
             CreatedAtUtc = matchInvite.CreatedAtUtc,
             UpdatedAtUtc = matchInvite.UpdatedAtUtc,
             AcceptedAtUtc = matchInvite.AcceptedAtUtc,
-            DeletedAtUtc = matchInvite.DeletedAtUtc
         };
     }
 

@@ -241,12 +241,12 @@ else
                                         @foreach (var user in viewModel.CurrentMatchParticipants)
                                         {
                                             var isCreator = user.Id == viewModel.UserId;
-                                            var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
+                                            var photoUrl = user.AvatarUrl ?? "/images/user-avatar.png";
 
                                             <div class="flex items-center justify-between py-2 px-3 rounded-lg"
                                                  style="color: var(--text);">
                                                 <div class="flex items-center gap-3">
-                                                    <img src="@photoUrl" alt="@user.UserName"
+                                                    <img src="@photoUrl" alt="@user.DisplayName"
                                                          class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
                                                     <div>
                                                         <span class="font-medium">@user.DisplayName</span>
@@ -370,39 +370,48 @@ else
                                         }
                                         else
                                         {
-                                            foreach (var user in viewModel.AvailableInviteUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                            if (viewModel.AvailableInviteUsers.Data != null)
                                             {
-                                                var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                                var isParticipant = viewModel.IsParticipant(user.Id);
-                                                var isInvited = viewModel.PendingInvites!.Any(i => i.ReceiverId == user.Id);
+                                                foreach (var user in viewModel.AvailableInviteUsers.Data)
+                                                {
+                                                    var isParticipant = viewModel.IsParticipant(user.Id);
+                                                    var isInvited = viewModel.PendingInvites!.Any(i => i.ReceiverId == user.Id);
 
-                                                <div
-                                                    class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg transition-all hover:opacity-80 @(isParticipant || isInvited ? "opacity-50" : "")"
-                                                    style="color: var(--text);">
-                                                    <div class="flex items-center gap-3 flex-1">
-                                                        <img src="@photoUrl" alt="@user.UserName"
-                                                             class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
-                                                        <span class="fw-500 truncate">@user.DisplayName</span>
+                                                    <div
+                                                        class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg transition-all hover:opacity-80 @(isParticipant || isInvited ? "opacity-50" : "")"
+                                                        style="color: var(--text);">
+                                                        <div class="flex items-center gap-3 flex-1">
+                                                            <img src="@user.AvatarUrl" alt="@user.DisplayName"
+                                                                 class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
+                                                            <span class="fw-500 truncate">@user.DisplayName</span>
+                                                        </div>
+                                                        @if (isParticipant)
+                                                        {
+                                                            <span
+                                                                class="text-xs px-2 py-1 bg-[var(--main)] rounded-full text-[var(--text-contrast)]">
+                                                                Participant
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            if (isInvited)
+                                                            {
+                                                                <span
+                                                                    class="text-xs px-2 py-1 bg-yellow-500 text-white rounded-full">
+                                                                    Invited
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button
+                                                                    @onclick="@(() => viewModel.SendInviteToUserAsync(user.Id))"
+                                                                    class="px-3 py-1 bg-[var(--main)] hover:opacity-80 text-[var(--text-contrast)] rounded-lg text-sm font-medium transition">
+                                                                    Invite
+                                                                </button>
+                                                            }
+                                                        }
                                                     </div>
-                                                    @if (isParticipant)
-                                                    {
-                                                        <span
-                                                            class="text-xs px-2 py-1 bg-[var(--main)] rounded-full text-[var(--text-contrast)]">Participant</span>
-                                                    }
-                                                    else if (isInvited)
-                                                    {
-                                                        <span
-                                                            class="text-xs px-2 py-1 bg-yellow-500 text-white rounded-full">Invited</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <button
-                                                            @onclick="@(() => viewModel.SendInviteToUserAsync(user.Id))"
-                                                            class="px-3 py-1 bg-[var(--main)] hover:opacity-80 text-[var(--text-contrast)] rounded-lg text-sm font-medium transition">
-                                                            Invite
-                                                        </button>
-                                                    }
-                                                </div>
+                                                }
                                             }
                                         }
                                     </div>

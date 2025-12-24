@@ -9,7 +9,5 @@ public interface IEmailSender : IEmailSender<ApplicationUser>
     Task SendMatchConfirmationEmail(string email, string displayName);
     Task SendMatchCancelledAsync(ApplicationUser user, string email, Match match, string cancelledByName);
     Task SendContactEmail(string name, string email, string subject, string message);
-
-    // ← ADICIONE ESTA LINHA:
     Task SendMatchReminderAsync(string email, string userName, Match match, string timeframe);
 }

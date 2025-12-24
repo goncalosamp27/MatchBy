@@ -5,8 +5,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Repositories.ChatConversation;
 
-internal sealed class ConversationRepository : IConversationRepository
+public sealed class ConversationRepository : IConversationRepository
 {
+    private static IQueryable<Conversation> Query(ApplicationDbContext dbContext)
+    {
+        return dbContext
+            .Conversations
+            .Include(c => c.Participants)
+            .Include(c => c.Creator)
+            .Include(c => c.Messages)
+            .ThenInclude(m => m.ReplyToMessage)
+            .Include(m => m.Team);
+    }
     /// <summary>
     /// Paginates conversations using cursor-based pagination with optional search filtering.
     /// </summary>
@@ -74,24 +84,27 @@ internal sealed class ConversationRepository : IConversationRepository
         };
     }
 
-    public async Task<bool> PrivateConversationExistsAsync(IReadOnlyCollection<string> participantIds, ApplicationDbContext dbContext, CancellationToken ct)
+    public async Task<string?> PrivateConversationExistsAsync(List<string> participantIds, ApplicationDbContext dbContext, CancellationToken ct)
     {
-        return await dbContext.Conversations
-            .Include(c => c.Participants)
+        Conversation? conversation = await Query(dbContext)
             .Where(c => c.Type == ConversationType.Private)
-            .AnyAsync(c => c.Participants.Count == participantIds.Count &&
-                           c.Participants.All(p =>participantIds.Contains(p.Id)), ct);
+            .FirstOrDefaultAsync(c => c.Participants.Count == participantIds.Count &&
+                                      c.Participants.All(p => participantIds.Contains(p.Id)), ct);
+        
+        return conversation?.Id;
     }
-
     
+    public async Task<bool> CanDeleteConversation(string conversationId, ConversationType conversationType, string userId, ApplicationDbContext dbContext, CancellationToken ct)
+    {
+        return conversationType == ConversationType.Private
+            ? await Query(dbContext)
+                .AnyAsync(c => c.Id == conversationId && c.Participants.Any(p => p.Id == userId), ct)
+            :  await Query(dbContext)
+                .AnyAsync(c => c.Id == conversationId && c.CreatorId == userId, ct);
+    }
     public async Task<Conversation?> GetByIdAsync(string conversationId, string userId, ApplicationDbContext dbContext, CancellationToken ct = default)
     {
-        Conversation? conversation = await dbContext.Conversations
-            .Include(m => m.Participants)
-            .Include(m => m.Creator)
-            .Include(m => m.Messages)
-            .Include(m => m.Team)
-            .Include(m => m.Messages)
+        Conversation? conversation = await Query(dbContext)
             .Where(m => m.Id ==conversationId)
             .Where(m => m.Participants.Any(p => p.Id == userId))
             .FirstOrDefaultAsync(i => i.Id == conversationId, ct);
@@ -110,21 +123,13 @@ internal sealed class ConversationRepository : IConversationRepository
 
     public async Task<bool> IsParticipantAsync(string conversationId, string userId, ApplicationDbContext dbContext, CancellationToken ct = default)
     {
-        return await dbContext.Conversations
-            .Include(c => c.Creator)
-            .Include(c => c.Team)
-            .Include(c => c.Match)
+        return await Query(dbContext)
             .AnyAsync(c => c.Id == conversationId && c.Participants.Any(u => u.Id == userId), ct);
     }
 
     public async Task<CursorPaginationResponse<List<Conversation>>> GetConversationsForUserAsync(string userId, int pageSize, string? cursor, string? query, ApplicationDbContext dbContext, CancellationToken ct = default)
     {
-        IQueryable<Conversation> baseQuery = dbContext.Conversations
-            .Include(c => c.Participants)
-            .Include(c => c.Creator)
-            .Include(c => c.Messages)
-            .Include(m => m.Team)
-            .Include(m => m.Messages)
+        IQueryable<Conversation> baseQuery = Query(dbContext)
             .Where(c => c.Participants.Any(u => u.Id == userId));
 
         if (!string.IsNullOrWhiteSpace(cursor))

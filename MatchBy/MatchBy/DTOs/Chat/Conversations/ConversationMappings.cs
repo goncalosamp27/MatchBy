@@ -47,7 +47,6 @@ public static class ConversationMappings
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
             LastMessageAtUtc = null,
-            DeletedAtUtc = null
         };
     }
 }

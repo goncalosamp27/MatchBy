@@ -1,7 +1,11 @@
 using FluentValidation;
 using MatchBy.Data;
+using MatchBy.DTOs.Notification;
 using MatchBy.DTOs.TeamInvite;
 using MatchBy.Models;
+using MatchBy.Repositories.Team;
+using MatchBy.Repositories.TeamInvite;
+using MatchBy.Repositories.User;
 using MatchBy.Services.Notifications;
 using MatchBy.Services.TeamInvites;
 using Microsoft.EntityFrameworkCore;
@@ -11,35 +15,48 @@ namespace MatchBy.UnitTests.Services.TeamInvites;
 
 public class TeamsInvitesServiceTests : IDisposable
 {
+    private readonly Mock<ITeamRepository> _teamRepositoryMock;
+    private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<ITeamInviteRepository> _teamInviteRepositoryMock;
     private readonly Mock<IValidator<CreateTeamInviteDto>> _createValidatorMock;
-    private readonly DbContextOptions<ApplicationDbContext> _dbContextOptions;
     private readonly ApplicationDbContext _dbContext;
     private readonly TeamsInvitesService _teamsInvitesService;
 
     public TeamsInvitesServiceTests()
     {
+        _teamRepositoryMock = new Mock<ITeamRepository>();
+        _userRepositoryMock = new Mock<IUserRepository>();
+        _teamInviteRepositoryMock = new Mock<ITeamInviteRepository>();
         _createValidatorMock = new Mock<IValidator<CreateTeamInviteDto>>();
         var notificationServiceMock = new Mock<INotificationService>();
         var dbContextFactoryMock = new Mock<IDbContextFactory<ApplicationDbContext>>();
 
-        // Setup in-memory database with a unique name per test class
-        // All contexts created with these options will share the same database
+        // Setup in-memory database
         string databaseName = Guid.NewGuid().ToString();
-        _dbContextOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        DbContextOptions<ApplicationDbContext> dbContextOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
-        // Create a test context for setup and verification
-        // This context will share the same in-memory database as contexts created by the factory
-        _dbContext = new ApplicationDbContext(_dbContextOptions);
+        _dbContext = new ApplicationDbContext(dbContextOptions);
 
-        // Setup the factory to return a new instance each time
-        // This prevents the service from disposing the test's context instance
         dbContextFactoryMock
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => new ApplicationDbContext(_dbContextOptions));
+            .ReturnsAsync(() => new ApplicationDbContext(dbContextOptions));
+
+        // Setup notification service
+        notificationServiceMock
+            .Setup(s => s.SendNotificationAsync(It.IsAny<CreateNotificationDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<bool>.Ok(true));
+
+        // Setup validator to return valid by default
+        _createValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<CreateTeamInviteDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
         _teamsInvitesService = new TeamsInvitesService(
+            _teamRepositoryMock.Object,
+            _userRepositoryMock.Object,
+            _teamInviteRepositoryMock.Object,
             dbContextFactoryMock.Object,
             _createValidatorMock.Object,
             notificationServiceMock.Object);
@@ -47,16 +64,7 @@ public class TeamsInvitesServiceTests : IDisposable
 
     public void Dispose()
     {
-        _dbContext.Dispose();
-    }
-
-    /// <summary>
-    /// Helper method to create a fresh DbContext for verification.
-    /// This ensures we're querying the database directly rather than using cached entities from the change tracker.
-    /// </summary>
-    private ApplicationDbContext CreateFreshDbContext()
-    {
-        return new ApplicationDbContext(_dbContextOptions);
+        _dbContext?.Dispose();
     }
 
     #region GetInviteById Tests
@@ -65,19 +73,6 @@ public class TeamsInvitesServiceTests : IDisposable
     public async Task GetInviteById_WithValidId_ShouldReturnInvite()
     {
         // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
-        var team = new Team 
-        { 
-            Id = "team1", 
-            Name = "Test Team", 
-            Description = "Test Description",
-            OwnerId = "sender1", 
-            MaxMembers = 10,
-            Privacy = TeamPrivacy.Public,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-        
         var invite = new TeamInvite
         {
             Id = "invite1",
@@ -90,10 +85,9 @@ public class TeamsInvitesServiceTests : IDisposable
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("invite1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invite);
 
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.GetInviteById("invite1");
@@ -107,6 +101,11 @@ public class TeamsInvitesServiceTests : IDisposable
     [Fact]
     public async Task GetInviteById_WithInvalidId_ShouldReturnFailure()
     {
+        // Arrange
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("nonexistent", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TeamInvite?)null);
+
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.GetInviteById("nonexistent");
 
@@ -114,7 +113,6 @@ public class TeamsInvitesServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.Contains("not found", result.ErrorMessages[0]);
     }
-
     #endregion
 
     #region CreateInvite Tests
@@ -123,23 +121,20 @@ public class TeamsInvitesServiceTests : IDisposable
     public async Task CreateInvite_WithValidData_ShouldCreateInvite()
     {
         // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
+        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender", EmailConfirmed = true };
+        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver", EmailConfirmed = true };
         var team = new Team 
         { 
             Id = "team1", 
             Name = "Test Team",
             Description = "Test Description",
-            OwnerId = "sender1", 
+            OwnerId = "sender1",
+            Owner = sender,
             MaxMembers = 10,
             Privacy = TeamPrivacy.Public,
             CreatedAtUtc = DateTime.UtcNow,
             Members = new List<ApplicationUser> { sender }
         };
-
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.SaveChangesAsync();
 
         var createDto = new CreateTeamInviteDto
         {
@@ -149,38 +144,7 @@ public class TeamsInvitesServiceTests : IDisposable
             Content = "Join us!"
         };
 
-        _createValidatorMock
-            .Setup(v => v.ValidateAsync(It.IsAny<CreateTeamInviteDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
-
-        // Act
-        Result<TeamInviteDto> result = await _teamsInvitesService.CreateInvite(createDto);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.Data);
-        Assert.Equal("team1", result.Data.TeamId);
-    }
-
-    [Fact]
-    public async Task CreateInvite_WithExistingPendingInvite_ShouldReturnFailure()
-    {
-        // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
-        var team = new Team 
-        { 
-            Id = "team1", 
-            Name = "Test Team",
-            Description = "Test Description",
-            OwnerId = "sender1", 
-            MaxMembers = 10,
-            Privacy = TeamPrivacy.Public,
-            CreatedAtUtc = DateTime.UtcNow,
-            Members = new List<ApplicationUser> { sender }
-        };
-
-        var existingInvite = new TeamInvite
+        var createdInvite = new TeamInvite
         {
             Id = "invite1",
             SenderId = "sender1",
@@ -192,10 +156,61 @@ public class TeamsInvitesServiceTests : IDisposable
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(existingInvite);
-        await _dbContext.SaveChangesAsync();
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("sender1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sender);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("receiver1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(receiver);
+
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserOwnsByIdAsync("team1", "sender1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
+
+        _teamInviteRepositoryMock
+            .Setup(r => r.ExistsPendingInviteByTeamAndUser("team1", "receiver1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _teamInviteRepositoryMock
+            .Setup(r => r.Add(It.IsAny<TeamInvite>(), It.IsAny<ApplicationDbContext>()))
+            .Callback<TeamInvite, ApplicationDbContext>((i, db) =>
+            {
+                i.Id = "invite1";
+            });
+
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("invite1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(createdInvite);
+
+        // Act
+        Result<TeamInviteDto> result = await _teamsInvitesService.CreateInvite(createDto);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.Equal("team1", result.Data.TeamId);
+        _teamInviteRepositoryMock.Verify(r => r.Add(It.IsAny<TeamInvite>(), It.IsAny<ApplicationDbContext>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateInvite_WithExistingPendingInvite_ShouldReturnFailure()
+    {
+        // Arrange
+        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender", EmailConfirmed = true };
+        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver", EmailConfirmed = true };
+        var team = new Team 
+        { 
+            Id = "team1", 
+            Name = "Test Team",
+            Description = "Test Description",
+            OwnerId = "sender1",
+            Owner = sender,
+            MaxMembers = 10,
+            Privacy = TeamPrivacy.Public,
+            CreatedAtUtc = DateTime.UtcNow,
+            Members = new List<ApplicationUser> { sender }
+        };
 
         var createDto = new CreateTeamInviteDto
         {
@@ -205,9 +220,21 @@ public class TeamsInvitesServiceTests : IDisposable
             Content = "Join us!"
         };
 
-        _createValidatorMock
-            .Setup(v => v.ValidateAsync(It.IsAny<CreateTeamInviteDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("sender1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sender);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("receiver1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(receiver);
+
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserOwnsByIdAsync("team1", "sender1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
+
+        _teamInviteRepositoryMock
+            .Setup(r => r.ExistsPendingInviteByTeamAndUser("team1", "receiver1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.CreateInvite(createDto);
@@ -215,29 +242,27 @@ public class TeamsInvitesServiceTests : IDisposable
         // Assert
         Assert.False(result.Success);
         Assert.Contains("already exists", result.ErrorMessages[0]);
+        _teamInviteRepositoryMock.Verify(r => r.Add(It.IsAny<TeamInvite>(), It.IsAny<ApplicationDbContext>()), Times.Never);
     }
 
     [Fact]
     public async Task CreateInvite_WithFullTeam_ShouldReturnFailure()
     {
         // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
+        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender", EmailConfirmed = true };
+        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver", EmailConfirmed = true };
         var team = new Team 
         { 
             Id = "team1", 
             Name = "Test Team",
             Description = "Test Description",
-            OwnerId = "sender1", 
+            OwnerId = "sender1",
+            Owner = sender,
             MaxMembers = 1,
             Privacy = TeamPrivacy.Public,
             CreatedAtUtc = DateTime.UtcNow,
             Members = new List<ApplicationUser> { sender }
         };
-
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.SaveChangesAsync();
 
         var createDto = new CreateTeamInviteDto
         {
@@ -247,9 +272,21 @@ public class TeamsInvitesServiceTests : IDisposable
             Content = "Join us!"
         };
 
-        _createValidatorMock
-            .Setup(v => v.ValidateAsync(It.IsAny<CreateTeamInviteDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("sender1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sender);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync("receiver1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(receiver);
+
+        _teamRepositoryMock
+            .Setup(r => r.GetTeamUserOwnsByIdAsync("team1", "sender1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
+
+        _teamInviteRepositoryMock
+            .Setup(r => r.ExistsPendingInviteByTeamAndUser("team1", "receiver1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.CreateInvite(createDto);
@@ -257,6 +294,7 @@ public class TeamsInvitesServiceTests : IDisposable
         // Assert
         Assert.False(result.Success);
         Assert.Contains("already full", result.ErrorMessages[0]);
+        _teamInviteRepositoryMock.Verify(r => r.Add(It.IsAny<TeamInvite>(), It.IsAny<ApplicationDbContext>()), Times.Never);
     }
 
     #endregion
@@ -267,8 +305,8 @@ public class TeamsInvitesServiceTests : IDisposable
     public async Task AcceptInvite_WithValidInvite_ShouldAcceptInvite()
     {
         // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
+        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender", EmailConfirmed = true };
+        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver", EmailConfirmed = true };
         var team = new Team 
         { 
             Id = "team1", 
@@ -290,34 +328,34 @@ public class TeamsInvitesServiceTests : IDisposable
             Content = "Join us!",
             Status = InviteStatus.Pending,
             ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            Team = team,
+            Receiver = receiver
         };
 
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("invite1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invite);
+
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("invite1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invite);
 
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.AcceptInvite("invite1", "receiver1");
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal(InviteStatus.Accepted, result.Data!.Status);
-        
-        // Use a fresh context to verify the changes were persisted
-        await using ApplicationDbContext freshContext = CreateFreshDbContext();
-        Team? updatedTeam = await freshContext.Teams.Include(t => t.Members).FirstOrDefaultAsync(t => t.Id == "team1");
-        Assert.NotNull(updatedTeam);
-        Assert.Contains(updatedTeam.Members, m => m.Id == "receiver1");
+        Assert.Equal(InviteStatus.Accepted, invite.Status);
+        Assert.Contains(team.Members, m => m.Id == "receiver1");
     }
 
     [Fact]
     public async Task AcceptInvite_WithNonReceiver_ShouldReturnFailure()
     {
         // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
+        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender", EmailConfirmed = true };
+        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver", EmailConfirmed = true };
         var team = new Team 
         { 
             Id = "team1", 
@@ -339,13 +377,14 @@ public class TeamsInvitesServiceTests : IDisposable
             Content = "Join us!",
             Status = InviteStatus.Pending,
             ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            Team = team,
+            Receiver = receiver
         };
 
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("invite1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invite);
 
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.AcceptInvite("invite1", "user2");
@@ -359,8 +398,8 @@ public class TeamsInvitesServiceTests : IDisposable
     public async Task AcceptInvite_WithExpiredInvite_ShouldReturnFailure()
     {
         // Arrange
-        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender" };
-        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver" };
+        var sender = new ApplicationUser { Id = "sender1", UserName = "sender", Email = "sender@test.com", DisplayName = "Sender", EmailConfirmed = true };
+        var receiver = new ApplicationUser { Id = "receiver1", UserName = "receiver", Email = "receiver@test.com", DisplayName = "Receiver", EmailConfirmed = true };
         var team = new Team 
         { 
             Id = "team1", 
@@ -382,13 +421,14 @@ public class TeamsInvitesServiceTests : IDisposable
             Content = "Join us!",
             Status = InviteStatus.Pending,
             ExpiresAtUtc = DateTime.UtcNow.AddDays(-1), // Expired
-            CreatedAtUtc = DateTime.UtcNow.AddDays(-7)
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-7),
+            Team = team,
+            Receiver = receiver
         };
 
-        await _dbContext.Users.AddRangeAsync(sender, receiver);
-        await _dbContext.Teams.AddAsync(team);
-        await _dbContext.TeamInvites.AddAsync(invite);
-        await _dbContext.SaveChangesAsync();
+        _teamInviteRepositoryMock
+            .Setup(r => r.GetByIdAsync("invite1", It.IsAny<ApplicationDbContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invite);
 
         // Act
         Result<TeamInviteDto> result = await _teamsInvitesService.AcceptInvite("invite1", "receiver1");

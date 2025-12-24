@@ -25,7 +25,7 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
         builder.HasOne(ti => ti.Sender)
             .WithMany()
             .HasForeignKey(ti => ti.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(ti => ti.ReceiverId)
             .HasMaxLength(500)
@@ -34,7 +34,7 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
         builder.HasOne(ti => ti.Receiver)
             .WithMany()
             .HasForeignKey(ti => ti.ReceiverId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         builder.Property(ti => ti.TeamId)
             .HasMaxLength(500)
@@ -57,7 +57,5 @@ public class TeamInviteConfiguration: IEntityTypeConfiguration<TeamInvite>
 
         builder.Property(t => t.UpdatedAtUtc);
         builder.Property(t => t.AcceptedAtUtc);
-        builder.Property(t => t.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

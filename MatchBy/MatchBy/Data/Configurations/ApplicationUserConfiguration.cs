@@ -13,7 +13,6 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .IsRequired()
             .HasMaxLength(50);
 
-        builder.OwnsOne(u => u.BaseLocation);
         builder.OwnsOne(u => u.ProfileImage);
         builder.Property(u => u.Id)
             .HasMaxLength(500)
@@ -29,15 +28,10 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.Bio)
             .HasMaxLength(500);
 
-        builder.Property(u => u.Status)
-            .IsRequired();
-
         builder.Property(u => u.CreatedAtUtc)
             .IsRequired();
 
         builder.Property(i => i.UpdatedAtUtc);
-        builder.Property(i => i.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
 
         builder.HasIndex(u => u.UserName).IsUnique();
         builder.HasIndex(u => u.Email).IsUnique();

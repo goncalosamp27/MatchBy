@@ -25,7 +25,6 @@ public static class ChatMessageMappings
             ConversationId = chatMessage.ConversationId,
             CreatedAtUtc = chatMessage.CreatedAtUtc,
             UpdatedAtUtc = chatMessage.UpdatedAtUtc,
-            DeletedAtUtc = chatMessage.DeletedAtUtc
         };
     }
 
@@ -42,7 +41,6 @@ public static class ChatMessageMappings
             InviteUrl = createChatMessageDto.InviteUrl,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
     }
 }

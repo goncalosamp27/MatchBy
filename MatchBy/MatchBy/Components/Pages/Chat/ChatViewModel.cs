@@ -4,6 +4,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.DTOs.Chat.Messages;
+using MatchBy.DTOs.User;
 using MatchBy.Hubs;
 using MatchBy.Models;
 using MatchBy.Services.ChatMessages;
@@ -56,7 +57,7 @@ public sealed class ChatViewModel(
         }
     }
 
-    public PaginationResponse<List<ApplicationUser>> AllUsers
+    public PaginationResponse<List<UserDto>> AllUsers
     {
         get;
         private set
@@ -64,7 +65,13 @@ public sealed class ChatViewModel(
             field = value;
             OnPropertyChanged(nameof(AllUsers));
         }
-    } = new();
+    } = new()
+    {
+        Page = 0,
+        TotalCount = 0,
+        PageSize = 0,
+        Data = []
+    };
 
     public async Task InitializeAsync(string? conversationId, string userId)
     {
@@ -74,7 +81,7 @@ public sealed class ChatViewModel(
         Result<CursorPaginationResponse<List<ConversationDto>>> conversations = await conversationService.GetConversationsAsync(userId, 10, null, null, CancellationToken.None);
         if (!conversations.Success)
         {
-            await toastService.Error(conversations.ErrorMessages.ToString());
+            await toastService.Error(string.Join(", ", conversations.ErrorMessages));
         }
         else
         {
@@ -89,12 +96,12 @@ public sealed class ChatViewModel(
                 Result<ConversationDto> conversationResult = await conversationService.GetConversationByIdAsync(conversationId, userId, CancellationToken.None);
                 if (conversationResult.Success)
                 {
-                    selectedConversation = conversationResult.Data!;
+                    selectedConversation = conversationResult.Data;
                     state.UpdateConversation(selectedConversation);
                 }
                 else
                 {
-                    await toastService.Error(conversationResult.ErrorMessages.ToString());
+                    await toastService.Error(string.Join(", ", conversationResult.ErrorMessages));
                 }
             }
 
@@ -119,7 +126,7 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                state.UpsertMessage(result.Data!);
+                state.UpsertMessage(result.Data);
                 await NotifyStateChangedAsync();
             }
             else
@@ -132,8 +139,7 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                Console.WriteLine($"Updated message via SignalR: {result.Data!.Content}");
-                state.UpsertMessage(result.Data!);
+                state.UpsertMessage(result.Data);
                 await NotifyStateChangedAsync();
             }
             else
@@ -147,8 +153,7 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                Console.WriteLine($"Deleted message via SignalR: {result.Data!.MessageId}");
-                state.RemoveMessage(result.Data!.Conversation, result.Data!.MessageId);
+                state.RemoveMessage(result.Data.Conversation, result.Data.MessageId);
                 await NotifyStateChangedAsync();
             }
             else
@@ -162,9 +167,8 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                Console.WriteLine($"Received conversation via SignalR: {result.Data!.Title}");
-                state.Conversations.Add(result.Data!);
-                await OnConversationSelected(result.Data!);
+                state.Conversations.Add(result.Data);
+                await OnConversationSelected(result.Data);
                 await NotifyStateChangedAsync();
             }
             else
@@ -178,8 +182,8 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                Console.WriteLine($"Updated conversation via SignalR: {result.Data!.Title}");
-                state.UpdateConversation(result.Data!);
+                Console.WriteLine($"Updated conversation via SignalR: {result.Data.Title}");
+                state.UpdateConversation(result.Data);
                 await NotifyStateChangedAsync();
             }
             else
@@ -193,7 +197,7 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                string conversationId = result.Data!;
+                string conversationId = result.Data;
                 Console.WriteLine($"Deleted conversation via SignalR: {conversationId}");
                 state.RemoveConversation(conversationId);
                 await NotifyStateChangedAsync();
@@ -209,15 +213,15 @@ public sealed class ChatViewModel(
         {
             if (result.Success)
             {
-                Console.WriteLine($"Left conversation via SignalR: {result.Data!.Id}");
+                Console.WriteLine($"Left conversation via SignalR: {result.Data.Id}");
 
-                if (result.Data!.Participants.All(p => p.Id != state.UserId))
+                if (result.Data.Participants.All(p => p.Id != state.UserId))
                 {
-                    state.RemoveConversation(result.Data!.Id);
+                    state.RemoveConversation(result.Data.Id);
                 }
                 else
                 {
-                    state.UpdateConversation(result.Data!);
+                    state.UpdateConversation(result.Data);
                 }
 
                 await NotifyStateChangedAsync();
@@ -257,6 +261,7 @@ public sealed class ChatViewModel(
         catch (Exception ex)
         {
             Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
+            await toastService.Error($"Chat real-time connection failed: {ex.Message}");
         }
     }
 
@@ -270,7 +275,7 @@ public sealed class ChatViewModel(
         }
 
         state.ClearConversations();
-        state.AddConversations(conversations.Data!);
+        state.AddConversations(conversations.Data);
     }
 
     public async Task LoadMoreConversations((string? nextCursor, string? search) args)
@@ -288,7 +293,7 @@ public sealed class ChatViewModel(
             return;
         }
 
-        state.AddConversations(conversations.Data!);
+        state.AddConversations(conversations.Data);
     }
 
     public async Task LoadMoreMessages(string? nextCursor)
@@ -305,15 +310,15 @@ public sealed class ChatViewModel(
             return;
         }
 
-        state.AddMessages(messagesResult.Data!);
+        state.AddMessages(messagesResult.Data);
     }
 
     public async Task GetUsers(NewConversationModal.UsersQuery usersQuery)
     {
-        Result<PaginationResponse<List<ApplicationUser>>> response = await usersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
+        Result<PaginationResponse<List<UserDto>>> response = await usersService.GetUsers(usersQuery.q, usersQuery.page, usersQuery.pageSize);
         if (response.Success)
         {
-            AllUsers = response.Data!;
+            AllUsers = response.Data;
         }
         else
         {
@@ -398,7 +403,14 @@ public sealed class ChatViewModel(
 
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("CreateMessage", createChatMessageDto);
+            try
+            {
+                await _hubConnection.InvokeAsync("CreateMessage", createChatMessageDto);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to share location: {ex.Message}");
+            }
         }
 
         ReplyToMessage = null;
@@ -415,7 +427,14 @@ public sealed class ChatViewModel(
 
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("UpdateMessage", msg);
+            try
+            {
+                await _hubConnection.InvokeAsync("UpdateMessage", msg);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to update message: {ex.Message}");
+            }
         }
     }
 
@@ -423,7 +442,14 @@ public sealed class ChatViewModel(
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("DeleteMessage", msg.Id);
+            try
+            {
+                await _hubConnection.InvokeAsync("DeleteMessage", msg.Id);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to delete message: {ex.Message}");
+            }
         }
     }
 
@@ -460,7 +486,14 @@ public sealed class ChatViewModel(
 
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("CreateConversation", createConversationDto);
+            try
+            {
+                await _hubConnection.InvokeAsync("CreateConversation", createConversationDto);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to start chat: {ex.Message}");
+            }
         }
     }
 
@@ -474,7 +507,14 @@ public sealed class ChatViewModel(
 
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("LeaveConversationAndNotify", id);
+            try
+            {
+                await _hubConnection.InvokeAsync("LeaveConversationAndNotify", id);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to leave conversation: {ex.Message}");
+            }
         }
     }
 
@@ -488,7 +528,14 @@ public sealed class ChatViewModel(
 
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("DeleteConversation", id);
+            try
+            {
+                await _hubConnection.InvokeAsync("DeleteConversation", id);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to delete conversation: {ex.Message}");
+            }
         }
     }
 
@@ -528,7 +575,16 @@ public sealed class ChatViewModel(
 
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("UpdateConversation", updateConversationDto.ConversationId, updateConversationDto.CreatorUserId);
+            try
+            {
+                await _hubConnection.InvokeAsync("UpdateConversation",
+                    updateConversationDto.ConversationId,
+                    updateConversationDto.CreatorUserId);
+            }
+            catch (Exception ex)
+            {
+                await toastService.Error($"Failed to update conversation (realtime): {ex.Message}");
+            }
         }
 
         state.UpdateConversation(conv.Data!);

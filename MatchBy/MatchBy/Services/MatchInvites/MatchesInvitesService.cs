@@ -1,17 +1,31 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
 using MatchBy.Data;
+using MatchBy.DTOs.Chat.Conversations;
+using MatchBy.DTOs.Chat.Messages;
 using MatchBy.DTOs.Match;
 using MatchBy.DTOs.MatchInvite;
 using MatchBy.DTOs.Notification;
 using MatchBy.Enums;
 using MatchBy.Models;
+using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.ChatMessage;
+using MatchBy.Repositories.Match;
+using MatchBy.Repositories.MatchInvite;
+using MatchBy.Repositories.User;
+using MatchBy.Services.ChatMessages;
+using MatchBy.Services.Conversations;
 using MatchBy.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.MatchInvites;
 
 public class MatchesInvitesService(
+    IConversationService conversationService,
+    IChatMessageService chatMessageService,
+    IUserRepository userRepository,
+    IMatchRepository matchRepository,
+    IMatchInviteRepository matchInviteRepository,
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateMatchInviteDto> createInviteValidator,
     INotificationService notificationService) : IMatchesInvitesService
@@ -29,10 +43,7 @@ public class MatchesInvitesService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        MatchInvite? invite = await dbContext
-            .MatchInvites
-            .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.MatchId == matchId && i.ReceiverId == receiverId && i.Status == InviteStatus.Pending, ct);
+        MatchInvite? invite = await matchInviteRepository.GetByIdAsync(matchId, receiverId, dbContext, ct);
 
         return invite == null
             ? Result<MatchInviteDto>.Fail($"No invite found for match {matchId} and receiver {receiverId}.")
@@ -50,16 +61,7 @@ public class MatchesInvitesService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        MatchInvite? invite = await dbContext
-            .MatchInvites
-            .AsNoTracking()
-            .Include(i => i.Sender)
-            .Include(i => i.Receiver)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Creator)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Participants)
-            .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
+        MatchInvite? invite = await matchInviteRepository.GetByIdAsync(inviteId, dbContext, ct);
 
         return invite == null
             ? Result<MatchInviteDto>.Fail($"Invite with id {inviteId} not found.")
@@ -80,38 +82,17 @@ public class MatchesInvitesService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        IQueryable<MatchInvite> query = dbContext
-            .MatchInvites
-            .AsNoTracking()
-            .Include(i => i.Sender)
-            .Include(i => i.Receiver)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Creator)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Participants)
-            .Where(i => i.Status == InviteStatus.Pending)
-            .Where(i => i.ReceiverId == userId);
+        PaginationResponse<List<MatchInvite>> invites = await matchInviteRepository.GetReceivedInvites(userId, dbContext, page, pageSize, ct);
 
-        int total = await query.CountAsync(ct);
-        int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-        List<MatchInvite> invites = await query
-            .OrderByDescending(i => i.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-        var inviteDtos = invites.Select(i => i.ToDto()).ToList();
+        var inviteDtos = invites.Data.Select(i => i.ToDto()).ToList();
 
         return Result<PaginationResponse<List<MatchInviteDto>>>.Ok(
             new PaginationResponse<List<MatchInviteDto>>
             {
                 Data = inviteDtos,
-                NextPageAvailable = page < totalPages,
-                Page = page,
-                PageSize = pageSize,
-                PreviousPageAvailable = page > 1,
-                TotalCount = total
+                Page = invites.Page,
+                PageSize = invites.PageSize,
+                TotalCount = invites.TotalCount
             });
     }
     /// <summary>
@@ -128,39 +109,18 @@ public class MatchesInvitesService(
         string userId, int page = 1, int pageSize = 10, CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        
+        PaginationResponse<List<MatchInvite>> invites = await matchInviteRepository.GetSentInvites(userId, dbContext, page, pageSize, ct);
 
-        IQueryable<MatchInvite> query = dbContext
-            .MatchInvites
-            .AsNoTracking()
-            .Include(i => i.Sender)
-            .Include(i => i.Receiver)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Creator)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Participants)
-            .Where(i => i.Status == InviteStatus.Pending)
-            .Where(i => i.SenderId == userId);
-
-        int total = await query.CountAsync(ct);
-        int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-        List<MatchInvite> invites = await query
-            .OrderByDescending(i => i.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-        var inviteDtos = invites.Select(i => i.ToDto()).ToList();
+        var inviteDtos = invites.Data.Select(i => i.ToDto()).ToList();
 
         return Result<PaginationResponse<List<MatchInviteDto>>>.Ok(
             new PaginationResponse<List<MatchInviteDto>>
             {
                 Data = inviteDtos,
-                NextPageAvailable = page < totalPages,
-                Page = page,
-                PageSize = pageSize,
-                PreviousPageAvailable = page > 1,
-                TotalCount = total
+                Page = invites.Page,
+                PageSize = invites.PageSize,
+                TotalCount = invites.TotalCount
             });
     }
     /// <summary>
@@ -180,44 +140,23 @@ public class MatchesInvitesService(
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
         // First, check if the match exists
-        bool matchExists = await dbContext.Matches.AnyAsync(m => m.Id == matchId, ct);
+        bool matchExists = await matchRepository.ExistsAsync(matchId, dbContext, ct);
         if (!matchExists)
         {
             return Result<PaginationResponse<List<MatchInviteDto>>>.Fail($"Match with id {matchId} not found.");
         }
 
-        IQueryable<MatchInvite> query = dbContext
-            .MatchInvites
-            .AsNoTracking()
-            .Include(i => i.Sender)
-            .Include(i => i.Receiver)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Creator)
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Participants)
-            .Where(i => i.Status == InviteStatus.Pending)
-            .Where(i => i.MatchId == matchId);
+        PaginationResponse<List<MatchInvite>> invites = await matchInviteRepository.GetInvitesForMatch(matchId, dbContext, page, pageSize, ct);
 
-        int total = await query.CountAsync(ct);
-        int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-        List<MatchInvite> invites = await query
-            .OrderByDescending(i => i.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-        var inviteDtos = invites.Select(i => i.ToDto()).ToList();
+        var inviteDtos = invites.Data.Select(i => i.ToDto()).ToList();
 
         return Result<PaginationResponse<List<MatchInviteDto>>>.Ok(
             new PaginationResponse<List<MatchInviteDto>>
             {
                 Data = inviteDtos,
-                NextPageAvailable = page < totalPages,
-                Page = page,
-                PageSize = pageSize,
-                PreviousPageAvailable = page > 1,
-                TotalCount = total
+                Page = invites.Page,
+                PageSize = invites.PageSize,
+                TotalCount = invites.TotalCount
             });
     }
     /// <summary>
@@ -241,29 +180,27 @@ public class MatchesInvitesService(
         ValidationResult validationResult = await createInviteValidator.ValidateAsync(createDto, ct);
         if (!validationResult.IsValid)
         {
-            return Result<MatchInviteDto>.Fail(validationResult.ToString());
+            string errorMessage = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+            return Result<MatchInviteDto>.Fail(errorMessage);
         }
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
         // Check if sender exists
-        bool senderExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.SenderId, ct);
-        if (!senderExists)
+        ApplicationUser? sender = await userRepository.GetByIdAsync(createDto.SenderId, dbContext, ct);
+        if (sender == null)
         {
             return Result<MatchInviteDto>.Fail($"Sender with id {createDto.SenderId} not found.");
         }
 
         // Check if receiver exists
-        bool receiverExists = await dbContext.Users.AnyAsync(u => u.Id == createDto.ReceiverId, ct);
-        if (!receiverExists)
+        ApplicationUser? receiver = await userRepository.GetByIdAsync(createDto.ReceiverId, dbContext, ct);
+        if (receiver == null)
         {
             return Result<MatchInviteDto>.Fail($"Receiver with id {createDto.ReceiverId} not found.");
         }
 
-        // Check if match exists
-        Match? match = await dbContext.Matches
-            .Include(m => m.Participants)
-            .FirstOrDefaultAsync(m => m.Id == createDto.MatchId, ct);
-        
+        // Check if match exists, this is called by the creator of the match
+        Match? match = await matchRepository.GetByIdAsync(createDto.MatchId, createDto.SenderId, false, dbContext, ct);
         if (match == null)
         {
             return Result<MatchInviteDto>.Fail($"Match with id {createDto.MatchId} not found.");
@@ -276,41 +213,55 @@ public class MatchesInvitesService(
         }
 
         // Check if there's already a pending invite
-        bool existingInvite = await dbContext.MatchInvites
-            .AnyAsync(i => i.MatchId == createDto.MatchId 
-                        && i.ReceiverId == createDto.ReceiverId 
-                        && i.Status == InviteStatus.Pending, ct);
-        
-        if (existingInvite)
+        Result<MatchInviteDto> existingInvite = await GetMatchInvite(createDto.MatchId, createDto.ReceiverId, ct);
+        if (existingInvite is { Success: true, Data.Status: InviteStatus.Pending })
         {
             return Result<MatchInviteDto>.Fail($"A pending invite already exists for this user and match.");
         }
 
         MatchInvite invite = createDto.ToEntity();
-        await dbContext.MatchInvites.AddAsync(invite, ct);
-        await dbContext.SaveChangesAsync(ct);
-
-        // Send notification to the receiver
-        string matchName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}";
+        matchInviteRepository.Add(invite, dbContext);
         
-        string? sender = await dbContext.Users
-            .Where(u => u.Id == createDto.SenderId)
-            .Select(u => u.DisplayName)
-            .FirstOrDefaultAsync(ct);
+        await dbContext.SaveChangesAsync(ct);
         
         var notification = new CreateNotificationDto
         {
-            Type = NotificationType.MatchInviteReceived,
+            Type = NotificationType.Match,
             ReceiverUserId = createDto.ReceiverId,
             SenderUserId = createDto.SenderId,
             RelatedEntityId = match.Id,
-            RelatedEntityName = matchName,
+            RelatedEntityName = $"{match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}",
             Title = "Match invite",
-            Message = $"{sender} invited you to the match {matchName}",
+            Message = $"{sender.DisplayName} invited you to the match {match.Sport} on {match.MatchDateTimeUtc:dd/MM/yyyy 'at' HH:mm}",
             ActionUrl = $"/matches/{match.Id}"
         };
 
         await notificationService.SendNotificationAsync(notification, ct);
+
+        Result<string> conversationExistsId = await conversationService.PrivateConversationExists([sender.Id, receiver.Id], ct);
+        if (!conversationExistsId.Success)
+        {
+            var createConversationDto = new CreateConversationDto
+            {
+                CreatorUserId = sender.Id,
+                ConversationType = ConversationType.Private,
+                ParticipantIds = [sender.Id, receiver.Id]
+            };
+            Result<ConversationDto> conversationResult = await conversationService.CreateConversationAsync(createConversationDto, ct);
+            if (!conversationResult.Success)
+            {
+                return Result<MatchInviteDto>.Fail("Failed to create conversation for match invite message.");
+            }
+            conversationExistsId.Data = conversationResult.Data.Id;
+        }
+
+        var createChatMessageDto = new CreateChatMessageDto
+        {
+            CreatorUserId = sender.Id,
+            ConversationId = conversationExistsId.Data,
+            InviteUrl = $"/matches/{match.Id}",
+        };
+        await chatMessageService.CreateChatMessageAsync(createChatMessageDto, ct);
 
         return await GetInviteById(invite.Id, ct);
     }
@@ -329,9 +280,7 @@ public class MatchesInvitesService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        MatchInvite? invite = await dbContext.MatchInvites
-            .FirstOrDefaultAsync(i => i.Id == inviteId, ct);
-
+        MatchInvite? invite = await matchInviteRepository.GetByIdAsync(inviteId, dbContext, ct);
         if (invite == null)
         {
             return Result<bool>.Fail($"Invite with id {inviteId} not found.");
@@ -343,7 +292,7 @@ public class MatchesInvitesService(
             return Result<bool>.Fail("Only the sender can delete the invite.");
         }
 
-        invite.DeletedAtUtc = DateTime.UtcNow;
+        matchInviteRepository.Remove(invite, dbContext);
         await dbContext.SaveChangesAsync(ct);
 
         return Result<bool>.Ok(true);
@@ -371,11 +320,7 @@ public class MatchesInvitesService(
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        MatchInvite? invite = await dbContext.MatchInvites
-            .Include(i => i.Match)
-                .ThenInclude(m => m!.Participants)
-            .FirstOrDefaultAsync(i => i.Id == inviteId && i.Status == InviteStatus.Pending, ct);
-
+        MatchInvite? invite = await matchInviteRepository.GetByIdAsync(inviteId, dbContext, ct);
         if (invite == null)
         {
             return Result<MatchInviteDto>.Fail($"Invite with id {inviteId} not found.");
@@ -393,24 +338,28 @@ public class MatchesInvitesService(
             await dbContext.SaveChangesAsync(ct);
             return Result<MatchInviteDto>.Fail("The invite has expired.");
         }
+        
+        if(invite.Status != InviteStatus.Pending)
+        {
+            return Result<MatchInviteDto>.Fail("Only pending invites can be accepted.");
+        }
 
         // Check if match still has space
         if (invite.Match!.Participants.Count >= invite.Match.MaxPlayers)
         {
             return Result<MatchInviteDto>.Fail("The match is already full.");
         }
-        
 
         // Add user to match participants
-        ApplicationUser? user = await dbContext.Users.FindAsync([userId], ct);
+        ApplicationUser? user = await userRepository.GetByIdAsync(invite.ReceiverId, dbContext, ct);
         if (user == null)
         {
-            return Result<MatchInviteDto>.Fail($"User with id {userId} not found.");
+            return Result<MatchInviteDto>.Fail($"User with id {invite.ReceiverId} not found.");
         }
         
         if(invite.Match!.MinimumPlayersRating != MinimumPlayersAverage.All && user.Rating < (int)invite.Match!.MinimumPlayersRating)
         {
-            return Result<MatchInviteDto>.Fail($"User with id {userId} does not meet the minimum players average rating requirement to join the match {invite.Match!.Id}.");
+            return Result<MatchInviteDto>.Fail($"User with id {invite.ReceiverId} does not meet the minimum players average rating requirement to join the match {invite.Match!.Id}.");
         }
 
         invite.Match.Participants.Add(user);

@@ -17,7 +17,7 @@ public class UserMappingsTests
 
         // Assert
         Assert.Equal(user.Id, dto.Id);
-        Assert.Equal(user.UserName, dto.DisplayName);
+        Assert.Equal(user.DisplayName, dto.DisplayName);
         Assert.Equal(user.ProfileImage?.Url, dto.AvatarUrl);
     }
 
@@ -32,7 +32,7 @@ public class UserMappingsTests
         UserDto dto = user.ToDto();
 
         // Assert
-        Assert.Null(dto.AvatarUrl);
+        Assert.Equal("/images/user-avatar.svg", dto.AvatarUrl);
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public class UserMappingsTests
         UserDto dto = user.ToDto();
 
         // Assert
-        Assert.Equal("username", dto.DisplayName);
-        Assert.NotEqual(user.DisplayName, dto.DisplayName);
+        Assert.Equal("Display Name", dto.DisplayName);
+        Assert.Equal(user.DisplayName, dto.DisplayName);
     }
 
     private static ApplicationUser CreateValidUser()
@@ -87,7 +87,15 @@ public class UserMappingsTests
         {
             Id = "user-id",
             UserName = "testuser",
-            DisplayName = "Test User"
+            DisplayName = "Test User",
+            ProfileImage = new FileStore(
+                Url: "https://example.com/image.jpg",
+                ExpireDateTimeUtc: DateTime.UtcNow.AddDays(1),
+                Key: "file-key",
+                FileCategory: FileCategory.ProfileImage,
+                FileType: FileType.Image,
+                CreatedAtUtc: DateTime.UtcNow
+            ),
         };
     }
 }

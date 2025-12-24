@@ -18,7 +18,6 @@ public class ApplicationUserExtensionsTests
         // Assert
         Assert.Equal("Test User", result.DisplayName);
         Assert.Equal(0, result.Rating);
-        Assert.Equal(AccountStatus.Available, result.Status);
         Assert.NotEqual(default, result.CreatedAtUtc);
     }
 
@@ -34,7 +33,6 @@ public class ApplicationUserExtensionsTests
         // Assert
         Assert.Equal(string.Empty, result.DisplayName);
         Assert.Equal(0, result.Rating);
-        Assert.Equal(AccountStatus.Available, result.Status);
     }
 
     [Fact]
@@ -49,7 +47,6 @@ public class ApplicationUserExtensionsTests
         // Assert
         Assert.Null(result.DisplayName);
         Assert.Equal(0, result.Rating);
-        Assert.Equal(AccountStatus.Available, result.Status);
     }
 
     [Fact]
@@ -66,22 +63,6 @@ public class ApplicationUserExtensionsTests
 
         // Assert
         Assert.Equal(0, result.Rating);
-    }
-
-    [Fact]
-    public void InitializeNewUser_ShouldSetStatusToAvailable()
-    {
-        // Arrange
-        var user = new ApplicationUser
-        {
-            Status = AccountStatus.Available
-        };
-
-        // Act
-        ApplicationUser result = user.InitializeNewUser("Test User");
-
-        // Assert
-        Assert.Equal(AccountStatus.Available, result.Status);
     }
 
     [Fact]

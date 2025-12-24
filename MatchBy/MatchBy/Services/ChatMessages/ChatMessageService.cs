@@ -3,12 +3,18 @@ using FluentValidation.Results;
 using MatchBy.Data;
 using MatchBy.DTOs.Chat.Messages;
 using MatchBy.Models;
+using MatchBy.Repositories.ChatConversation;
+using MatchBy.Repositories.ChatMessage;
+using MatchBy.Repositories.User;
 using Microsoft.EntityFrameworkCore;
 using ChatMessage = MatchBy.Models.ChatMessage;
 
 namespace MatchBy.Services.ChatMessages;
 
 public class ChatMessageService(
+    IConversationRepository conversationRepository,
+    IUserRepository userRepository,
+    IChatMessageRepository chatMessageRepository,
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IValidator<CreateChatMessageDto> createChatMessageValidator,
     IValidator<UpdateChatMessageDto> updateChatMessageValidator) : IChatMessageService
@@ -21,57 +27,30 @@ public class ChatMessageService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-
-        bool isUserInvolved = await dbContext.Conversations
-            .Where(c => c.Id == conversationId)
-            .Where(c => c.Participants.Any(p => p.Id == userId))
-            .AnyAsync(ct);
-
+        
+        Conversation? conversation = await conversationRepository.GetByIdAsync(conversationId, userId, dbContext, ct);
+        if(conversation is null)
+        {
+            return Result<CursorPaginationResponse<List<ChatMessageDto>>>.Fail(
+                "Conversation not found or user is not a participant.");
+        }
+        
+        bool isUserInvolved = conversation.Participants.Any(p => p.Id == userId);
         if (!isUserInvolved)
         {
             return Result<CursorPaginationResponse<List<ChatMessageDto>>>.Fail(
                 "User is not a participant in the conversation.");
         }
-
-        IQueryable<ChatMessage> query = dbContext
-            .ChatMessages
-            .Include(m => m.Sender)
-            .Include(m => m.ReplyToMessage)
-            .ThenInclude(r => r!.Sender)
-            .Include(m => m.Conversation)
-            .Where(m => m.ConversationId == conversationId)
-            .AsNoTracking();
-
-        if (!string.IsNullOrEmpty(cursor))
-        {
-            query = query.Where(m => m.Id.CompareTo(cursor) < 0);
-        }
-
-        List<ChatMessage> messages = await query
-            .OrderByDescending(m => m.Id)
-            .Take(pageSize + 1)
-            .ToListAsync(ct);
-
-        bool hasNextPage = messages.Count > pageSize;
-
-        if (hasNextPage)
-        {
-            messages.RemoveAt(messages.Count - 1);
-        }
         
-        messages.Reverse();
+        CursorPaginationResponse<List<ChatMessage>> messages = await chatMessageRepository.GetChatMessagesAsync(conversationId, userId, dbContext, pageSize, cursor, ct);
 
-        var chatMessages = messages.Select(m => m.ToDto()).ToList();
-
-        string? nextCursor = hasNextPage && chatMessages.Any()
-            ? chatMessages[0].Id
-            : null;
+        var chatMessages = messages.Data.Select(m => m.ToDto()).ToList();
     
         return Result<CursorPaginationResponse<List<ChatMessageDto>>>.Ok(
             new CursorPaginationResponse<List<ChatMessageDto>>
             {
                 Data = chatMessages,
-                NextCursor = nextCursor
+                NextCursor = messages.NextCursor
             });
     }
 
@@ -79,24 +58,19 @@ public class ChatMessageService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        ChatMessage? chatMessage = await dbContext.ChatMessages
-            .Include(m => m.Sender)
-            .Include(m => m.ReplyToMessage)
-            .ThenInclude(r => r!.Sender)
-            .Include(m => m.Conversation)
-            .Where(m => m.Id == chatMessageId)
-            .FirstOrDefaultAsync(ct);
-
+        ChatMessage? chatMessage = await chatMessageRepository.GetByIdAsync(chatMessageId, dbContext, ct);
         if (chatMessage is null)
         {
             return Result<ChatMessageDto>.Fail("Chat message not found.");
         }
+        
+        Conversation? conversation = await conversationRepository.GetByIdAsync(chatMessage.ConversationId, userId, dbContext, ct);
+        if (conversation is null)
+        {
+            return Result<ChatMessageDto>.Fail("Conversation not found.");
+        }
 
-        bool isUserInvolved = await dbContext.Conversations
-            .Where(c => c.Id == chatMessage.ConversationId)
-            .Where(c => c.Participants.Any(p => p.Id == userId))
-            .AnyAsync(ct);
-
+        bool isUserInvolved = conversation.Participants.Any(p => p.Id == userId);
         return !isUserInvolved
             ? Result<ChatMessageDto>.Fail("User is not a participant in the conversation.")
             : Result<ChatMessageDto>.Ok(chatMessage.ToDto());
@@ -112,19 +86,14 @@ public class ChatMessageService(
         }
 
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        ApplicationUser? sender = await dbContext.Users
-            .Where(u => u.Id == createChatMessageDto.CreatorUserId)
-            .FirstOrDefaultAsync(ct);
+        
+        ApplicationUser? sender = await userRepository.GetByIdAsync(createChatMessageDto.CreatorUserId, dbContext, ct);
         if (sender is null)
         {
             return Result<ChatMessageDto>.Fail("Sender user not found.");
         }
 
-        Conversation? conversation = await dbContext.Conversations
-            .Where(c => c.Id == createChatMessageDto.ConversationId)
-            .Where(c => c.CreatorId == createChatMessageDto.CreatorUserId ||
-                        c.Participants.Any(p => p.Id == createChatMessageDto.CreatorUserId))
-            .FirstOrDefaultAsync(ct);
+        Conversation? conversation = await conversationRepository.GetByIdAsync(createChatMessageDto.ConversationId, createChatMessageDto.CreatorUserId, dbContext, ct);
         if (conversation is null)
         {
             return Result<ChatMessageDto>.Fail("Conversation not found or user is not a participant.");
@@ -134,7 +103,7 @@ public class ChatMessageService(
         conversation.LastMessageAtUtc = DateTime.UtcNow;
         ChatMessage chatMessage = createChatMessageDto.ToEntity();
 
-        await dbContext.ChatMessages.AddAsync(chatMessage, ct);
+        chatMessageRepository.Add(chatMessage, dbContext);
         await dbContext.SaveChangesAsync(ct);
 
         return await GetChatMessageByIdAsync(chatMessage.Id, createChatMessageDto.CreatorUserId, ct);
@@ -150,32 +119,19 @@ public class ChatMessageService(
         }
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
 
-        ApplicationUser? sender = await dbContext.Users
-            .Where(u => u.Id == updateChatMessageDto.CreatorUserId)
-            .FirstOrDefaultAsync(ct);
+        ApplicationUser? sender = await userRepository.GetByIdAsync(updateChatMessageDto.CreatorUserId, dbContext, ct);
         if (sender is null)
         {
             return Result<ChatMessageDto>.Fail("Sender user not found.");
         }
 
-        ChatMessage? chatMessage = await dbContext.ChatMessages
-            .Where(m => m.Id == updateChatMessageDto.ChatMessageId && m.DeletedAtUtc == null)
-            .Where(m => m.SenderId == updateChatMessageDto.CreatorUserId)
-            .Include(m => m.ReplyToMessage)
-            .Include(m => m.Conversation)
-            .Include(m => m.Sender)
-            .FirstOrDefaultAsync(ct);
-
+        ChatMessage? chatMessage = await chatMessageRepository.GetByIdAsync(updateChatMessageDto.ChatMessageId, dbContext, ct);
         if (chatMessage is null)
         {
             return Result<ChatMessageDto>.Fail("Chat message not found or user is not the sender.");
         }
 
-        Conversation? conversation = await dbContext.Conversations
-            .Where(c => c.Id == chatMessage.ConversationId)
-            .Include(c => c.Messages)
-            .FirstOrDefaultAsync(ct);
-
+        Conversation? conversation = await conversationRepository.GetByIdAsync(chatMessage.ConversationId, updateChatMessageDto.CreatorUserId, dbContext, ct);
         if (conversation is null)
         {
             return Result<ChatMessageDto>.Fail("Conversation not found.");
@@ -194,21 +150,13 @@ public class ChatMessageService(
         CancellationToken ct = default)
     {
         await using ApplicationDbContext dbContext = await dbContextFactory.CreateDbContextAsync(ct);
-        ChatMessage? chatMessage = await dbContext.ChatMessages
-            .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
-            .Where(c => c.SenderId == userId)
-            .FirstOrDefaultAsync(ct);
-
+        ChatMessage? chatMessage = await chatMessageRepository.GetByIdAsync(chatMessageId, dbContext, ct);
         if (chatMessage is null)
         {
             return Result<bool>.Fail("Chat message not found or user is not the sender.");
         }
 
-        Conversation? conversation = await dbContext.Conversations
-            .Where(c => c.Id == chatMessage.ConversationId)
-            .Include(c => c.Messages)
-            .FirstOrDefaultAsync(ct);
-
+        Conversation? conversation = await conversationRepository.GetByIdAsync(chatMessage.ConversationId, userId, dbContext, ct);
         if (conversation is null)
         {
             return Result<bool>.Fail("Conversation not found.");
@@ -223,17 +171,13 @@ public class ChatMessageService(
             : conversation.Messages.Last(m => m.Id != chatMessageId).Content;
 
         // only the sender can delete their message
-        bool canDelete = await dbContext.ChatMessages
-            .AnyAsync(c => c.Id == chatMessageId && c.SenderId == userId && c.DeletedAtUtc == null, ct);
-
-        if (!canDelete)
+        ChatMessage? chatMessageToDelete = await chatMessageRepository.GetByIdAsync(chatMessageId, dbContext, ct);
+        if (chatMessageToDelete is null || chatMessageToDelete.SenderId != userId)
         {
             return Result<bool>.Fail("User is not authorized to delete this message.");
         }
 
-        int affected = await dbContext.ChatMessages
-            .Where(c => c.Id == chatMessageId && c.DeletedAtUtc == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.DeletedAtUtc, DateTime.UtcNow), ct);
+        chatMessageRepository.Remove(chatMessage, dbContext);
         
         List<ChatMessage> messages = [.. conversation.Messages.Where(m => m.ReplyToMessageId == chatMessageId)];
         foreach (ChatMessage msg in messages)
@@ -242,8 +186,7 @@ public class ChatMessageService(
             msg.ReplyToMessage = null;
         }
         
-        await dbContext.SaveChangesAsync(ct);
-
+        int affected = await dbContext.SaveChangesAsync(ct);
         return affected > 0 ? Result<bool>.Ok(true) : Result<bool>.Fail("Failed to delete chat message.");
     }
 }

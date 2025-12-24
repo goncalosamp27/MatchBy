@@ -13,8 +13,8 @@ public class ConversationSeeder : ISeeder
 
         var users = db.Users.ToList();
         Match? match = db.Matches.FirstOrDefault();
-        Team? team = db.Teams.FirstOrDefault();
-        if (match == null || users.Count < 3 || team == null )
+        var teams = db.Teams.ToList();
+        if (match == null || users.Count < 3 || teams.Count < 8 )
         {
             return Task.CompletedTask;
         }
@@ -38,7 +38,105 @@ public class ConversationSeeder : ISeeder
                 Id = $"conversation_{Guid.CreateVersion7()}",
                 Type = ConversationType.Team,
                 Title = "Team Alpha",
-                TeamId = team.Id,
+                TeamId = teams[0].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team Betha",
+                TeamId = teams[1].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team C",
+                TeamId = teams[2].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team D",
+                TeamId = teams[3].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team E",
+                TeamId = teams[4].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team F",
+                TeamId = teams[5].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team G",
+                TeamId = teams[6].Id,
+                CreatorId = users[0].Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                Participants =
+                [
+                    users[0],
+                    users[1]
+                ]
+            },
+            new()
+            {
+                Id = $"conversation_{Guid.CreateVersion7()}",
+                Type = ConversationType.Team,
+                Title = "Team H",
+                TeamId = teams[7].Id,
                 CreatorId = users[0].Id,
                 CreatedAtUtc = DateTime.UtcNow,
                 Participants =
@@ -64,8 +162,10 @@ public class ConversationSeeder : ISeeder
         ];
 
         db.Conversations.AddRange(conversations);
-        team.ConversationId = conversations[1].Id;
-
+        foreach (Team team in teams)
+        {
+            team.ConversationId = conversations.FirstOrDefault(c => c.TeamId == team.Id)?.Id;
+        }
         return db.SaveChangesAsync(ct);
     }
 }

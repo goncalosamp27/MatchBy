@@ -30,7 +30,6 @@ public static class MatchMappings
             Participants = list,
             CreatedAtUtc = match.CreatedAtUtc,
             UpdatedAtUtc = match.UpdatedAtUtc,
-            DeletedAtUtc = match.DeletedAtUtc
         };
     }
 
@@ -53,7 +52,6 @@ public static class MatchMappings
             Participants = [],
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
     }
 

@@ -1,14 +1,13 @@
-﻿// Services/Users/IUsersService.cs
-
+﻿using MatchBy.DTOs.User;
 using MatchBy.Models;
 
 namespace MatchBy.Services.Users;
 
 public interface IUsersService
 {
-    Task<Result<ApplicationUser>> GetUser(string userId, CancellationToken cancellationToken = default);
+    Task<Result<UserDto>> GetUser(string userId, CancellationToken cancellationToken = default);
 
-    Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
+    Task<Result<PaginationResponse<List<UserDto>>>> GetUsers(
         string? search = null,
         int page = 1,
         int pageSize = 20,

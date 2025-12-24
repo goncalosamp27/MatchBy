@@ -23,8 +23,7 @@ public class MatchInviteMappingsTests
             ExpiresAtUtc = expiresAt,
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = null,
-            AcceptedAtUtc = null,
-            DeletedAtUtc = null
+            AcceptedAtUtc = null
         };
 
         // Act

@@ -8,7 +8,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
 {
     public void Configure(EntityTypeBuilder<Notification> builder)
     {
-        builder.HasKey(u => u.Id);
+        builder.ToTable("Notifications");
+        builder.HasKey(n => n.Id);
         builder.Property(u => u.Type)
             .IsRequired();
 
@@ -45,18 +46,16 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(u => u.CreatedAtUtc)
             .IsRequired();
         
-        builder.HasOne(c => c.Sender)
+        builder.HasOne(n => n.Sender)
             .WithMany()
-            .HasForeignKey(c => c.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
-        
-        builder.HasOne(c => c.Receiver)
+            .HasForeignKey(n => n.SenderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(n => n.Receiver)
             .WithMany()
-            .HasForeignKey(c => c.ReceiverId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(n => n.ReceiverId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(i => i.ReadAtUtc);
-        builder.Property(i => i.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

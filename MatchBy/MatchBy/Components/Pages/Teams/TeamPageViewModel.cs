@@ -160,7 +160,7 @@ public sealed class TeamPageViewModel(
         {
             Result<TeamDto> result = await teamService.GetTeamByIdAsync(_teamId, _userId ?? string.Empty, CancellationToken.None);
 
-            if (!result.Success || result.Data == null)
+            if (!result.Success)
             {
                 string errorMsg = result.ErrorMessages.Any()
                     ? string.Join(", ", result.ErrorMessages)
@@ -338,7 +338,7 @@ public sealed class TeamPageViewModel(
         {
             Result<TeamDto> result = await teamService.GetTeamByIdAsync(_teamId, _userId, CancellationToken.None);
 
-            if (result.Success && result.Data != null)
+            if (result.Success)
             {
                 Team = result.Data;
                 if (_team?.OwnerId == _userId)

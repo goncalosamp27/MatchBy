@@ -17,18 +17,25 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
         builder.Property(c => c.Type)
             .IsRequired();
         
-        builder.OwnsOne(u => u.Image);
+        builder.OwnsOne(c => c.Image);
 
         builder.Property(c => c.Title)
             .HasMaxLength(200);
 
         builder.Property(c => c.CreatorId)
+            .HasMaxLength(500)
             .IsRequired();
+
+        builder.Property(c => c.TeamId)
+            .HasMaxLength(500);
+
+        builder.Property(c => c.MatchId)
+            .HasMaxLength(500);
 
         builder.HasOne(c => c.Creator)
             .WithMany()
             .HasForeignKey(c => c.CreatorId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(c => c.Participants)
             .WithMany()
@@ -37,7 +44,7 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
         builder.HasMany(c => c.Messages)
             .WithOne(m => m.Conversation)
             .HasForeignKey(m => m.ConversationId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(c => c.Team)
             .WithOne(m => m.Conversation)
@@ -55,9 +62,5 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
         builder.Property(c => c.UpdatedAtUtc);
 
         builder.Property(c => c.LastMessageAtUtc);
-
-        builder.Property(c => c.DeletedAtUtc);
-
-        builder.HasQueryFilter(c => c.DeletedAtUtc == null);
     }
 }

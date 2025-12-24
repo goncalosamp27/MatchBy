@@ -50,8 +50,7 @@ public class MatchMappingsTests
             ConversationId = "conv_999",
             Participants = new List<ApplicationUser> { creator, participant1 },
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = updatedAt,
-            DeletedAtUtc = null
+            UpdatedAtUtc = updatedAt
         };
 
         // Act
@@ -103,8 +102,7 @@ public class MatchMappingsTests
             ConversationId = null,
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         // Act
@@ -164,7 +162,6 @@ public class MatchMappingsTests
         Assert.Empty(entity.Participants);
         Assert.NotEqual(DateTime.MinValue, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -280,8 +277,7 @@ public class MatchMappingsTests
             CreatorId = "creator_123",
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateMatchDto
@@ -338,8 +334,7 @@ public class MatchMappingsTests
             CreatorId = "creator_123",
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateMatchDto
@@ -387,8 +382,7 @@ public class MatchMappingsTests
             CreatorId = "creator_123",
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow.AddDays(-5),
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateMatchDto
@@ -436,8 +430,7 @@ public class MatchMappingsTests
             CreatorId = "creator_123",
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateMatchDto

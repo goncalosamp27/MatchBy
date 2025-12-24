@@ -5,6 +5,7 @@ using MatchBy.DTOs.Team;
 using MatchBy.DTOs.TeamInvite;
 using MatchBy.DTOs.User;
 using MatchBy.Models;
+using MatchBy.Services.S3;
 using MatchBy.Services.TeamInvites;
 using MatchBy.Services.Teams;
 using MatchBy.Services.Users;
@@ -161,7 +162,7 @@ public sealed class EditTeamViewModel(
 
     public IReadOnlyCollection<string> SelectedMemberIds => _selectedMemberIds;
 
-    public PaginationResponse<List<ApplicationUser>> AvailableUsers
+    public PaginationResponse<List<UserDto>> AvailableUsers
     {
         get;
         private set
@@ -169,9 +170,15 @@ public sealed class EditTeamViewModel(
             field = value;
             OnPropertyChanged(nameof(AvailableUsers));
         }
-    } = new();
+    } = new()
+    {
+        Page = 0,
+        TotalCount = 0,
+        PageSize = 0,
+        Data = []
+    };
 
-    public PaginationResponse<List<ApplicationUser>> AvailableInviteUsers
+    public PaginationResponse<List<UserDto>> AvailableInviteUsers
     {
         get;
         private set
@@ -179,7 +186,13 @@ public sealed class EditTeamViewModel(
             field = value;
             OnPropertyChanged(nameof(AvailableInviteUsers));
         }
-    } = new();
+    } = new()
+    {
+        Page = 0,
+        TotalCount = 0,
+        PageSize = 0,
+        Data = []
+    };
 
     public List<UserDto> CurrentTeamMembers
     {
@@ -411,10 +424,10 @@ public sealed class EditTeamViewModel(
         IsLoadingMembers = true;
         try
         {
-            Result<PaginationResponse<List<ApplicationUser>>> response = await usersService.GetUsers(_memberSearch, _currentMemberPage, 10, ct);
+            Result<PaginationResponse<List<UserDto>>> response = await usersService.GetUsers(_memberSearch, _currentMemberPage, 10, ct);
             if (response.Success)
             {
-                PaginationResponse<List<ApplicationUser>>? users = response.Data!;
+                PaginationResponse<List<UserDto>>? users = response.Data!;
                 if (_userId != null)
                 {
                     users.Data = users.Data.Where(u => u.Id != _userId).ToList();
@@ -458,10 +471,10 @@ public sealed class EditTeamViewModel(
         IsLoadingInviteUsers = true;
         try
         {
-            Result<PaginationResponse<List<ApplicationUser>>> response = await usersService.GetUsers(_inviteSearch, _currentInvitePage, 10, ct);
+            Result<PaginationResponse<List<UserDto>>> response = await usersService.GetUsers(_inviteSearch, _currentInvitePage, 10, ct);
             if (response.Success)
             {
-                PaginationResponse<List<ApplicationUser>>? users = response.Data!;
+                PaginationResponse<List<UserDto>>? users = response.Data!;
                 if (_userId != null)
                 {
                     users.Data = users.Data.Where(u => u.Id != _userId).ToList();

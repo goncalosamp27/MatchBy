@@ -237,28 +237,32 @@ else
                                                 }
                                                 else
                                                 {
-                                                    foreach (var user in viewModel.AvailableUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                                    if (viewModel.AvailableUsers.Data != null)
                                                     {
-                                                        var isSelected = viewModel.SelectedMemberIds.Contains(user.Id);
-                                                        var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
-                                                        <div
-                                                            class="flex items-center gap-3 py-2 px-3 rounded-xl transition-all text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer"
-                                                            @onclick="@(() => viewModel.ToggleMember(user.Id))">
-                                                            <img src="@photoUrl"
-                                                                 alt="@user.UserName"
-                                                                 class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]/60"/>
-                                                            <span
-                                                                class="fw-500 truncate flex-1">@user.DisplayName</span>
-                                                            @if (isSelected)
-                                                            {
-                                                                <svg class="w-5 h-5 flex-shrink-0" fill="currentColor"
-                                                                     viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd"
-                                                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                                          clip-rule="evenodd"/>
-                                                                </svg>
-                                                            }
-                                                        </div>
+                                                        foreach (var user in viewModel.AvailableUsers.Data)
+                                                        {
+                                                            var isSelected = viewModel.SelectedMemberIds.Contains(user.Id);
+                                                            <div
+                                                                class="flex items-center gap-3 py-2 px-3 rounded-xl transition-all text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] cursor-pointer"
+                                                                @onclick="@(() => viewModel.ToggleMember(user.Id))">
+                                                                <img src="@user.AvatarUrl"
+                                                                     alt="@user.DisplayName"
+                                                                     class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]/60"/>
+                                                                <span
+                                                                    class="fw-500 truncate flex-1">
+                                                                    @user.DisplayName
+                                                                </span>
+                                                                @if (isSelected)
+                                                                {
+                                                                    <svg class="w-5 h-5 flex-shrink-0" fill="currentColor"
+                                                                         viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd"
+                                                                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                              clip-rule="evenodd"/>
+                                                                    </svg>
+                                                                }
+                                                            </div>
+                                                        }
                                                     }
                                                 }
                                             </div>
@@ -285,7 +289,7 @@ else
                                                             var member = viewModel.AvailableUsers.Data?.FirstOrDefault(u => u.Id == memberId);
                                                             var currentMember = viewModel.CurrentTeamMembers.FirstOrDefault(m => m.Id == memberId);
                                                             var displayName = member?.DisplayName ?? currentMember?.DisplayName ?? "Unknown";
-                                                            var photoUrl = member?.ProfileImage?.Url ?? currentMember?.AvatarUrl ?? "/images/user-avatar.png";
+                                                            var photoUrl = member?.AvatarUrl ?? currentMember?.AvatarUrl ?? "/images/user-avatar.svg";
 
                                                             <div
                                                                 class="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--main)] text-[var(--text-contrast)]">
@@ -424,9 +428,8 @@ else
                                         }
                                         else
                                         {
-                                            foreach (var user in viewModel.AvailableInviteUsers.Data ?? Enumerable.Empty<ApplicationUser>())
+                                            foreach (var user in viewModel.AvailableInviteUsers.Data)
                                             {
-                                                var photoUrl = user.ProfileImage?.Url ?? "/images/user-avatar.png";
                                                 var isAlreadyMember = viewModel.SelectedMemberIds.Contains(user.Id);
                                                 var isAlreadyInvited = viewModel.PendingInvites?.Any(i => i.ReceiverId == user.Id) ?? false;
 
@@ -434,8 +437,8 @@ else
                                                     class="flex items-center justify-between gap-3 py-2 px-3 rounded-lg transition-all hover:opacity-80 @(isAlreadyMember || isAlreadyInvited ? "opacity-50" : "")"
                                                     style="color: var(--text);">
                                                     <div class="flex items-center gap-3 flex-1">
-                                                        <img src="@photoUrl"
-                                                             alt="@user.UserName"
+                                                        <img src="@user.AvatarUrl"
+                                                             alt="@user.DisplayName"
                                                              class="rounded-full w-10 h-10 object-cover flex-shrink-0 border border-[var(--main)]"/>
                                                         <span class="fw-500 truncate">@user.DisplayName</span>
                                                     </div>

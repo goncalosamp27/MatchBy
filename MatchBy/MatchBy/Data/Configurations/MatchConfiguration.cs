@@ -14,7 +14,7 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
             .IsRequired()
             .HasMaxLength(500);
 
-        builder.OwnsOne(u => u.Location);
+        builder.OwnsOne(m => m.Location);
 
         builder.Property(m => m.Description)
             .HasMaxLength(500)
@@ -45,14 +45,12 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
         builder.HasOne(m => m.Creator)
             .WithMany()
             .HasForeignKey(m => m.CreatorId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(m => m.CreatedAtUtc)
             .IsRequired();
 
         builder.Property(i => i.UpdatedAtUtc);
-        builder.Property(i => i.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
 
         builder.HasMany(m => m.Participants)
             .WithMany(u => u.JoinedMatches)

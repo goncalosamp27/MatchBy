@@ -9,7 +9,6 @@ public static class ApplicationUserExtensions
     {
         user.DisplayName = displayName;
         user.Rating = 0;
-        user.Status = AccountStatus.Available;
         user.CreatedAtUtc = DateTime.UtcNow;
         return user;
     }

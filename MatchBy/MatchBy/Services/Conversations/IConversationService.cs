@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using MatchBy.Data;
 using MatchBy.DTOs.Chat.Conversations;
 using MatchBy.Models;
 using Microsoft.AspNetCore.Components.Forms;
@@ -7,10 +8,11 @@ namespace MatchBy.Services.Conversations;
 
 public interface IConversationService
 {
+    Task<Result<string>> PrivateConversationExists(List<string> participantIds, CancellationToken ct = default);
     Task<Result<CursorPaginationResponse<List<ConversationDto>>>> GetConversationsAsync(string creatorUserId,
         int pageSize,
         string? cursor, string? query, CancellationToken ct = default);
-
+    
     Task<Result<ConversationDto>> GetConversationByIdAsync(string conversationId, string creatorUserId,
         CancellationToken ct = default);
 

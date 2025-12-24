@@ -31,7 +31,6 @@ public class MatchMappingsTests
         Assert.Equal(match.ConversationId, dto.ConversationId);
         Assert.Equal(match.CreatedAtUtc, dto.CreatedAtUtc);
         Assert.Equal(match.UpdatedAtUtc, dto.UpdatedAtUtc);
-        Assert.Equal(match.DeletedAtUtc, dto.DeletedAtUtc);
         Assert.NotNull(dto.Participants);
     }
 
@@ -124,7 +123,6 @@ public class MatchMappingsTests
         Assert.Empty(entity.Participants);
         Assert.NotEqual(default, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -320,8 +318,7 @@ public class MatchMappingsTests
             ConversationId = null,
             Participants = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
     }
 

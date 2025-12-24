@@ -1,5 +1,4 @@
-﻿using MatchBy.Enums;
-using MatchBy.Models;
+﻿using MatchBy.Models;
 
 namespace MatchBy.Data.Seeders;
 
@@ -20,7 +19,7 @@ public class ChatMessageSeeder : ISeeder
             return Task.CompletedTask;
         }
 
-        var messages = new List<ChatMessage>()
+        var messages = new List<ChatMessage>
         {
             new()
             {
@@ -52,7 +51,7 @@ public class ChatMessageSeeder : ISeeder
                 SenderId = users[1].Id,
                 ConversationId = conversations[0].Id,
                 CreatedAtUtc = DateTime.UtcNow,
-                InviteUrl = "https://github.com/MESW-LES-2025/MatchBy"
+                InviteUrl = $"/matches/{match.Id}"
             },
             new()
             {
@@ -60,7 +59,7 @@ public class ChatMessageSeeder : ISeeder
                 SenderId = users[1].Id,
                 ConversationId = conversations[1].Id,
                 CreatedAtUtc = DateTime.UtcNow,
-                InviteUrl = "https://github.com/MESW-LES-2025/MatchBy"
+                InviteUrl = $"/matches/{match.Id}"
             },
             new()
             {

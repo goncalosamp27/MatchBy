@@ -25,7 +25,6 @@ public static class TeamMappings
             ImageUrl = team.Image?.Url,
             CreatedAtUtc = team.CreatedAtUtc,
             UpdatedAtUtc = team.UpdatedAtUtc,
-            DeletedAtUtc = team.DeletedAtUtc
         };
     }
 
@@ -42,7 +41,6 @@ public static class TeamMappings
             Members = [],
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
     }
 

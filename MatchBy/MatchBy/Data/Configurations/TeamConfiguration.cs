@@ -25,12 +25,15 @@ public class TeamConfiguration: IEntityTypeConfiguration<Team>
             .HasMaxLength(500)
             .IsRequired();
         
-        builder.OwnsOne(u => u.Image);
+        builder.Property(t => t.ConversationId)
+            .HasMaxLength(500);
+        
+        builder.OwnsOne(t => t.Image);
         
         builder.HasOne(t => t.Owner)
             .WithMany()
             .HasForeignKey(t => t.OwnerId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         builder.HasMany(t => t.Members)
             .WithMany()
@@ -40,7 +43,5 @@ public class TeamConfiguration: IEntityTypeConfiguration<Team>
             .IsRequired();
 
         builder.Property(t => t.UpdatedAtUtc);
-        builder.Property(t => t.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

@@ -23,7 +23,6 @@ public sealed class Match
     public ICollection<ApplicationUser> Participants { get; set; } = new List<ApplicationUser>();
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
-    public DateTime? DeletedAtUtc { get; set; } 
     public bool Reminder3DaysSent { get; set; }
     public bool Reminder30MinSent { get; set; }
 }

@@ -9,6 +9,7 @@
 @inject IMatchesService MatchesService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @implements IDisposable
+@inject NavigationManager NavigationManager
 
 @if (_viewModel is null)
 {
@@ -68,19 +69,19 @@ else
             <div class="flex gap-4 mb-8">
                 <button
                     class="@(_viewModel.ActiveTab == "my" ? "bg-[var(--section-secondary)] border-2 border-[var(--main)]" : "bg-[var(--section)] border-2 border-transparent") px-8 py-3 rounded-lg font-medium text-[var(--text)] hover:bg-[var(--section-secondary)] transition-all"
-                    @onclick='() => _viewModel.ActiveTab = "my"'>
+                    @onclick='() => UpdateUrl("my")'>
                     My Matches
                 </button>
                 <button
                     class="@(_viewModel.ActiveTab == "search" ? "bg-[var(--section-secondary)] border-2 border-[var(--main)]" : "bg-[var(--section)] border-2 border-transparent") px-8 py-3 rounded-lg font-medium text-[var(--text)] hover:bg-[var(--section-secondary)] transition-all"
-                    @onclick='() => _viewModel.ActiveTab = "search"'>
+                    @onclick='() => UpdateUrl("search")'>
                     Search Matches
                 </button>
             </div>
 
             @if (_viewModel.ActiveTab == "my")
             {
-                @if (viewModel.IsAuthenticated)
+                if (viewModel.IsAuthenticated)
                 {
                     <!-- Matches I Created -->
                     <div class="mb-12">
@@ -115,7 +116,7 @@ else
                                     }
                                 }
                             </div>
-                            @if (viewModel.YourCreatedMatchesPagination != null && viewModel.YourCreatedMatches?.Count > 0)
+                            @if (viewModel is { YourCreatedMatchesPagination: not null, YourCreatedMatches.Count: > 0 })
                             {
                                 <div class="flex justify-center mt-8">
                                     <OffsetPagination CurrentPage="@viewModel.CurrentPageCreatedMatches"
@@ -135,7 +136,7 @@ else
                             <div
                                 class="rounded-xl border border-[var(--main)] p-16 text-center bg-[var(--section-secondary)]">
                                 <p class="mb-6 text-[var(--text)] opacity-70">You're not attending any matches yet</p>
-                                <button @onclick="@(() => _viewModel.ActiveTab = "search")"
+                                <button @onclick='() => UpdateUrl("search")'
                                    class="px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2 transition-colors bg-[var(--main)] text-[var(--text-contrast)] hover:bg-[var(--main-hover)] hover:text-[var(--text)]">
                                     <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                          width="24"
@@ -198,6 +199,7 @@ else
 }
 
 @code {
+    [Parameter, SupplyParameterFromQuery(Name = "tab")] public string? Tab { get; set; }
     private MatchesViewModel? _viewModel;
     private PropertyChangedEventHandler? _propertyChangedHandler;
 
@@ -221,6 +223,14 @@ else
         }
     }
 
+    protected override void OnParametersSet() 
+    {
+        if (_viewModel != null && Tab is not null)
+        {
+            _viewModel.ActiveTab = Tab;
+        }
+    }
+
     private async Task OnPageChangedCreatedMatches(int page)
     {
         if (_viewModel is null)
@@ -239,6 +249,17 @@ else
         }
 
         await _viewModel.OnPageChangedAsync(page, MatchesPageType.AttendingMatches);
+    }
+    
+    void UpdateUrl(string tab)
+    {
+        var uri = NavigationManager.GetUriWithQueryParameters(
+            new Dictionary<string, object?>
+            {
+                ["tab"] = string.IsNullOrWhiteSpace(tab) ? null : tab
+            });
+
+        NavigationManager.NavigateTo(uri, replace: true);
     }
 
     public void Dispose()

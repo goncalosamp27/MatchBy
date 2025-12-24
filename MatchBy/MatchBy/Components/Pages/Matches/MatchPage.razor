@@ -16,7 +16,7 @@
 @inject IPlayerRatingService PlayerRatingService
 @using System.Globalization;
 
-@if (_match == null)
+@if (_match is null)
 {
     <div class="flex items-center justify-center min-h-screen">
         <Loading></Loading>
@@ -34,7 +34,7 @@ else
                     </h1>
                     <div class="flex items-center gap-3">
                         <span class="text-base sm:text-lg text-[var(--text)]">Created by</span>
-                        <a class="inline-flex items-center gap-3 mt-2 group cursor-pointer" 
+                        <a class="inline-flex items-center gap-3 mt-2 group cursor-pointer"
                            href="@((_match.CreatorId == _userId) ? "/profile" : $"/profile/{_match.CreatorId}")"
                            target="_blank" rel="noopener noreferrer">
                             <div
@@ -95,22 +95,25 @@ else
                             <Button Type="ButtonType.Button"
                                     Clicked="OpenInGoogleMaps"
                                     class="inline-flex items-center justify-center px-3 py-2 rounded-md border border-[var(--main)] text-sm font-medium hover:bg-[var(--main)] hover:text-[var(--text-contrast)] transition">
-                                <svg class="w-5 h-5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                          d="M12 2C8.13 2 5 5.13 5 9c0 4.5 5.4 10.3 6.2 11.1.2.2.4.3.8.3s.6-.1.8-.3C13.6 19.3 19 13.5 19 9c0-3.87-3.13-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" />
+                                <svg class="w-5 h-5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          d="M12 2C8.13 2 5 5.13 5 9c0 4.5 5.4 10.3 6.2 11.1.2.2.4.3.8.3s.6-.1.8-.3C13.6 19.3 19 13.5 19 9c0-3.87-3.13-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/>
                                 </svg>
                                 Maps
                             </Button>
                             <Button Type="ButtonType.Button" Clicked="@(() => CopyToClipboard(_match.Address))"
                                     class="inline-flex items-center justify-center px-4 py-2 rounded-lg border-2 border-[var(--main)] text-sm font-medium text-[var(--text)] hover:bg-[var(--main)] hover:text-[var(--text-contrast)] transition-all flex-shrink-0">
-                                <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24"
                                      stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                 </svg>
                                 Copy
                             </Button>
-                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -133,70 +136,121 @@ else
                 <!-- Action Buttons Card -->
                 <div
                     class="bg-[var(--section-secondary)] rounded-xl border-2 border-[var(--main)] p-4 sm:p-6 shadow-lg">
-                    @if (_match.Participants != null)
+                    @switch (_match.Status)
                     {
-                        if (_match.Status == MatchStatus.Cancelled)
-                        {
+                        case MatchStatus.Cancelled:
                             <Button
                                 Class="!py-4 !w-full !justify-center !border-4 !line-through text-[var(--text)] !border-[var(--section-secondary)] !bg-[var(--section)]"
                                 Disabled="@true">
                                 <span class="text-lg font-semibold">Match Cancelled</span>
                             </Button>
-                        }
-                        else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers && _userId is null)
+                            break;
+                        default:
                         {
-                            <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)]  !text-lg !font-semibold !rounded-lg"
-                                Clicked="GoToLogin">
-                                Login to Join Match!
-                            </Button>
-                        }
-                        else if (_match.CreatorId == _userId)
-                        {
-                            <div class="space-y-3">
-                                <Button
-                                    Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-lg !text-[var(--text-contrast)]  !font-semibold !rounded-lg"
-                                    Clicked="@(() => LeaveMatch(_match.Id))">
-                                    Cancel Match
-                                </Button>
-                                @if (_match.Status == MatchStatus.Pendent)
-                                {
+                            var participantCount = _match.Participants?.Count ?? 0;
+                            var hasSpots = participantCount < _match.MaxPlayers;
+                            var isLoggedIn = _userId is not null;
+                            var isOwner = isLoggedIn && _match.CreatorId == _userId;
+                            var isParticipant = isLoggedIn && (_match.Participants?.Any(p => p.Id == _userId) ?? false);
+
+                            if (isOwner)
+                            {
+                                <div class="space-y-3">
                                     <Button
                                         Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
-                                        Clicked="@(() => EditMatch(_match.Id))">
-                                        Edit Match
-                                    </Button>   
+                                        Clicked="GoToConversation">
+                                        Go to Conversation
+                                    </Button>
+                                    @if (_match.Status == MatchStatus.Pendent || _match.Status == MatchStatus.Completed)
+                                    {
+                                        <Button
+                                            Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-lg !text-[var(--text-contrast)]  !font-semibold !rounded-lg"
+                                            Clicked="@(() => LeaveMatch(_match.Id))">
+                                            Cancel Match
+                                        </Button>
+                                    }
+                                    @if (_match.Status == MatchStatus.Pendent)
+                                    {
+                                        <Button
+                                            Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
+                                            Clicked="@(() => EditMatch(_match.Id))">
+                                            Edit Match
+                                        </Button>
+                                        <Button
+                                            Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
+                                            Clicked="@(() => ConfirmMatch(_match.Id))">
+                                            Confirm Match
+                                        </Button>
+                                    }
+                                </div>
+                            }
+                            else if (_match.Status is MatchStatus.Confirmed)
+                            {
+                                <div class="space-y-3">
+                                    <Button
+                                        Class="!py-4 !w-full !justify-center !border-4 text-[var(--text)] !border-[var(--section-secondary)] !bg-[var(--section)]"
+                                        Disabled="@true">
+                                        <span class="text-lg font-semibold">Match is Confirmed</span>
+                                    </Button>
+                                </div>
+                            }
+                            else if (_match.Status is MatchStatus.Completed)
+                            {
+                                <div class="space-y-3">
+                                    <Button
+                                        Class="!py-4 !w-full !justify-center !border-4 text-[var(--text)] !border-[var(--section-secondary)] !bg-[var(--section)]"
+                                        Disabled="@true">
+                                        <span class="text-lg font-semibold">Match is Completed</span>
+                                    </Button>
+                                </div>
+                            }
+                            else if (!isLoggedIn)
+                            {
+                                <div class="space-y-3">
+                                    <Button
+                                        Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)]  !text-lg !font-semibold !rounded-lg"
+                                        Clicked="GoToLogin">
+                                        Login to Join Match!
+                                    </Button>
+                                </div>
+                            }
+                            else if (isParticipant)
+                            {
+                                <div class="space-y-3">
                                     <Button
                                         Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
-                                        Clicked="@(() => ConfirmMatch(_match.Id))">
-                                        Confirm Match
-                                    </Button>   
-                                }
-                            </div>
-                        }
-                        else if (_match.Participants.All(p => p.Id != _userId) && _match.Participants.Count < _match.MaxPlayers)
-                        {
-                            <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)]  !text-lg !font-semibold !rounded-lg"
-                                Clicked="@(() => JoinMatch(_match.Id))">
-                                Join Match!
-                            </Button>
-                        }
-                        else if (_match.Participants.Any(p => p.Id == _userId))
-                        {
-                            <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
-                                Clicked="@(() => LeaveMatch(_match.Id))">
-                                Leave Match
-                            </Button>
-                        }
-                        else
-                        {
-                            <Button
-                                Class="!py-4 !w-full !justify-center !bg-[var(--section)] !text-[var(--text-contrast)] !border-2 !border-[var(--text)]"
-                                Disabled="@true">
-                                <span class="text-lg font-semibold">Match Full</span>
-                            </Button>
+                                        Clicked="GoToConversation">
+                                        Go to Conversation
+                                    </Button>
+                                    <Button
+                                        Class="!py-4 !w-full !justify-center !bg-[var(--error)] hover:!bg-[var(--reset)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
+                                        Clicked="@(() => LeaveMatch(_match.Id))">
+                                        Leave Match
+                                    </Button>
+                                </div>
+                            }
+                            else if (hasSpots)
+                            {
+                                <div class="space-y-3">
+                                    <Button
+                                        Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)]  !text-lg !font-semibold !rounded-lg"
+                                        Clicked="@(() => JoinMatch(_match.Id))">
+                                        Join Match!
+                                    </Button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="space-y-3">
+                                    <Button
+                                        Class="!py-4 !w-full !justify-center !bg-[var(--section)] !text-[var(--text-contrast)] !border-2 !border-[var(--text)]"
+                                        Disabled="@true">
+                                        <span class="text-lg font-semibold">Match Full</span>
+                                    </Button>
+                                </div>
+                            }
+
+                            break;
                         }
                     }
                 </div>
@@ -284,7 +338,7 @@ else
                                         <span class="text-sm text-[var(--text)] opacity-75">Minimum Rating</span>
                                     </div>
                                     <span class="text-lg font-bold text-[var(--text)]">
-                                        @switch(_match.MinimumPlayersRating)
+                                        @switch (_match.MinimumPlayersRating)
                                         {
                                             case > 0:
                                                 @(((int)_match.MinimumPlayersRating).ToString())
@@ -342,18 +396,21 @@ else
                     {
                         @foreach (var p in _match.Participants)
                         {
-                            <a href="@(p.Id == _userId ? "/profile" : $"/profile/{p.Id}")" target="_blank" rel="noopener noreferrer"
+                            <a href="@(p.Id == _userId ? "/profile" : $"/profile/{p.Id}")" target="_blank"
+                               rel="noopener noreferrer"
                                class="flex items-center justify-between gap-3 bg-[var(--section-secondary)] p-3 rounded-lg border border-[var(--text)] group hover:border-[var(--main)]">
                                 <div class="flex items-center gap-3 cursor-pointer">
                                     <div
                                         class="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-[var(--text)] bg-[var(--section)] flex items-center justify-center group-hover:border-[var(--main)] transition-colors flex-shrink-0">
                                         @if (!string.IsNullOrEmpty(p.AvatarUrl))
                                         {
-                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover"/>
+                                            <img src="@p.AvatarUrl" class="w-full h-full object-cover"
+                                                 alt="@($"{p.DisplayName}'s profile picture")"/>
                                         }
                                         else
                                         {
-                                            <img src="images/user-avatar.png" class="w-full h-full object-cover"/>
+                                            <img src="images/user-avatar.png" class="w-full h-full object-cover"
+                                                 alt="@($"{p.DisplayName}'s profile picture")"/>
                                         }
                                     </div>
 
@@ -385,8 +442,6 @@ else
                                 }
                             </a>
                         }
-
-
                     }
                     else
                     {
@@ -405,6 +460,7 @@ else
             </div>
         </div>
     }
+
     @if (_showRatingModal && _selectedParticipant != null)
     {
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 flex items-center justify-center p-4">
@@ -471,8 +527,6 @@ else
             </div>
         </div>
     }
-
-
 }
 
 <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
@@ -509,11 +563,13 @@ else
             await ToastService.Error("You must be logged in to submit a rating.");
             return;
         }
+
         if (_selectedParticipant is null || _selectedRating == 0)
         {
             await ToastService.Error("Please select a participant and rating before submitting.");
             return;
         }
+
         CreatePlayerRatingDto request = new()
         {
             SentById = _userId,
@@ -522,13 +578,14 @@ else
             Rating = _selectedRating,
             Comment = string.IsNullOrWhiteSpace(_ratingComment) ? null : _ratingComment
         };
-        Result<PlayerRatingDto> result = await PlayerRatingService.CreatePlayerRatingAsync(request);
+        var result = await PlayerRatingService.CreateRatingAsync(request);
 
         if (!result.Success)
         {
             await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error submitting rating.");
             return;
         }
+
         await ToastService.Success("Rating submitted successfully!", "Submit Rating");
         CloseRatingModal();
     }
@@ -547,6 +604,25 @@ else
         NavigationManager.NavigateTo($"/Account/Login?returnUrl={returnUrl}", forceLoad: true);
     }
 
+    private void GoToConversation()
+    {
+        if (_match is null)
+            return;
+
+        var target = string.IsNullOrWhiteSpace(_match.ConversationId)
+            ? "/chat"
+            : $"/chat/{_match.ConversationId}";
+
+        if (_userId is null)
+        {
+            var returnUrl = Uri.EscapeDataString(target);
+            NavigationManager.NavigateTo($"/Account/Login?returnUrl={returnUrl}", forceLoad: true);
+            return;
+        }
+
+        NavigationManager.NavigateTo(target);
+    }
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -557,10 +633,13 @@ else
         var result = await MatchesService.GetMatchById(MatchId, _userId, CancellationToken.None);
         if (!result.Success)
         {
-            await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error fetching match.");
+            await ToastService.Error(result.ErrorMessages[0]);
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/matches");
             return;
         }
-        _match = result.Data!;
+
+        _match = result.Data;
 
         _shouldInitMap = true;
         StateHasChanged();
@@ -595,6 +674,7 @@ else
                 await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error joining match.");
                 return;
             }
+
             await ToastService.Success("Successfully joined the match!", "Join Match");
             _match = result.Data!;
         }
@@ -612,6 +692,7 @@ else
                 {
                     NavigationManager.NavigateTo("/matches");
                 }
+
                 return;
             }
 
@@ -619,6 +700,7 @@ else
             NavigationManager.NavigateTo("/matches");
         }
     }
+
     private async Task ConfirmMatch(string matchId)
     {
         if (_userId is not null)
@@ -629,7 +711,7 @@ else
                 await ToastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error confirming match.");
                 return;
             }
-            
+
             await ToastService.Success("Successfully confirmed the match!", "Confirm Match");
             _match = result.Data!;
             StateHasChanged();
@@ -643,27 +725,12 @@ else
         if (_match == null)
             return;
 
-        string url;
-
-        if (_match.Location != null)
-        {
-            // Usa latitude/longitude se existirem
-            var lat = _match.Location.Latitude.ToString(CultureInfo.InvariantCulture);
-            var lng = _match.Location.Longitude.ToString(CultureInfo.InvariantCulture);
-            url = $"https://www.google.com/maps/search/?api=1&query={lat},{lng}";
-        }
-        else if (!string.IsNullOrWhiteSpace(_match.Address))
-        {
-            // Fallback: usar o endereço em texto
-            var encodedAddress = Uri.EscapeDataString(_match.Address);
-            url = $"https://www.google.com/maps/search/?api=1&query={encodedAddress}";
-        }
-        else
-        {
-            await ToastService.Error("Location not available.");
-            return;
-        }
+        // Usa latitude/longitude se existirem
+        var lat = _match.Location.Latitude.ToString(CultureInfo.InvariantCulture);
+        var lng = _match.Location.Longitude.ToString(CultureInfo.InvariantCulture);
+        var url = $"https://www.google.com/maps/search/?api=1&query={lat},{lng}";
 
         await Js.InvokeVoidAsync("open", url, "_blank");
     }
+
 }

@@ -264,11 +264,11 @@ else
                         }
                         else if (team.Members.Any(m => m.Id == viewModel.UserId) && team.OwnerId != viewModel.UserId)
                         {
-                            <a href="/chat/@team.ConversationId"
-                               class="block w-full py-3 mb-3 rounded-lg bg-[var(--main)] hover:opacity-90 text-[var(--text-contrast)] font-medium text-center transition">
-                                Go To Conversation
-                            </a>
-
+                            <Button
+                                Class="!py-4 !w-full mb-3 !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg"
+                                Clicked="GoToConversation">
+                                Go to Conversation
+                            </Button>
                             <Button Color="Color.Danger"
                                     Clicked="@LeaveTeam"
                                     Loading="@viewModel.IsLeavingTeam"
@@ -279,11 +279,11 @@ else
                         }
                         else
                         {
-                            <a href="/chat/@team.ConversationId"
-                               class="block w-full py-3 mb-3 rounded-lg bg-[var(--main)] hover:opacity-90 text-[var(--text-contrast)] font-medium text-center transition">
-                                Go To Conversation
-                            </a>
-
+                            <Button
+                                Class="!py-4 !w-full !justify-center !bg-[var(--main)] hover:!bg-[var(--main-hover)] !text-[var(--text-contrast)] !text-lg !font-semibold !rounded-lg mb-3"
+                                Clicked="GoToConversation">
+                                Go to Conversation
+                            </Button>
                             <Button Color="Color.Danger"
                                     Clicked="@LeaveTeam"
                                     Loading="@viewModel.IsLeavingTeam"
@@ -337,8 +337,7 @@ else
 @code {
     [Parameter] public string TeamId { get; set; } = string.Empty;
 
-    [PersistentState]
-    public TeamPageViewModel? ViewModel { get; set; }
+    private TeamPageViewModel? ViewModel { get; set; }
     private PropertyChangedEventHandler? _propertyChangedHandler;
 
     protected override async Task OnInitializedAsync()
@@ -353,11 +352,8 @@ else
             return;
         }
 
-        if (ViewModel is null)
-        {
-            ViewModel = new TeamPageViewModel(TeamService, TeamInvitesService, ToastService);
-            await ViewModel.InitializeAsync(TeamId, userId);
-        }
+        ViewModel = new TeamPageViewModel(TeamService, TeamInvitesService, ToastService);
+        await ViewModel.InitializeAsync(TeamId, userId);
         
         _propertyChangedHandler = async (_, _) => await InvokeAsync(StateHasChanged);
         ViewModel.PropertyChanged += _propertyChangedHandler;
@@ -382,6 +378,25 @@ else
         }
 
         await ViewModel.JoinTeamAsync();
+    }
+    
+    private void GoToConversation()
+    {
+        if (ViewModel is null || ViewModel.Team is null)
+            return;
+
+        var target = string.IsNullOrWhiteSpace(ViewModel.Team.ConversationId)
+            ? "/chat"
+            : $"/chat/{ViewModel.Team.ConversationId}";
+
+        if (ViewModel.UserId is null)
+        {
+            var returnUrl = Uri.EscapeDataString(target);
+            NavigationManager.NavigateTo($"/Account/Login?returnUrl={returnUrl}", forceLoad: true);
+            return;
+        }
+
+        NavigationManager.NavigateTo(target);
     }
 
     private async Task LeaveTeam()

@@ -15,13 +15,11 @@ public abstract class Invite
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public DateTime? AcceptedAtUtc { get; set; } 
-    public DateTime? DeletedAtUtc { get; set; }
 }
 
 public enum InviteStatus
 {
     Pending = 0,
     Accepted = 1,
-    Expired = 3,
-    Deleted = 4
+    Expired = 3
 }

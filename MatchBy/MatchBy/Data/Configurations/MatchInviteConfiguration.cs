@@ -25,7 +25,7 @@ public class MatchInviteConfiguration: IEntityTypeConfiguration<MatchInvite>
         builder.HasOne(i => i.Sender)
             .WithMany()
             .HasForeignKey(i => i.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(i => i.ReceiverId)
             .IsRequired()
@@ -34,7 +34,7 @@ public class MatchInviteConfiguration: IEntityTypeConfiguration<MatchInvite>
         builder.HasOne(i => i.Receiver)
             .WithMany()
             .HasForeignKey(i => i.ReceiverId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Property(i => i.MatchId)
             .IsRequired()
@@ -57,7 +57,5 @@ public class MatchInviteConfiguration: IEntityTypeConfiguration<MatchInvite>
 
         builder.Property(i => i.UpdatedAtUtc);
         builder.Property(i => i.AcceptedAtUtc);
-        builder.Property(i => i.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

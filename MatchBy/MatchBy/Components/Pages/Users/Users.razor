@@ -1,10 +1,14 @@
 @page "/users"
 @inject IUsersService UsersService
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 @rendermode @(new InteractiveServerRenderMode(false))
+@inject AuthenticationStateProvider AuthStateProvider
 @attribute [StreamRendering]
 @using Blazorise
+@using MatchBy.DTOs.User
 @using MatchBy.Services.Users
+@using Microsoft.AspNetCore.Authorization
 @inject IToastService ToastService
 @implements IDisposable
 
@@ -27,8 +31,7 @@
 
                 <input type="text"
                        @bind="_searchTerm"
-                       @bind:event="oninput"
-                       @onkeyup="HandleSearchDebounced"
+                       @oninput="OnSearchInput"
                        placeholder="Search users by name, username, or location..."
                        class="w-full pl-10 pr-10 py-3 bg-[var(--section-secondary)] text-[var(--text)] rounded-lg border-2 border-[var(--main)] focus:ring-2 focus:ring-[var(--main)] focus:border-transparent"/>
 
@@ -44,11 +47,10 @@
                     </button>
                 }
             </div>
-
-            @if (_users != null)
+            @if (_usersResponse != null)
             {
-                <p class="text-[var(--text)] mt-2 text-sm">
-                    Showing @_users.Count of @_totalUsers @(_totalUsers == 1 ? "user" : "users")
+                <p class="text-[var(--text)] mt-4 text-sm">
+                    Showing @_usersResponse.Data.Count of @_usersResponse.TotalCount @(_usersResponse.TotalCount == 1 ? "user" : "users")
                     @if (!string.IsNullOrWhiteSpace(_searchTerm))
                     {
                         <span> matching "@_searchTerm"</span>
@@ -63,23 +65,23 @@
                 <Loading></Loading>
             </div>
         }
-        else if (_users != null && _users.Any())
+        else if (_usersResponse != null && _usersResponse.Data.Any())
         {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                @foreach (var user in _users)
+                @foreach (var user in _usersResponse.Data)
                 {
                     <UserCard User="@user" OnClick="NavigateToProfile"></UserCard>
                 }
             </div>
 
             <div class="flex justify-center items-center gap-2 mt-8">
-                <OffsetPagination CurrentPage="_currentPage" OnPageChanged="GoToPage" PageSize="PageSize"
-                                  TotalItems="_totalUsers"></OffsetPagination>
+                <OffsetPagination CurrentPage="@_currentPage" OnPageChanged="GoToPage" PageSize="@PageSize"
+                                  TotalItems="@_usersResponse.TotalCount"></OffsetPagination>
             </div>
         }
         else if (!_loading)
         {
-            <UsersEmptyState SearchTerm="_searchTerm"></UsersEmptyState>
+            <UsersEmptyState SearchTerm="@_searchTerm"></UsersEmptyState>
         }
     </div>
 </section>
@@ -87,17 +89,38 @@
 <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 
 @code {
-    private List<ApplicationUser>? _users;
-    private string _searchTerm = string.Empty;
+    private PaginationResponse<List<UserDto>>? _usersResponse;
     private bool _loading = true;
+    private const int PageSize = 8;
+    private string _searchTerm = "";
     private int _currentPage = 1;
-    private int _totalUsers;
-    private const int PageSize = 20;
     private Timer? _debounceTimer;
 
     [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+    [Parameter, SupplyParameterFromQuery(Name = "search")]
+    public string? Search { get; set; }
 
-    protected override async Task OnInitializedAsync() => await LoadUsers();
+    [Parameter, SupplyParameterFromQuery(Name = "page")]
+    public int? Page { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if(user.Identity is not { IsAuthenticated: true })
+        {
+            NavigationManager.NavigateTo("/account/login");
+        }
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        _searchTerm = Search ?? "";
+        _currentPage = Page.GetValueOrDefault(1);
+        if (_currentPage < 1) _currentPage = 1;
+
+        await LoadUsers();
+    }
 
     private async Task LoadUsers()
     {
@@ -112,26 +135,29 @@
                 pageSize: PageSize,
                 CancellationToken.None);
 
-            if (!result.Success || result.Data == null)
+            if (!result.Success)
             {
-                await ToastService.Error(result.ErrorMessages.FirstOrDefault() ?? "Error loading users.");
-                _users = [];
+                await ToastService.Error(result.ErrorMessages.FirstOrDefault());
                 return;
             }
 
-            _users = result.Data.Data;
-            _totalUsers = result.Data.TotalCount;
+            _usersResponse = result.Data;
         }
         catch
         {
             await ToastService.Error("An error occurred while loading users.");
-            _users = [];
         }
         finally
         {
             _loading = false;
             StateHasChanged();
         }
+    }
+    
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        HandleSearchDebounced();
     }
 
     private void HandleSearchDebounced()
@@ -140,7 +166,11 @@
         _debounceTimer = new Timer(async _ =>
         {
             _currentPage = 1;
-            await InvokeAsync(async () => { await LoadUsers(); });
+            await InvokeAsync(async () =>
+            {
+                UpdateUrl(_searchTerm, _currentPage);
+                await LoadUsers();
+            });
         }, null, 500, Timeout.Infinite);
     }
 
@@ -148,6 +178,7 @@
     {
         _searchTerm = string.Empty;
         _currentPage = 1;
+        UpdateUrl(null, 1);
         await LoadUsers();
     }
 
@@ -156,7 +187,20 @@
     private async Task GoToPage(int page)
     {
         _currentPage = page;
+        UpdateUrl(_searchTerm, _currentPage);
         await LoadUsers();
+    }
+    
+    void UpdateUrl(string? search, int? page)
+    {
+        var uri = NavigationManager.GetUriWithQueryParameters(
+            new Dictionary<string, object?>
+            {
+                ["search"] = string.IsNullOrWhiteSpace(search) ? null : search,
+                ["page"] = page <= 1 ? null : page
+            });
+
+        NavigationManager.NavigateTo(uri, replace: true);
     }
 
     public void Dispose() => _debounceTimer?.Dispose();

@@ -52,8 +52,7 @@ public class TeamMappingsTests
                 CreatedAtUtc: createdAt
             ),
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = updatedAt,
-            DeletedAtUtc = null
+            UpdatedAtUtc = updatedAt
         };
 
         // Act
@@ -97,8 +96,7 @@ public class TeamMappingsTests
             Privacy = TeamPrivacy.Private,
             Image = null,
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         // Act
@@ -149,7 +147,6 @@ public class TeamMappingsTests
         Assert.Empty(entity.Members);
         Assert.NotEqual(DateTime.MinValue, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -217,8 +214,7 @@ public class TeamMappingsTests
             Privacy = TeamPrivacy.Private,
             Members = new List<ApplicationUser>(),
             CreatedAtUtc = createdAt,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateTeamDto
@@ -263,8 +259,7 @@ public class TeamMappingsTests
             Privacy = TeamPrivacy.Public,
             Members = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow,
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateTeamDto
@@ -300,8 +295,7 @@ public class TeamMappingsTests
             Privacy = TeamPrivacy.Public,
             Members = new List<ApplicationUser>(),
             CreatedAtUtc = DateTime.UtcNow.AddDays(-5),
-            UpdatedAtUtc = null,
-            DeletedAtUtc = null
+            UpdatedAtUtc = null
         };
 
         var updateDto = new UpdateTeamDto

@@ -22,17 +22,17 @@ public class FriendConfiguration: IEntityTypeConfiguration<Friend>
         builder.HasOne(f => f.Sender)
             .WithMany()
             .HasForeignKey(f => f.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
-        
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Property(f => f.ReceiverId)
             .HasMaxLength(500)
             .IsRequired();
-        
+
         //Friend is associated with one Receiver
         builder.HasOne(f => f.Receiver)
             .WithMany()
             .HasForeignKey(f => f.ReceiverId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         builder.Property(f => f.CreatedAtUtc)
             .IsRequired();
@@ -43,7 +43,5 @@ public class FriendConfiguration: IEntityTypeConfiguration<Friend>
             .IsUnique();
         
         builder.Property(i => i.UpdatedAtUtc);
-        builder.Property(i => i.DeletedAtUtc);
-        builder.HasQueryFilter(m => m.DeletedAtUtc == null);
     }
 }

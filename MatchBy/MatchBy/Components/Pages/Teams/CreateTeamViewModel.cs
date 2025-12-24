@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Blazorise;
 using FluentValidation;
 using MatchBy.DTOs.Team;
+using MatchBy.DTOs.User;
 using MatchBy.Models;
 using MatchBy.Services.Teams;
 using MatchBy.Services.Users;
@@ -94,7 +95,7 @@ public sealed class CreateTeamViewModel(
         }
     }
 
-    public PaginationResponse<List<ApplicationUser>> AvailableUsers
+    public PaginationResponse<List<UserDto>> AvailableUsers
     {
         get;
         set
@@ -102,9 +103,15 @@ public sealed class CreateTeamViewModel(
             field = value;
             OnPropertyChanged(nameof(AvailableUsers));
         }
-    } = new();
+    } = new()
+    {
+        Page = 0,
+        TotalCount = 0,
+        PageSize = 0,
+        Data = []
+    };
     
-    public List<ApplicationUser> SelectedUsers
+    public List<UserDto> SelectedUsers
     {
         get;
         set
@@ -248,10 +255,10 @@ public sealed class CreateTeamViewModel(
         IsLoadingMembers = true;
         try
         {
-            Result<PaginationResponse<List<ApplicationUser>>> response = await usersService.GetUsers(_memberSearch, _currentMemberPage, 10);
+            Result<PaginationResponse<List<UserDto>>> response = await usersService.GetUsers(_memberSearch, _currentMemberPage, 10);
             if (response.Success)
             {
-                PaginationResponse<List<ApplicationUser>>? users = response.Data!;
+                PaginationResponse<List<UserDto>>? users = response.Data!;
                 // Filter out current user
                 if (_userId != null)
                 {

@@ -82,13 +82,5 @@
 
     <ItemGroup>
       <Folder Include="Components\Pages\AboutUs\" />
-      <Folder Include="Repositories\ChatMessage\" />
-      <Folder Include="Repositories\Friend\" />
-      <Folder Include="Repositories\MatchInvite\" />
-      <Folder Include="Repositories\Match\" />
-      <Folder Include="Repositories\Notification\" />
-      <Folder Include="Repositories\PlayerRating\" />
-      <Folder Include="Repositories\TeamInvite\" />
-      <Folder Include="Repositories\Team\" />
     </ItemGroup>
 </Project>

@@ -145,7 +145,14 @@
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-semibold" style="color: var(--text);">
-                                Match Invitation
+                                @if (Message.InviteUrl.Contains("matches"))
+                                {
+                                    <span>Match Invitation</span>
+                                }
+                                else
+                                {
+                                    <span>Team Invitation</span>
+                                }
                             </p>
                             <p class="text-xs opacity-75" style="color: var(--text);">
                                 Tap to view and accept

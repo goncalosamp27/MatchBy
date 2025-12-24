@@ -39,7 +39,6 @@ public class FriendMappingsTests
             Receiver = receiver,
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = updatedAt,
-            DeletedAtUtc = null
         };
 
         // Act
@@ -74,7 +73,6 @@ public class FriendMappingsTests
             Receiver = null,
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
 
         // Act
@@ -115,7 +113,6 @@ public class FriendMappingsTests
         Assert.Equal("receiver_456", entity.ReceiverId);
         Assert.NotEqual(DateTime.MinValue, entity.CreatedAtUtc);
         Assert.Null(entity.UpdatedAtUtc);
-        Assert.Null(entity.DeletedAtUtc);
     }
 
     [Fact]
@@ -171,7 +168,6 @@ public class FriendMappingsTests
             ReceiverId = "receiver_456",
             CreatedAtUtc = DateTime.UtcNow.AddDays(-5),
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
 
         DateTime beforeUpdate = DateTime.UtcNow.AddSeconds(-1);
@@ -198,7 +194,6 @@ public class FriendMappingsTests
             ReceiverId = "receiver_456",
             CreatedAtUtc = createdAt,
             UpdatedAtUtc = null,
-            DeletedAtUtc = null
         };
 
         // Act
@@ -209,7 +204,6 @@ public class FriendMappingsTests
         Assert.Equal("sender_123", friend.SenderId);
         Assert.Equal("receiver_456", friend.ReceiverId);
         Assert.Equal(createdAt, friend.CreatedAtUtc);
-        Assert.Null(friend.DeletedAtUtc);
     }
 
     #endregion

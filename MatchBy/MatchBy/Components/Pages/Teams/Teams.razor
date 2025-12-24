@@ -9,6 +9,7 @@
 @inject ITeamService TeamService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @implements IDisposable
+@inject NavigationManager NavigationManager
 
 @if (_viewModel is null)
 {
@@ -66,12 +67,12 @@ else
             <div class="flex gap-4 mb-8">
                 <button
                     class="@(viewModel.ActiveTab == "my" ? "bg-[var(--section-secondary)] border-2 border-[var(--main)]" : "bg-[var(--section)] border-2 border-transparent") px-8 py-3 rounded-lg font-medium text-[var(--text)] hover:bg-[var(--section-secondary)] transition-all"
-                    @onclick='() => viewModel.ActiveTab = "my"'>
+                    @onclick='() => UpdateUrl("my")'>
                     My Teams
                 </button>
                 <button
                     class="@(viewModel.ActiveTab == "search" ? "bg-[var(--section-secondary)] border-2 border-[var(--main)]" : "bg-[var(--section)] border-2 border-transparent") px-8 py-3 rounded-lg font-medium text-[var(--text)] hover:bg-[var(--section-secondary)] transition-all"
-                    @onclick='() => viewModel.ActiveTab = "search"'>
+                    @onclick='() => UpdateUrl("search")'>
                     Search Teams
                 </button>
             </div>
@@ -304,6 +305,8 @@ else
     private PropertyChangedEventHandler? _propertyChangedHandler;
     private bool _isAuthenticated;
     private string? _userId;
+    
+    [Parameter, SupplyParameterFromQuery] public string? Tab { get; set; }
 
     protected override void OnInitialized()
     {
@@ -324,6 +327,26 @@ else
             await _viewModel.InitializeAsync(_userId, _isAuthenticated);
         }
     }
+
+    protected override void OnParametersSet()
+    {
+        if (_viewModel != null)
+        {
+            _viewModel.ActiveTab = Tab ?? "my";
+        }
+    }
+
+    void UpdateUrl(string tab)
+    {
+        var uri = NavigationManager.GetUriWithQueryParameters(
+            new Dictionary<string, object?>
+            {
+                ["tab"] = string.IsNullOrWhiteSpace(tab) ? null : tab
+            });
+
+        NavigationManager.NavigateTo(uri, replace: true);
+    }
+
 
     private async Task SearchTeams()
     {

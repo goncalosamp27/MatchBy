@@ -10,9 +10,9 @@
 @using Microsoft.AspNetCore.Authorization
 @using Blazorise
 @using System.ComponentModel
+@using MatchBy.DTOs.User
 @attribute [Authorize]
-@rendermode @(new InteractiveServerRenderMode(false))
-@attribute [StreamRendering]
+@rendermode InteractiveServer
 @inject AuthenticationStateProvider Auth
 @inject IConversationService ConversationService
 @inject IChatMessageService ChatMessageService
@@ -110,7 +110,13 @@
 <NewConversationModal @ref="_modal"
                       OnCreate="StartChat"
                       OnGetUsers="GetUsers"
-                      Users="@(_viewModel?.AllUsers ?? new PaginationResponse<List<ApplicationUser>>())"/>
+                      Users="@(_viewModel?.AllUsers ?? new PaginationResponse<List<UserDto>>
+                             {
+                                 Page = 0,
+                                 TotalCount = 0,
+                                 PageSize = 0,
+                                 Data = []
+                             })"/>
 
 <ToastProvider Placement="ToasterPlacement.TopEnd" Class="mt-12"/>
 
@@ -226,11 +232,7 @@
         await _viewModel.OnDeleteMessage(msg);
     }
 
-    private Task OnReplyToMessage(ChatMessageDto msg)
-    {
-        if (_viewModel is null) return Task.CompletedTask;
-        return _viewModel.OnReplyToMessage(msg);
-    }
+    private Task OnReplyToMessage(ChatMessageDto msg) => _viewModel is null ? Task.CompletedTask : _viewModel.OnReplyToMessage(msg);
 
     private Task CancelReply()
     {

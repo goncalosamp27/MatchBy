@@ -67,7 +67,7 @@ public class MatchReminderJob(
                     {
                         SenderUserId = match.CreatorId,
                         ReceiverUserId = participant.Id,
-                        Type = NotificationType.MatchReminder,
+                        Type = NotificationType.Match,
                         Title = "Match Reminder - 3 days",
                         Message = $"Your match '{match.Description}' is in 3 days!",
                         RelatedEntityId = match.Id,
@@ -129,7 +129,7 @@ public class MatchReminderJob(
                     {
                         SenderUserId = match.CreatorId,
                         ReceiverUserId = participant.Id,
-                        Type = NotificationType.MatchReminder,
+                        Type = NotificationType.Match,
                         Title = "Match Reminder - 30 minutes",
                         Message = $"Your match '{match.Description}' starts in 30 minutes!",
                         RelatedEntityId = match.Id,

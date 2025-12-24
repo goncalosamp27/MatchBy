@@ -42,16 +42,18 @@ public sealed class EditMatchViewModel(
     private int _currentInvitePage = 1;
 
     // Current participants of the match
-    public List<ApplicationUser> CurrentMatchParticipants { get; private set; } = [];
-    
+    public List<UserDto> CurrentMatchParticipants { get; private set; } = [];
+
     // Pending invites for the match
     public List<MatchInviteDto> PendingInvites { get; private set; } = [];
-    
+
     // Users available to be invited (search results)
-    public PaginationResponse<List<ApplicationUser>> AvailableInviteUsers { get; private set; } = new()
+    public PaginationResponse<List<UserDto>> AvailableInviteUsers { get; private set; } = new()
     {
         Data = [],
-        TotalCount = 0
+        TotalCount = 0,
+        Page = 0,
+        PageSize = 0
     };
 
     public UpdateMatchDto? Model
@@ -73,7 +75,7 @@ public sealed class EditMatchViewModel(
             OnPropertyChanged(nameof(MatchId));
         }
     }
-    
+
     public string UserId
     {
         get => _userId;
@@ -176,10 +178,10 @@ public sealed class EditMatchViewModel(
 
             if (match.CreatorId != userId)
             {
-                return new EditMatchLoadResult 
-                { 
-                    Status = EditMatchLoadStatus.Unauthorized, 
-                    ErrorMessage = "Only the creator can edit this match." 
+                return new EditMatchLoadResult
+                {
+                    Status = EditMatchLoadStatus.Unauthorized,
+                    ErrorMessage = "Only the creator can edit this match."
                 };
             }
 
@@ -197,15 +199,8 @@ public sealed class EditMatchViewModel(
                 MinimumPlayersRating = match.MinimumPlayersRating,
                 UserId = userId
             };
-            
-            CurrentMatchParticipants = match.Participants.Select(p => new ApplicationUser 
-            { 
-                Id = p.Id, 
-                DisplayName = p.DisplayName, 
-                UserName = p.DisplayName, // Fallback
-                // Map AvatarUrl to FileStore if present
-                ProfileImage = !string.IsNullOrEmpty(p.AvatarUrl) ? new FileStore(p.AvatarUrl, DateTime.MaxValue, "dummy", FileCategory.ProfileImage, FileType.Image, DateTime.MinValue) : null
-            }).ToList();
+
+            CurrentMatchParticipants = match.Participants.ToList();
 
             await LoadInvitesAsync();
             await LoadInviteUsersAsync();
@@ -223,7 +218,8 @@ public sealed class EditMatchViewModel(
         IsLoadingInvites = true;
         try
         {
-            Result<PaginationResponse<List<MatchInviteDto>>> result = await matchesInvitesService.GetInvitesForMatch(_matchId, 1, 100, CancellationToken.None);
+            Result<PaginationResponse<List<MatchInviteDto>>> result =
+                await matchesInvitesService.GetInvitesForMatch(_matchId, 1, 100, CancellationToken.None);
             if (result.Success && result.Data != null)
             {
                 PendingInvites = result.Data.Data
@@ -243,7 +239,8 @@ public sealed class EditMatchViewModel(
         IsLoadingInviteUsers = true;
         try
         {
-            Result<PaginationResponse<List<ApplicationUser>>> result = await usersService.GetUsers(_inviteSearch, _currentInvitePage, 10, CancellationToken.None);
+            Result<PaginationResponse<List<UserDto>>> result =
+                await usersService.GetUsers(_inviteSearch, _currentInvitePage, 10, CancellationToken.None);
             if (result.Success && result.Data != null)
             {
                 AvailableInviteUsers = result.Data;
@@ -270,26 +267,26 @@ public sealed class EditMatchViewModel(
         CurrentInvitePage = page;
         await LoadInviteUsersAsync();
     }
-    
+
     public void UpdateDescription(string value)
     {
-        if (Model is not null) 
+        if (Model is not null)
         {
             Model = Model with { Description = value };
         }
     }
-    
+
     public void UpdateAddress(string value)
     {
-        if (Model is not null) 
+        if (Model is not null)
         {
             Model = Model with { Address = value };
         }
     }
-    
+
     public void UpdatePrivacy(MatchPrivacy value)
     {
-        if (Model is not null) 
+        if (Model is not null)
         {
             Model = Model with { Privacy = value };
         }
@@ -297,32 +294,36 @@ public sealed class EditMatchViewModel(
 
     public ValidationStatus ValidateProperty(string propertyName)
     {
-        if (Model is null) 
+        if (Model is null)
         {
             return ValidationStatus.None;
         }
+
         ValidationResult result = validator.Validate(Model);
-        return result.Errors.Any(e => e.PropertyName == propertyName) ? ValidationStatus.Error : ValidationStatus.Success;
+        return result.Errors.Any(e => e.PropertyName == propertyName)
+            ? ValidationStatus.Error
+            : ValidationStatus.Success;
     }
 
     public string? GetValidationError(string propertyName)
     {
-        if (Model is null) 
+        if (Model is null)
         {
             return null;
         }
+
         ValidationResult result = validator.Validate(Model);
         return result.Errors.FirstOrDefault(e => e.PropertyName == propertyName)?.ErrorMessage;
     }
 
     public async Task<bool> SubmitMatchAsync(Validations validations)
     {
-        if (Model is null) 
+        if (Model is null)
         {
             return false;
         }
-        
-        if (!await validations.ValidateAll()) 
+
+        if (!await validations.ValidateAll())
         {
             return false;
         }
@@ -331,10 +332,12 @@ public sealed class EditMatchViewModel(
         try
         {
             Result<bool> result = await matchesService.UpdateMatch(Model, CancellationToken.None);
-            
+
             if (!result.Success)
             {
-                await toastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Error updating match.");
+                await toastService.Error(result.ErrorMessages.Any()
+                    ? result.ErrorMessages[0]
+                    : "Error updating match.");
                 return false;
             }
 
@@ -349,7 +352,7 @@ public sealed class EditMatchViewModel(
 
     public async Task SendInviteToUserAsync(string receiverId)
     {
-        if (string.IsNullOrEmpty(_matchId) || string.IsNullOrEmpty(_userId)) 
+        if (string.IsNullOrEmpty(_matchId) || string.IsNullOrEmpty(_userId))
         {
             return;
         }
@@ -361,7 +364,7 @@ public sealed class EditMatchViewModel(
                 MatchId = _matchId,
                 SenderId = _userId,
                 ReceiverId = receiverId,
-                Content = $"You've been invited to join the match!" 
+                Content = $"You've been invited to join the match!"
             };
 
             Result<MatchInviteDto> result = await matchesInvitesService.CreateInvite(createDto, CancellationToken.None);
@@ -369,12 +372,13 @@ public sealed class EditMatchViewModel(
             if (result.Success)
             {
                 await toastService.Success("Invite sent successfully!");
-                await LoadInvitesAsync(); 
+                await LoadInvitesAsync();
                 OnPropertyChanged(nameof(PendingInvites));
             }
             else
             {
-                await toastService.Error(result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Failed to send invite.");
+                await toastService.Error(
+                    result.ErrorMessages.Any() ? result.ErrorMessages[0] : "Failed to send invite.");
             }
         }
         catch (Exception ex)
@@ -385,7 +389,7 @@ public sealed class EditMatchViewModel(
 
     public async Task RemoveInviteAsync(string inviteId)
     {
-        if (string.IsNullOrEmpty(inviteId)) 
+        if (string.IsNullOrEmpty(inviteId))
         {
             return;
         }
@@ -408,41 +412,36 @@ public sealed class EditMatchViewModel(
             await toastService.Error($"An error occurred: {ex.Message}");
         }
     }
-    
+
     public async Task RemoveParticipantAsync(string participantId)
     {
-        if (participantId == _userId) 
+        if (participantId == _userId)
         {
-            return; 
+            return;
         }
 
-        try 
+        try
         {
             Result<bool> result = await matchesService.LeaveMatch(_matchId, participantId, CancellationToken.None);
             if (result.Success)
             {
-                 await toastService.Success("Participant removed.");
-                 Result<MatchDto> matchResult = await matchesService.GetMatchById(_matchId, _userId, CancellationToken.None);
-                 if (matchResult.Success && matchResult.Data != null)
-                 {
-                     CurrentMatchParticipants = matchResult.Data.Participants.Select(p => new ApplicationUser 
-                    { 
-                        Id = p.Id, 
-                        DisplayName = p.DisplayName, 
-                        UserName = p.DisplayName,
-                        ProfileImage = !string.IsNullOrEmpty(p.AvatarUrl) ? new FileStore(p.AvatarUrl, DateTime.MaxValue, "dummy", FileCategory.ProfileImage, FileType.Image, DateTime.MinValue) : null
-                    }).ToList();
+                await toastService.Success("Participant removed.");
+                Result<MatchDto> matchResult =
+                    await matchesService.GetMatchById(_matchId, _userId, CancellationToken.None);
+                if (matchResult.Success && matchResult.Data != null)
+                {
+                    CurrentMatchParticipants = matchResult.Data.Participants.ToList();
                     OnPropertyChanged(nameof(CurrentMatchParticipants));
-                 }
+                }
             }
-            else 
+            else
             {
-                 await toastService.Error("Failed to remove participant.");
+                await toastService.Error("Failed to remove participant.");
             }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-             await toastService.Error($"An error occurred: {ex.Message}");
+            await toastService.Error($"An error occurred: {ex.Message}");
         }
     }
 }

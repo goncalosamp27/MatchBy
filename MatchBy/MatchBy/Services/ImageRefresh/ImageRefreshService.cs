@@ -106,7 +106,7 @@ public class ImageRefreshService(
             await RefreshConversationImageAsync(team.Conversation);
         }
     }
-    
+
     /// <summary>
     /// Refreshes profile images for both the sender and receiver of a notification.
     /// </summary>

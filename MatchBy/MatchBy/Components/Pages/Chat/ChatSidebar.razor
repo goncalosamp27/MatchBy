@@ -24,10 +24,11 @@
 
         <!-- search -->
         <label class="relative mt-2 block">
-            <TextEdit @bind-Text="_search"
+            <TextEdit 
                       Placeholder="Search for contacts"
+                      Text="@Search"
+                      TextChanged="OnSearchChanged"
                       Role="TextRole.Search"
-                      KeyDown="OnSearchKeyDown"
                       Class="w-full rounded-lg border pl-8 sm:pl-9 pr-2.5 sm:pr-3 py-1.5 sm:py-2 text-xs sm:text-sm outline-none focus:ring-2 transition-all"
                       Style="background-color: var(--section-secondary); color: var(--text); border-color: var(--main); placeholder-color: var(--text);"/>
             <svg class="size-4 sm:size-5 absolute left-2 sm:left-2.5 top-1.5 sm:top-2 opacity-50"
@@ -108,7 +109,8 @@
 
 @code
 {
-    private string _search = "";
+    private Timer? _debounceTimer;
+    public string? Search { get; set; }
     [Parameter] public List<ConversationDto> Conversations { get; set; } = [];
     [Parameter] public EventCallback<ConversationDto> OnConversationSelected { get; set; }
     [Parameter] public required string CurrentUserId { get; set; }
@@ -118,13 +120,22 @@
     [Parameter] public string? NextCursor { get; set; }
     [Parameter] public string? Class { get; set; }
     
-    public void OnNextPagination(string? cursor) => OnNext.InvokeAsync((cursor, _search));
-
-    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    public void OnNextPagination(string? cursor) => OnNext.InvokeAsync((cursor, Search));
+    
+    private void OnSearchChanged(string? value)
     {
-        if (e.Key == "Enter")
+        Search = value;
+        HandleSearchDebounced();
+    }
+    
+    private void HandleSearchDebounced()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(async _ =>
         {
-            await OnSearch.InvokeAsync(_search);
-        }
+            await InvokeAsync(() =>
+                OnSearch.InvokeAsync(Search)
+            );
+        }, null, 500, Timeout.Infinite);
     }
 }

@@ -1,12 +1,14 @@
 ﻿using MatchBy.Data;
-using MatchBy.Enums;
+using MatchBy.DTOs.User;
 using MatchBy.Models;
+using MatchBy.Repositories.User;
 using MatchBy.Services.ImageRefresh;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchBy.Services.Users;
 
 public class UsersService(
+    IUserRepository userRepository,
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IImageRefreshService imageRefreshService)
     : IUsersService
@@ -19,26 +21,20 @@ public class UsersService(
     /// <returns>
     /// The user entity if found, or null if the user does not exist. The user's profile image is refreshed before returning.
     /// </returns>
-    public async Task<Result<ApplicationUser>> GetUser(string userId, CancellationToken cancellationToken = default)
+    public async Task<Result<UserDto>> GetUser(string userId, CancellationToken cancellationToken = default)
     {
         await using ApplicationDbContext context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        ApplicationUser? user = await context.Users
-            .Include(u => u.JoinedMatches)
-            .Where(u => u.Id == userId &&
-                        u.Status == AccountStatus.Available &&
-                        u.DeletedAtUtc == null)
-            .FirstOrDefaultAsync(cancellationToken);
-
+        ApplicationUser? user = await userRepository.GetByIdAsync(userId, context, cancellationToken);
         if (user == null)
         {
-            return Result<ApplicationUser>.Fail("User not found.");
+            return Result<UserDto>.Fail("User not found.");
         }
 
         await imageRefreshService.RefreshUserProfileImageAsync(user);
         await context.SaveChangesAsync(cancellationToken);
 
-        return Result<ApplicationUser>.Ok(user);
+        return Result<UserDto>.Ok(user.ToDto());
     }
 
     /// <summary>
@@ -52,71 +48,31 @@ public class UsersService(
     /// A result containing a paginated response with a list of users, ordered by username.
     /// Profile images are refreshed before returning.
     /// </returns>
-    public async Task<Result<PaginationResponse<List<ApplicationUser>>>> GetUsers(
+    public async Task<Result<PaginationResponse<List<UserDto>>>> GetUsers(
         string? search = null,
         int page = 1,
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
         await using ApplicationDbContext context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        
+        PaginationResponse<List<ApplicationUser>> users = await userRepository.GetUsers(context, search, page, pageSize, cancellationToken);
 
-        try
+        // Refresh profile images for all users
+        foreach (ApplicationUser user in users.Data)
         {
-            IQueryable<ApplicationUser> query = context.Users
-                .Include(u => u.JoinedMatches)
-                .Where(u => u.Status == AccountStatus.Available && u.DeletedAtUtc == null)
-                .AsQueryable();
-
-            // Apply search filter
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                search = search.ToLower();
-                query = query.Where(u =>
-                    u.UserName!.ToLower().Contains(search) ||
-                    u.DisplayName.ToLower().Contains(search) ||
-                    (u.BaseLocation != null &&
-                     (u.BaseLocation.City.ToLower().Contains(search) ||
-                      u.BaseLocation.Country.ToLower().Contains(search)))
-                );
-            }
-
-            int total = await query.CountAsync(cancellationToken);
-
-            List<ApplicationUser> users = await query
-                .OrderBy(u => u.DisplayName)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-
-            // Refresh profile images for all users
-            foreach (ApplicationUser user in users)
-            {
-                await imageRefreshService.RefreshUserProfileImageAsync(user);
-            }
-            await context.SaveChangesAsync(cancellationToken);
-
-            var response = new PaginationResponse<List<ApplicationUser>>
-            {
-                Data = users,
-                TotalCount = total,
-                Page = page,
-                PageSize = pageSize
-            };
-
-            return new Result<PaginationResponse<List<ApplicationUser>>>
-            {
-                Success = true,
-                Data = response
-            };
+            await imageRefreshService.RefreshUserProfileImageAsync(user);
         }
-        catch (Exception ex)
+        await context.SaveChangesAsync(cancellationToken);
+
+        var userDtos = users.Data.Select(u => u.ToDto()).ToList();
+
+        return Result<PaginationResponse<List<UserDto>>>.Ok(new PaginationResponse<List<UserDto>>
         {
-            // Log error if logger is available
-            return new Result<PaginationResponse<List<ApplicationUser>>>
-            {
-                Success = false,
-                ErrorMessages = [$"Error fetching users: {ex.Message}"]
-            };
-        }
+            Data = userDtos,
+            TotalCount = users.TotalCount,
+            Page = users.Page,
+            PageSize = users.PageSize
+        });
     }
 }

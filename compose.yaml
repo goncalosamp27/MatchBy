@@ -15,13 +15,15 @@
     image: postgres:17.2
     container_name: database.postgres
     environment:
-      POSTGRES_DB: database
+      POSTGRES_DB: database.postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - ./.containers/database_data:/var/lib/postgresql/data
     ports:
       - 5432:5432
+    networks:
+      - matchby-network
   
   pgadmin:
     image: dpage/pgadmin4
@@ -33,3 +35,9 @@
       - "8080:80"
     depends_on:
       - matchby.postgres
+    networks:
+      - matchby-network
+      
+networks:
+    matchby-network:
+        driver: bridge
