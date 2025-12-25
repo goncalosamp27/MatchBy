@@ -15,7 +15,7 @@ public class TzTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("GMT Standard Time", result.Id);
+        Assert.Equal("Europe/Lisbon", result.Id);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class TzTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("GMT Standard Time", result.Id);
+        Assert.Equal("Europe/London", result.Id);
     }
 
     [Fact]
