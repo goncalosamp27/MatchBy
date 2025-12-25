@@ -39,11 +39,11 @@ jobs:
       - name: Publish app
         run: dotnet publish MatchBy/MatchBy/MatchBy.csproj -c Release -o ${{ env.DOTNET_ROOT }}/myapp --no-build
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: .net-app
-          path: ${{ env.DOTNET_ROOT }}/myapp
+      # - name: Upload artifact for deployment job
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: .net-app
+      #     path: ${{ env.DOTNET_ROOT }}/myapp
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,10 +52,25 @@ jobs:
       contents: read
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
         with:
-          name: .net-app
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.x
+
+      - name: Restore dependencies
+        run: dotnet restore MatchBy.sln
+
+      - name: Build
+        run: dotnet build MatchBy.sln --configuration Release --no-restore
+
+      - name: Publish app
+        run: dotnet publish MatchBy/MatchBy/MatchBy.csproj -c Release -o ${{ env.DOTNET_ROOT }}/myapp --no-build
 
       - name: Deploy to Azure Web App using publish profile
         uses: azure/webapps-deploy@v3

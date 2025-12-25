@@ -36,11 +36,11 @@ jobs:
       - name: dotnet publish
         run: dotnet publish MatchBy/MatchBy/MatchBy.csproj -c Release -o ${{ env.DOTNET_ROOT }}/myapp --no-build
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: .net-app
-          path: ${{ env.DOTNET_ROOT }}/myapp
+      # - name: Upload build artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: .net-app
+      #     path: ${{ env.DOTNET_ROOT }}/myapp
 
   # Job 2: Testes e Coverage
   test:
@@ -109,11 +109,11 @@ jobs:
           reporter: dotnet-trx
           fail-on-error: true
 
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage
+      # - name: Upload coverage artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+          # name: coverage
+          # path: coverage
 
   # Job 3: SonarCloud Analysis
   sonar:
