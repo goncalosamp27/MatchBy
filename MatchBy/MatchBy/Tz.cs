@@ -2,7 +2,7 @@
 
 namespace MatchBy;
 
-internal static class Tz
+public static class Tz
 {
     public static TimeZoneInfo FromId(string tzId) =>
         TZConvert.GetTimeZoneInfo(tzId); // accepts "Europe/Lisbon" or "GMT Standard Time"

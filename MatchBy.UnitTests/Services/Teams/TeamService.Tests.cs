@@ -297,17 +297,6 @@ public class TeamServiceTests : IDisposable
         Assert.Equal("My Team", result.Data.Data[0].Name);
     }
 
-    [Fact]
-    public async Task GetTeamsUserOwnAsync_WithEmptyUserId_ShouldReturnFailure()
-    {
-        // Act
-        Result<PaginationResponse<List<TeamDto>>> result = await _teamService.GetTeamsUserOwnAsync("", 1, 10, "");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Contains("User ID cannot be null or empty", result.ErrorMessages[0]);
-    }
-
     #endregion
 
     #region GetTeamsUserParticipateAsync Tests

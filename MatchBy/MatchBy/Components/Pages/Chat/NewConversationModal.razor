@@ -29,7 +29,7 @@
                                @bind-SelectedItem="_selectedItem"
                                Flush
                                Style="background-color: var(--background);">
-                        @if ((Users.Data?.Count ?? 0) == 0)
+                        @if (Users.Data.Count == 0)
                         {
                             <ListGroupItem class="py-3 text-center opacity-60"
                                            Style="color: var(--text);">

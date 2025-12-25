@@ -78,7 +78,7 @@ public class NotificationHub : Hub
     /// The user ID associated with the current connection.
     /// </returns>
     /// <exception cref="HubException">Thrown when the connection is not registered with a user ID.</exception>
-    private string EnsureUser()
+    public string EnsureUser()
         => ConnectionUsers.TryGetValue(Context.ConnectionId, out string? uid)
             ? uid
             : throw new HubException("Connection not registered.");
@@ -93,7 +93,7 @@ public class NotificationHub : Hub
     /// <remarks>
     /// This method returns a thread-safe snapshot of the user's connections.
     /// </remarks>
-    private IEnumerable<string> GetUserConnections(string userId)
+    public IEnumerable<string> GetUserConnections(string userId)
     {
         if (!UserConnections.TryGetValue(userId, out HashSet<string>? connections))
         {

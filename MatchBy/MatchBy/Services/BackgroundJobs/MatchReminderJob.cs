@@ -41,24 +41,25 @@ public class MatchReminderJob(
         {
             foreach (ApplicationUser participant in match.Participants)
             {
-                if (string.IsNullOrEmpty(participant.Email))
+                if (!string.IsNullOrEmpty(participant.Email))
                 {
-                    continue;
-                }
+                    try
+                    {
+                        await emailSender.SendMatchReminderAsync(
+                            participant.Email,
+                            participant.UserName!,
+                            match.Description,
+                            match.MatchDateTimeUtc,
+                            match.Address,
+                            match.Sport,
+                            "3 days");
 
-                try
-                {
-                    await emailSender.SendMatchReminderAsync(
-                        participant.Email,
-                        participant.UserName!,
-                        match,
-                        "3 days");
-
-                    logger.LogInformation("Sent 3-day email to {Email}", participant.Email);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
+                        logger.LogInformation("Sent 3-day email to {Email}", participant.Email);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
+                    }
                 }
 
                 try
@@ -103,24 +104,25 @@ public class MatchReminderJob(
         {
             foreach (ApplicationUser participant in match.Participants)
             {
-                if (string.IsNullOrEmpty(participant.Email))
+                if (!string.IsNullOrEmpty(participant.Email))
                 {
-                    continue;
-                }
+                    try
+                    {
+                        await emailSender.SendMatchReminderAsync(
+                            participant.Email,
+                            participant.UserName!,
+                            match.Description,
+                            match.MatchDateTimeUtc,
+                            match.Address,
+                            match.Sport,
+                            "30 minutes");
 
-                try
-                {
-                    await emailSender.SendMatchReminderAsync(
-                        participant.Email,
-                        participant.UserName!,
-                        match,
-                        "30 minutes");
-
-                    logger.LogInformation("Sent 30-min email to {Email}", participant.Email);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
+                        logger.LogInformation("Sent 30-min email to {Email}", participant.Email);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to send email to {Email}", participant.Email);
+                    }
                 }
 
                 try

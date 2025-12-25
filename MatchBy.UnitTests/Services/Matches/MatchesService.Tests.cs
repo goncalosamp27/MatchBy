@@ -352,12 +352,12 @@ public class MatchesServiceTests : IDisposable
             Privacy = MatchPrivacy.Public,
             MaxPlayers = 10,
             MinPlayers = 2,
-            MembersIds = new List<string>
-            {
+            MembersIds =
+            [
                 "user1",
                 "user2"
-            },
-            Location = null,
+            ],
+            Location = new Location(40.7128, -74.0060, "New York", "USA"),
             MinimumPlayersRating = MinimumPlayersAverage.All
         };
 
@@ -435,8 +435,8 @@ public class MatchesServiceTests : IDisposable
             CreatorId = "creator1",
             Sport = Sports.Football,
             Description = "Invalid match",
-            Location = null,
-            Address = null,
+            Location = new Location(40.7128, -74.0060, "New York", "USA"),
+            Address = "Rua de cima",
             MatchDateTimeUtc = default,
             MinimumPlayersRating = MinimumPlayersAverage.All,
             MinPlayers = 0,
@@ -470,8 +470,8 @@ public class MatchesServiceTests : IDisposable
             CreatorId = "nonexistent",
             Sport = Sports.Football,
             Description = "Test match",
-            Location = null,
-            Address = null,
+            Location = new Location(40.7128, -74.0060, "New York", "USA"),
+            Address = "Rua de cima",
             MatchDateTimeUtc = default,
             MinimumPlayersRating = MinimumPlayersAverage.All,
             MinPlayers = 0,
@@ -505,7 +505,7 @@ public class MatchesServiceTests : IDisposable
             UserId = "creator1",
             Description = "Updated description",
             Address = "New Address",
-            Location = null,
+            Location = new Location(40.7128, -74.0060, "New York", "USA"),
             MatchDateTimeUtc = default,
             MinimumPlayersRating = MinimumPlayersAverage.All,
             MinPlayers = 0,
@@ -552,8 +552,8 @@ public class MatchesServiceTests : IDisposable
             MatchId = "match1",
             UserId = "noncreator",
             Description = "Updated description",
-            Location = null,
-            Address = null,
+            Location = new Location(40.7128, -74.0060, "New York", "USA"),
+            Address = "Rua de cima",
             MatchDateTimeUtc = default,
             MinimumPlayersRating = MinimumPlayersAverage.All,
             MinPlayers = 0,

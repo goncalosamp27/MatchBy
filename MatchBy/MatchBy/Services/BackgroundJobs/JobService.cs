@@ -50,9 +50,11 @@ public class JobService(ILogger<JobService> logger, IDbContextFactory<Applicatio
                         if (participant.Email != null)
                         {
                             await emailSender.SendMatchCancelledAsync(
-                                participant,
+                                participant.DisplayName,
                                 participant.Email,
-                                match,
+                                match.Id,
+                                match.Sport,
+                                match.MatchDateTimeUtc,
                                 match.Creator.DisplayName
                             );
                         }

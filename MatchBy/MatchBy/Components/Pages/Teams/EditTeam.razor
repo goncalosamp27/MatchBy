@@ -420,7 +420,7 @@ else
                                     <div
                                         class="max-h-60 overflow-y-auto mb-3 border-2 border-[var(--main)] rounded-xl p-2 thin-scroll"
                                         style="background-color: var(--background);">
-                                        @if ((viewModel.AvailableInviteUsers.Data?.Count ?? 0) == 0)
+                                        @if (viewModel.AvailableInviteUsers.Data.Count == 0)
                                         {
                                             <div class="py-3 text-center opacity-60" style="color: var(--text);">No
                                                 users found

@@ -525,14 +525,18 @@ public class MatchesService(
                 if (participant.Email != null)
                 {
                     await emailSender.SendMatchCancelledAsync(
-                        participant,
+                        participant.DisplayName,
                         participant.Email,
-                        match,
-                        user.DisplayName ?? "Unknown"
+                        match.Id,
+                        match.Sport,
+                        match.MatchDateTimeUtc,
+                        user.DisplayName
                     );
                     await Task.Delay(100, ct);
                 }
             }
+            
+            await dbContext.SaveChangesAsync(ct);
             
             Result<bool> deleteConversation = await conversationService.DeleteConversationAsync(match.ConversationId!, match.CreatorId, ct);
             if (!deleteConversation.Success)

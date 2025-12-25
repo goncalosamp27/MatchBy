@@ -1,4 +1,5 @@
-﻿using MatchBy.Models;
+﻿using MatchBy.Enums;
+using MatchBy.Models;
 using Resend;
 
 namespace MatchBy.Services.Email;
@@ -8,22 +9,24 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
     private const int MaxRetries = 3;
 
     public async Task SendMatchCancelledAsync(
-        ApplicationUser user,
+        string userDisplayName,
         string email,
-        Match match,
+        string matchId,
+        Sports matchSport,
+        DateTime matchDateTimeUtc,
         string cancelledByName)
     {
-        string subject = $"Match #{match.Id} Has Been Cancelled";
+        string subject = $"Match #{matchId} Has Been Cancelled";
 
         string body = $@"
         <h2>Match Cancelled</h2>
-        <p>Hello {user.DisplayName},</p>
+        <p>Hello {userDisplayName},</p>
         <p>The match you were scheduled to participate in has been <strong>cancelled</strong>.</p>
 
         <h3>Match Details</h3>
         <ul>
-            <li><strong>Sport:</strong> {match.Sport}</li>
-            <li><strong>Date:</strong> {match.MatchDateTimeUtc:dddd, MMM d yyyy hh:mm tt}</li>
+            <li><strong>Sport:</strong> {matchSport}</li>
+            <li><strong>Date:</strong> {matchDateTimeUtc:dddd, MMM d yyyy hh:mm tt}</li>
         </ul>
 
         <p>The match was cancelled by <strong>{cancelledByName}</strong>.</p>
@@ -31,38 +34,23 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
         <br/>
         <p>Best regards,<br/>MatchBy</p>
     ";
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
+        
+        var message = new EmailMessage
         {
-            try
-            {
-                var message = new EmailMessage
-                {
-                    From = "MatchBy <matchby@uniqueue.site>",
-                    To = email,
-                    Subject = subject,
-                    HtmlBody = body
-                };
-
-                await resend.EmailSendAsync(message);
-            }
-            catch (ResendException ex)
-            {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
-                if (attempt == MaxRetries)
-                {
-                    throw;
-                }
-
-                await Task.Delay(1000 * (attempt + 1));
-            }
-        }
+            From = "MatchBy <matchby@uniqueue.site>",
+            To = email,
+            Subject = subject,
+            HtmlBody = body
+        };
+        
+        await SendEmailWithRetries(message);
     }
 
     public async Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink)
     {
         var message = new EmailMessage
         {
+            To = email,
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Confirm your email",
             HtmlBody = $@"
@@ -77,32 +65,15 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
                 <p>Best regards,<br>The MatchBy Team</p>
             "
         };
-        message.To.Add(email);
 
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
-        {
-            try
-            {
-                await resend.EmailSendAsync(message);
-            }
-            catch (ResendException ex)
-            {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
-                if (attempt == MaxRetries)
-                {
-                    throw;
-                }
-
-                await Task.Delay(1000 * (attempt + 1));
-            }
-        }
+        await SendEmailWithRetries(message);
     }
 
     public async Task SendPasswordResetLinkAsync(ApplicationUser user, string email, string resetLink)
     {
         var message = new EmailMessage
         {
+            To = email,
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Reset your password",
             HtmlBody = $@"
@@ -118,32 +89,15 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
                 <p>Best regards,<br>The MatchBy Team</p>
             "
         };
-        message.To.Add(email);
 
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
-        {
-            try
-            {
-                await resend.EmailSendAsync(message);
-            }
-            catch (ResendException ex)
-            {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
-                if (attempt == MaxRetries)
-                {
-                    throw;
-                }
-
-                await Task.Delay(1000 * (attempt + 1));
-            }
-        }
+        await SendEmailWithRetries(message);
     }
 
     public async Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode)
     {
         var message = new EmailMessage
         {
+            To = email,
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Your password reset code",
             HtmlBody = $@"
@@ -159,32 +113,15 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
                 <p>Best regards,<br>The MatchBy Team</p>
             "
         };
-        message.To.Add(email);
 
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
-        {
-            try
-            {
-                await resend.EmailSendAsync(message);
-            }
-            catch (ResendException ex)
-            {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
-                if (attempt == MaxRetries)
-                {
-                    throw;
-                }
-
-                await Task.Delay(1000 * (attempt + 1));
-            }
-        }
+        await SendEmailWithRetries(message);
     }
 
     public async Task SendMatchCancelationEmail(string email, string displayName)
     {
         var message = new EmailMessage
         {
+            To = email,
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Your match has been cancelled",
             HtmlBody = $"""
@@ -195,32 +132,15 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
                         <p>Best regards,<br/>The MatchBy Team</p>
                         """
         };
-        message.To.Add(email);
-
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
-        {
-            try
-            {
-                await resend.EmailSendAsync(message);
-            }
-            catch (ResendException ex)
-            {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
-                if (attempt == MaxRetries)
-                {
-                    throw;
-                }
-
-                await Task.Delay(1000 * (attempt + 1));
-            }
-        }
+        
+        await SendEmailWithRetries(message);
     }
 
     public async Task SendMatchConfirmationEmail(string email, string displayName)
     {
         var message = new EmailMessage
         {
+            To = email,
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = "Confirm your upcoming match",
             HtmlBody = $"""
@@ -232,32 +152,15 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
                         <p>Best regards,<br/>The MatchBy Team</p>
                         """
         };
-        message.To.Add(email);
-
-        for (int attempt = 0; attempt <= MaxRetries; attempt++)
-        {
-            try
-            {
-                await resend.EmailSendAsync(message);
-            }
-            catch (ResendException ex)
-            {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
-                if (attempt == MaxRetries)
-                {
-                    throw;
-                }
-
-                await Task.Delay(1000 * (attempt + 1));
-            }
-        }
+        
+        await SendEmailWithRetries(message);
     }
 
     public async Task SendContactEmail(string name, string email, string subject, string message)
     {
         var emailMessage = new EmailMessage
         {
+            To = "matchby@uniqueue.site",
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = $"Contact Form: {subject}",
             HtmlBody = $@"
@@ -281,7 +184,6 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
                 <p style='color: #666; font-size: 12px;'>To reply, please contact: {email}</p>
             "
         };
-        emailMessage.To.Add("matchby@uniqueue.site");
 
         var confirmationMessage = new EmailMessage
         {
@@ -308,39 +210,44 @@ public class EmailSender(IResend resend, ILogger<EmailSender> logger) : IEmailSe
             "
         };
 
-        await resend.EmailSendAsync(emailMessage);
-        await resend.EmailSendAsync(confirmationMessage);
+        await SendEmailWithRetries(emailMessage);
+        await SendEmailWithRetries(confirmationMessage);
     }
 
-    public async Task SendMatchReminderAsync(string email, string userName, Match match, string timeframe)
+    public async Task SendMatchReminderAsync(string email, string userName, string matchDescription, DateTime matchDateTime, string matchAddress, Sports matchSport, string timeframe)
     {
         var message = new EmailMessage
         {
+            To = email,
             From = "MatchBy <matchby@uniqueue.site>",
             Subject = $"Match Reminder - {timeframe}!",
             HtmlBody = $@"
             <h2>Hello {userName}!</h2>
             <p>Your match is coming up in <strong>{timeframe}</strong>!</p>
-            <h3>{match.Description}</h3>
-            <p><strong>Date:</strong> {match.MatchDateTimeUtc:dddd, MMM d yyyy hh:mm tt}</p>
-            <p><strong>Location:</strong> {match.Address}</p>
-            <p><strong>Sport:</strong> {match.Sport}</p>
+            <h3>{matchDescription}</h3>
+            <p><strong>Date:</strong> {matchDateTime:dddd, MMM d yyyy hh:mm tt}</p>
+            <p><strong>Location:</strong> {matchAddress}</p>
+            <p><strong>Sport:</strong> {matchSport}</p>
             <p>Don't forget to attend!</p>
             <br>
             <p>Best regards,<br>MatchBy Team</p>"
         };
 
-        message.To.Add(email);
+        await SendEmailWithRetries(message);
+    }
+    
+    private async Task SendEmailWithRetries(EmailMessage message)
+    {
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
         {
             try
             {
                 await resend.EmailSendAsync(message);
+                return;
             }
             catch (ResendException ex)
             {
-                logger.LogError(ex, "Failed to send match cancellation email to {Email} on attempt {Attempt}", email,
-                    attempt + 1);
+                logger.LogError(ex, "Failed to send email to {Email} on attempt {Attempt}", message.To.ToString(), attempt + 1);
                 if (attempt == MaxRetries)
                 {
                     throw;
