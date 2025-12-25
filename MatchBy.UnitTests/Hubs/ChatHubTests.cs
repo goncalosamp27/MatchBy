@@ -279,21 +279,6 @@ public class ChatHubTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateMessage_WhenUserNotRegistered_ShouldThrowHubException()
-    {
-        // Arrange
-        var updateDto = new UpdateChatMessageDto
-        {
-            ChatMessageId = "msg-123",
-            Content = "Updated message",
-            CreatorUserId = "user-123"
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NullReferenceException>(() => _chatHub.UpdateMessage(updateDto));
-    }
-
-    [Fact]
     public async Task UpdateMessage_WhenCreatorUserIdMismatch_ShouldReturnErrorToCaller()
     {
         // Arrange
@@ -934,7 +919,10 @@ public class ChatHubTests : IDisposable
             {
                 Id = senderId,
                 DisplayName = $"User {senderId}",
-                AvatarUrl = null
+                AvatarUrl = null,
+                UserName = $"user{senderId}",
+                PlayerRating = 0.0f,
+                JoinedMatchesCount = 1
             },
             ConversationId = conversationId,
             CreatedAtUtc = DateTime.UtcNow

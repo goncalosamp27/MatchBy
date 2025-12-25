@@ -11,8 +11,21 @@ public class FriendDtoTests
     {
         // Arrange
         DateTime createdAt = DateTime.UtcNow;
-        var sender = new UserDto { Id = "user_1", DisplayName = "User 1", AvatarUrl = null };
-        var receiver = new UserDto { Id = "user_2", DisplayName = "User 2", AvatarUrl = null };
+        var sender = new UserDto
+        {
+            Id = "user_1",
+            DisplayName = "User 1",
+            AvatarUrl = null,
+            UserName = "user1",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
+        };
+        var receiver = new UserDto
+        {
+            Id = "user_2", DisplayName = "User 2", AvatarUrl = null, UserName = "user2",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
+        };
 
         // Act
         var dto = new FriendDto
@@ -127,4 +140,3 @@ public class FriendDtoTests
         Assert.NotEqual(originalDto, modifiedDto);
     }
 }
-

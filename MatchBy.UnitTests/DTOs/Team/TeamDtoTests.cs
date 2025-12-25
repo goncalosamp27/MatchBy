@@ -18,7 +18,9 @@ public class TeamDtoTests
                 Id = "user_1",
                 DisplayName = "User 1",
                 AvatarUrl = null,
-                PlayerRating = 0.0f
+                PlayerRating = 0.0f,
+                UserName = "user1",
+                JoinedMatchesCount = 1
             }
         };
 

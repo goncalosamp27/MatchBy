@@ -257,6 +257,7 @@ public class ChatMessageRepositoryTests : IDisposable
 
         // Act
         _repository.Add(message, _dbContext);
+        _dbContext.SaveChanges();
 
         // Assert
         Assert.Contains(message, _dbContext.ChatMessages);
@@ -304,6 +305,7 @@ public class ChatMessageRepositoryTests : IDisposable
 
         // Act
         _repository.Remove(message, _dbContext);
+        await _dbContext.SaveChangesAsync();
 
         // Assert
         Assert.DoesNotContain(message, _dbContext.ChatMessages);

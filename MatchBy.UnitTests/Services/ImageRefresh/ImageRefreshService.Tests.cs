@@ -633,4 +633,582 @@ public class ImageRefreshServiceTests
     }
 
     #endregion
+
+    #region RefreshTeamImagesAsync Tests
+
+    [Fact]
+    public async Task RefreshTeamImagesAsync_ShouldRefreshTeamImage()
+    {
+        // Arrange
+        string teamId = "team1";
+        string imageKey = "team-image.jpg";
+        string newUrl = "https://s3.amazonaws.com/new-team-url";
+
+        var team = new Team
+        {
+            Id = teamId,
+            Name = "Test Team",
+            Image = new FileStore(
+                "old-team-url",
+                DateTime.UtcNow.AddHours(-1),
+                imageKey,
+                FileCategory.TeamImage,
+                FileType.Image,
+                DateTime.UtcNow
+            ),
+            Members = new List<ApplicationUser>(),
+            Owner = null,
+            Conversation = null
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync($"teams/{teamId}/image/{imageKey}", HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok(newUrl));
+
+        // Act
+        await _imageRefreshService.RefreshTeamImagesAsync(team);
+
+        // Assert
+        Assert.Equal(newUrl, team.Image!.Url);
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"teams/{teamId}/image/{imageKey}", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshTeamImagesAsync_ShouldRefreshAllMemberProfileImages()
+    {
+        // Arrange
+        var member1 = new ApplicationUser
+        {
+            Id = "user1",
+            UserName = "member1",
+            ProfileImage = new FileStore(
+                "old-member1-url",
+                DateTime.UtcNow.AddHours(-1),
+                "member1-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var member2 = new ApplicationUser
+        {
+            Id = "user2",
+            UserName = "member2",
+            ProfileImage = new FileStore(
+                "old-member2-url",
+                DateTime.UtcNow.AddHours(-1),
+                "member2-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var team = new Team
+        {
+            Id = "team1",
+            Name = "Test Team",
+            Image = null,
+            Members = new List<ApplicationUser> { member1, member2 },
+            Owner = null,
+            Conversation = null
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-url"));
+
+        // Act
+        await _imageRefreshService.RefreshTeamImagesAsync(team);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/user1/profile-pictures/member1-key.jpg", HttpVerb.GET),
+            Times.Once);
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/user2/profile-pictures/member2-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshTeamImagesAsync_ShouldRefreshOwnerProfileImage()
+    {
+        // Arrange
+        var owner = new ApplicationUser
+        {
+            Id = "owner1",
+            UserName = "owner",
+            ProfileImage = new FileStore(
+                "old-owner-url",
+                DateTime.UtcNow.AddHours(-1),
+                "owner-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var team = new Team
+        {
+            Id = "team1",
+            Name = "Test Team",
+            Image = null,
+            Members = new List<ApplicationUser>(),
+            Owner = owner,
+            Conversation = null
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-owner-url"));
+
+        // Act
+        await _imageRefreshService.RefreshTeamImagesAsync(team);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/owner1/profile-pictures/owner-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshTeamImagesAsync_ShouldRefreshConversationImage()
+    {
+        // Arrange
+        var conversation = new Conversation
+        {
+            Id = "conv1",
+            Type = ConversationType.Team,
+            Image = new FileStore(
+                "old-conv-url",
+                DateTime.UtcNow.AddHours(-1),
+                "conv-key.jpg",
+                FileCategory.ConversationImage,
+                FileType.Image,
+                DateTime.UtcNow
+            ),
+            Participants = new List<ApplicationUser>(),
+            Creator = null
+        };
+
+        var team = new Team
+        {
+            Id = "team1",
+            Name = "Test Team",
+            Image = null,
+            Members = new List<ApplicationUser>(),
+            Owner = null,
+            Conversation = conversation
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-conv-url"));
+
+        // Act
+        await _imageRefreshService.RefreshTeamImagesAsync(team);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"conversations/conv1/image/conv-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshTeamImagesAsync_WithNullOwner_ShouldNotThrow()
+    {
+        // Arrange
+        var team = new Team
+        {
+            Id = "team1",
+            Name = "Test Team",
+            Image = null,
+            Members = new List<ApplicationUser>(),
+            Owner = null,
+            Conversation = null
+        };
+
+        // Act & Assert
+        await _imageRefreshService.RefreshTeamImagesAsync(team);
+        // Should complete without throwing
+        Assert.NotNull(team);
+    }
+
+    [Fact]
+    public async Task RefreshTeamImagesAsync_WithCompleteTeam_ShouldRefreshAllImages()
+    {
+        // Arrange
+        var owner = new ApplicationUser
+        {
+            Id = "owner1",
+            UserName = "owner",
+            ProfileImage = new FileStore(
+                "old-owner-url",
+                DateTime.UtcNow.AddHours(-1),
+                "owner-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var member = new ApplicationUser
+        {
+            Id = "member1",
+            UserName = "member",
+            ProfileImage = new FileStore(
+                "old-member-url",
+                DateTime.UtcNow.AddHours(-1),
+                "member-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var conversation = new Conversation
+        {
+            Id = "conv1",
+            Type = ConversationType.Team,
+            Image = new FileStore(
+                "old-conv-url",
+                DateTime.UtcNow.AddHours(-1),
+                "conv-key.jpg",
+                FileCategory.ConversationImage,
+                FileType.Image,
+                DateTime.UtcNow
+            ),
+            Participants = new List<ApplicationUser>(),
+            Creator = null
+        };
+
+        var team = new Team
+        {
+            Id = "team1",
+            Name = "Test Team",
+            Image = new FileStore(
+                "old-team-url",
+                DateTime.UtcNow.AddHours(-1),
+                "team-key.jpg",
+                FileCategory.TeamImage,
+                FileType.Image,
+                DateTime.UtcNow
+            ),
+            Members = new List<ApplicationUser> { member },
+            Owner = owner,
+            Conversation = conversation
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-url"));
+
+        // Act
+        await _imageRefreshService.RefreshTeamImagesAsync(team);
+
+        // Assert
+        // Verify team image was refreshed
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"teams/team1/image/team-key.jpg", HttpVerb.GET),
+            Times.Once);
+
+        // Verify member image was refreshed
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/member1/profile-pictures/member-key.jpg", HttpVerb.GET),
+            Times.Once);
+
+        // Verify owner image was refreshed
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/owner1/profile-pictures/owner-key.jpg", HttpVerb.GET),
+            Times.Once);
+
+        // Verify conversation image was refreshed
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"conversations/conv1/image/conv-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region RefreshNotificationImagesAsync Tests
+
+    [Fact]
+    public async Task RefreshNotificationImagesAsync_ShouldRefreshReceiverProfileImage()
+    {
+        // Arrange
+        var receiver = new ApplicationUser
+        {
+            Id = "receiver1",
+            UserName = "receiver",
+            ProfileImage = new FileStore(
+                "old-receiver-url",
+                DateTime.UtcNow.AddHours(-1),
+                "receiver-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var notification = new Notification
+        {
+            Id = "notif1",
+            Type = NotificationType.Match,
+            Title = "Test Notification",
+            Message = "Test message",
+            Receiver = receiver,
+            Sender = null,
+            SenderId = "sender1",
+            ReceiverId = "receiver1",
+            RelatedEntityId = "entity1",
+            RelatedEntityName = "Test Entity",
+            IsRead = false,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-receiver-url"));
+
+        // Act
+        await _imageRefreshService.RefreshNotificationImagesAsync(notification);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/receiver1/profile-pictures/receiver-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshNotificationImagesAsync_ShouldRefreshSenderProfileImage()
+    {
+        // Arrange
+        var sender = new ApplicationUser
+        {
+            Id = "sender1",
+            UserName = "sender",
+            ProfileImage = new FileStore(
+                "old-sender-url",
+                DateTime.UtcNow.AddHours(-1),
+                "sender-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var notification = new Notification
+        {
+            Id = "notif1",
+            Type = NotificationType.Match,
+            Title = "Test Notification",
+            Message = "Test message",
+            Receiver = null,
+            Sender = sender,
+            SenderId = "sender1",
+            ReceiverId = "receiver1",
+            RelatedEntityId = "entity1",
+            RelatedEntityName = "Test Entity",
+            IsRead = false,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-sender-url"));
+
+        // Act
+        await _imageRefreshService.RefreshNotificationImagesAsync(notification);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/sender1/profile-pictures/sender-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshNotificationImagesAsync_ShouldRefreshBothSenderAndReceiverImages()
+    {
+        // Arrange
+        var receiver = new ApplicationUser
+        {
+            Id = "receiver1",
+            UserName = "receiver",
+            ProfileImage = new FileStore(
+                "old-receiver-url",
+                DateTime.UtcNow.AddHours(-1),
+                "receiver-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var sender = new ApplicationUser
+        {
+            Id = "sender1",
+            UserName = "sender",
+            ProfileImage = new FileStore(
+                "old-sender-url",
+                DateTime.UtcNow.AddHours(-1),
+                "sender-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var notification = new Notification
+        {
+            Id = "notif1",
+            Type = NotificationType.Match,
+            Title = "Test Notification",
+            Message = "Test message",
+            Receiver = receiver,
+            Sender = sender,
+            SenderId = "sender1",
+            ReceiverId = "receiver1",
+            RelatedEntityId = "entity1",
+            RelatedEntityName = "Test Entity",
+            IsRead = false,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-url"));
+
+        // Act
+        await _imageRefreshService.RefreshNotificationImagesAsync(notification);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/receiver1/profile-pictures/receiver-key.jpg", HttpVerb.GET),
+            Times.Once);
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync($"users/sender1/profile-pictures/sender-key.jpg", HttpVerb.GET),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshNotificationImagesAsync_WithNullReceiver_ShouldNotThrow()
+    {
+        // Arrange
+        var sender = new ApplicationUser
+        {
+            Id = "sender1",
+            UserName = "sender",
+            ProfileImage = new FileStore(
+                "old-sender-url",
+                DateTime.UtcNow.AddHours(-1),
+                "sender-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var notification = new Notification
+        {
+            Id = "notif1",
+            Type = NotificationType.Match,
+            Title = "Test Notification",
+            Message = "Test message",
+            Receiver = null,
+            Sender = sender,
+            SenderId = "sender1",
+            ReceiverId = "receiver1",
+            RelatedEntityId = "entity1",
+            RelatedEntityName = "Test Entity",
+            IsRead = false,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-sender-url"));
+
+        // Act & Assert
+        await _imageRefreshService.RefreshNotificationImagesAsync(notification);
+        // Should complete without throwing
+        Assert.NotNull(notification);
+    }
+
+    [Fact]
+    public async Task RefreshNotificationImagesAsync_WithNullSender_ShouldNotThrow()
+    {
+        // Arrange
+        var receiver = new ApplicationUser
+        {
+            Id = "receiver1",
+            UserName = "receiver",
+            ProfileImage = new FileStore(
+                "old-receiver-url",
+                DateTime.UtcNow.AddHours(-1),
+                "receiver-key.jpg",
+                FileCategory.ProfileImage,
+                FileType.Image,
+                DateTime.UtcNow
+            )
+        };
+
+        var notification = new Notification
+        {
+            Id = "notif1",
+            Type = NotificationType.Match,
+            Title = "Test Notification",
+            Message = "Test message",
+            Receiver = receiver,
+            Sender = null,
+            SenderId = "sender1",
+            ReceiverId = "receiver1",
+            RelatedEntityId = "entity1",
+            RelatedEntityName = "Test Entity",
+            IsRead = false,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _s3ServiceMock
+            .Setup(x => x.GetPresignedUrlAsync(It.IsAny<string>(), HttpVerb.GET))
+            .ReturnsAsync(Result<string>.Ok("new-receiver-url"));
+
+        // Act & Assert
+        await _imageRefreshService.RefreshNotificationImagesAsync(notification);
+        // Should complete without throwing
+        Assert.NotNull(notification);
+    }
+
+    [Fact]
+    public async Task RefreshNotificationImagesAsync_WithBothNull_ShouldNotCallS3Service()
+    {
+        // Arrange
+        var notification = new Notification
+        {
+            Id = "notif1",
+            Type = NotificationType.Match,
+            Title = "Test Notification",
+            Message = "Test message",
+            Receiver = null,
+            Sender = null,
+            SenderId = "sender1",
+            ReceiverId = "receiver1",
+            RelatedEntityId = "entity1",
+            RelatedEntityName = "Test Entity",
+            IsRead = false,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        // Act
+        await _imageRefreshService.RefreshNotificationImagesAsync(notification);
+
+        // Assert
+        _s3ServiceMock.Verify(
+            x => x.GetPresignedUrlAsync(It.IsAny<string>(), It.IsAny<HttpVerb>()),
+            Times.Never);
+    }
+
+    #endregion
 }

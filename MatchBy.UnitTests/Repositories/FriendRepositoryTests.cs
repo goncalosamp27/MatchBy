@@ -272,6 +272,7 @@ public class FriendRepositoryTests : IDisposable
 
         // Act
         _repository.Add(friendship, _dbContext);
+        _dbContext.SaveChanges();
 
         // Assert
         Assert.Contains(friendship, _dbContext.Friends);
@@ -313,6 +314,7 @@ public class FriendRepositoryTests : IDisposable
 
         // Act
         _repository.Remove(friendship, _dbContext);
+        await _dbContext.SaveChangesAsync();
 
         // Assert
         Assert.DoesNotContain(friendship, _dbContext.Friends);

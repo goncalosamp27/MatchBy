@@ -1,4 +1,4 @@
-/*using System.Net;
+using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
 using MatchBy.Models;
@@ -57,9 +57,9 @@ public class S3ServiceTests
     public async Task UploadFormFileAsync_WithValidFile_ShouldReturnSuccessWithKey()
     {
         // Arrange
-        string fileName = "test-image.jpg";
-        string contentType = "image/jpeg";
-        string folder = "users/user1/profile-pictures";
+        string fileName = "test-document.pdf";
+        string contentType = "application/pdf";
+        string folder = "users/user1/documents";
         byte[] fileContent = "test file content"u8.ToArray();
 
         var formFileMock = new Mock<IFormFile>();
@@ -77,7 +77,7 @@ public class S3ServiceTests
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.Data);
-        Assert.EndsWith(".jpg", result.Data);
+        Assert.EndsWith(".pdf", result.Data);
 
         _s3ClientMock.Verify(
             x => x.PutObjectAsync(
@@ -94,8 +94,8 @@ public class S3ServiceTests
     {
         // Arrange
         var formFileMock = new Mock<IFormFile>();
-        formFileMock.Setup(f => f.FileName).Returns("test.jpg");
-        formFileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        formFileMock.Setup(f => f.FileName).Returns("test.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
         formFileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream("test"u8.ToArray()));
 
         _s3ClientMock
@@ -115,8 +115,8 @@ public class S3ServiceTests
     {
         // Arrange
         var formFileMock = new Mock<IFormFile>();
-        formFileMock.Setup(f => f.FileName).Returns("test.jpg");
-        formFileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        formFileMock.Setup(f => f.FileName).Returns("test.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
         formFileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream("test"u8.ToArray()));
 
         _s3ClientMock
@@ -128,7 +128,7 @@ public class S3ServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("AWS S3 error", result.ErrorMessages[0]);
+        Assert.Contains("File upload failed due to AWS S3 error", result.ErrorMessages[0]);
     }
 
     [Fact]
@@ -136,8 +136,8 @@ public class S3ServiceTests
     {
         // Arrange
         var formFileMock = new Mock<IFormFile>();
-        formFileMock.Setup(f => f.FileName).Returns("test.jpg");
-        formFileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        formFileMock.Setup(f => f.FileName).Returns("test.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
         formFileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream("test"u8.ToArray()));
 
         _s3ClientMock
@@ -160,9 +160,9 @@ public class S3ServiceTests
     public async Task UploadBrowserFileAsync_WithValidFile_ShouldReturnSuccessWithKey()
     {
         // Arrange
-        string fileName = "browser-image.png";
-        string contentType = "image/png";
-        string folder = "teams/team1/image";
+        string fileName = "browser-document.pdf";
+        string contentType = "application/pdf";
+        string folder = "teams/team1/documents";
         byte[] fileContent = "test browser file content"u8.ToArray();
 
         var browserFileMock = new Mock<IBrowserFile>();
@@ -181,7 +181,7 @@ public class S3ServiceTests
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.Data);
-        Assert.EndsWith(".png", result.Data);
+        Assert.EndsWith(".pdf", result.Data); // Non-images preserve extension
 
         browserFileMock.Verify(
             x => x.OpenReadStream(_uploadSettings.MaxFileSizeMegaBytes * 1024 * 1024, default),
@@ -194,10 +194,10 @@ public class S3ServiceTests
         // Arrange
         (string, string)[] testCases = new[]
         {
-            ("image.jpg", ".jpg"),
-            ("document.pdf", ".pdf"),
-            ("video.mp4", ".mp4"),
-            ("file.TXT", ".txt") // Test case insensitivity
+            ("document.pdf", ".pdf"), // Non-images preserve extension
+            ("video.mp4", ".mp4"), // Non-images preserve extension
+            ("file.TXT", ".txt"), // Non-images preserve extension (case insensitive)
+            ("spreadsheet.xlsx", ".xlsx") // Non-images preserve extension
         };
 
         foreach (var (fileName, expectedExtension) in testCases)
@@ -414,10 +414,10 @@ public class S3ServiceTests
     public async Task UploadFormFileAsync_ShouldIncludeFileNameInMetadata()
     {
         // Arrange
-        string fileName = "my-special-file.jpg";
+        string fileName = "my-special-file.pdf";
         var formFileMock = new Mock<IFormFile>();
         formFileMock.Setup(f => f.FileName).Returns(fileName);
-        formFileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
         formFileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream("test"u8.ToArray()));
 
         PutObjectRequest? capturedRequest = null;
@@ -431,7 +431,6 @@ public class S3ServiceTests
 
         // Assert
         Assert.NotNull(capturedRequest);
-        //Assert.True(capturedRequest.Metadata.ContainsKey("file-name"));
         Assert.Equal(fileName, capturedRequest.Metadata["file-name"]);
     }
 
@@ -440,8 +439,8 @@ public class S3ServiceTests
     {
         // Arrange
         var formFileMock = new Mock<IFormFile>();
-        formFileMock.Setup(f => f.FileName).Returns("test.jpg");
-        formFileMock.Setup(f => f.ContentType).Returns("image/jpeg");
+        formFileMock.Setup(f => f.FileName).Returns("test.pdf");
+        formFileMock.Setup(f => f.ContentType).Returns("application/pdf");
         formFileMock.Setup(f => f.OpenReadStream()).Returns(new MemoryStream("test"u8.ToArray()));
 
         _s3ClientMock
@@ -460,4 +459,3 @@ public class S3ServiceTests
 
     #endregion
 }
-*/

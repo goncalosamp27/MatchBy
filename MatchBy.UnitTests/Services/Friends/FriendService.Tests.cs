@@ -50,7 +50,7 @@ public class FriendServiceTests : IDisposable
         // Setup notification service
         _notificationServiceMock
             .Setup(s => s.SendNotificationAsync(It.IsAny<CreateNotificationDto>(), It.IsAny<CancellationToken>()))
-            .Returns((Task<Result<bool>>)Task.CompletedTask);
+            .ReturnsAsync(Result<bool>.Ok(true));
 
         _friendService = new FriendService(
             _userRepositoryMock.Object,
@@ -589,7 +589,7 @@ public class FriendServiceTests : IDisposable
             .ReturnsAsync(friend);
 
         // Act
-        Result<FriendDto?> result = await _friendService.GetFriendshipBetweenUsers("user1", "user2");
+        Result<FriendDto> result = await _friendService.GetFriendshipBetweenUsers("user1", "user2");
 
         // Assert
         Assert.True(result.Success);
@@ -606,11 +606,10 @@ public class FriendServiceTests : IDisposable
             .ReturnsAsync((Friend?)null);
 
         // Act
-        Result<FriendDto?> result = await _friendService.GetFriendshipBetweenUsers("user1", "user2");
+        Result<FriendDto> result = await _friendService.GetFriendshipBetweenUsers("user1", "user2");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.Data);
+        Assert.True(!result.Success);
     }
 
     #endregion

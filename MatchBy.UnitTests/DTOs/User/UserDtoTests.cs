@@ -12,7 +12,10 @@ public class UserDtoTests
         {
             Id = "user_123",
             DisplayName = "John Doe",
-            AvatarUrl = "https://example.com/avatar.jpg"
+            AvatarUrl = "https://example.com/avatar.jpg",
+            UserName = "johndoe",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
         };
 
         // Assert
@@ -29,7 +32,10 @@ public class UserDtoTests
         {
             Id = "user_123",
             DisplayName = "John Doe",
-            AvatarUrl = null
+            AvatarUrl = null,
+            UserName = "johndoe",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
         };
 
         // Assert
@@ -44,7 +50,10 @@ public class UserDtoTests
         {
             Id = "user_123",
             DisplayName = "John Doe",
-            AvatarUrl = "https://example.com/avatar.jpg"
+            AvatarUrl = "https://example.com/avatar.jpg",
+            UserName = "johndoe",
+            PlayerRating = 0.0f,
+            JoinedMatchesCount = 1
         };
 
         // Act

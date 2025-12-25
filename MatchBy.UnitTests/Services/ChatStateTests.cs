@@ -384,7 +384,10 @@ public class ChatStateTests
             {
                 Id = "sender-123",
                 DisplayName = "Sender",
-                AvatarUrl = null
+                AvatarUrl = null,
+                UserName = "senderuser",
+                PlayerRating = 0.0f,
+                JoinedMatchesCount = 1
             },
             ConversationId = conversationId,
             CreatedAtUtc = DateTime.UtcNow
