@@ -200,11 +200,19 @@ builder.Services.AddScoped<ChatState>();
 builder.Services.AddScoped<IMatchReminderJob, MatchReminderJob>();
 builder.Services.AddHttpContextAccessor();
 
+string[] allowedOrigins = builder.Configuration.GetSection("AllowedCorsOrigins").Get<string[]>() ?? [];
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Policy", corsPolicyBuilder =>
+    options.AddPolicy("DevPolicy", corsPolicyBuilder =>
         corsPolicyBuilder
             .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+    
+    options.AddPolicy("ProdPolicy", corsPolicyBuilder =>
+        corsPolicyBuilder
+            .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
@@ -216,11 +224,13 @@ if (app.Environment.IsDevelopment())
     await app.RecreateDatabase();
     //await app.ApplyMigrationsAsync();
     await app.SeedDatabaseAsync();
+    app.UseCors("DevPolicy");
 }
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
+    app.UseCors("ProdPolicy");
 }
 
 using (IServiceScope scope = app.Services.CreateScope())
@@ -239,7 +249,6 @@ using (IServiceScope scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("Policy");
 app.MapStaticAssets();
 app.MapControllers();
 app.UseStatusCodePagesWithReExecute("/error-page/{0}");
