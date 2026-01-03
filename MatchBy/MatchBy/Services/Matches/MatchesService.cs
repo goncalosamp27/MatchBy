@@ -324,12 +324,8 @@ public class MatchesService(
 
         //get invite if exists
         Result<MatchInviteDto> matchInvite = await matchInvitesService.GetMatchInvite(matchId, userId, ct);
-        if (!matchInvite.Success)
-        {
-            return Result<MatchDto>.Fail(matchInvite.ErrorMessages[0]);
-        }
         
-        Match? match = await matchesRepository.GetByIdAsync(matchId, userId, matchInvite.Data.Status == InviteStatus.Pending, dbContext, ct);
+        Match? match = await matchesRepository.GetByIdAsync(matchId, userId, matchInvite is { Success: true, Data.Status: InviteStatus.Pending }, dbContext, ct);
         if (match is null)
         {
             return Result<MatchDto>.Fail($"Match with id {matchId} not found.");
