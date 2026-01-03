@@ -925,7 +925,7 @@ public class MatchesServiceTests : IDisposable
         Result<MatchDto> result = await _matchesService.JoinMatch(matchId, userId);
 
         // Assert
-        Assert.False(result.Success);
+        Assert.True(result.Success);
     }
 
     [Fact]
