@@ -1,243 +1,262 @@
-# MatchBy
+# **MatchBy**
 
-> A platform that connects people who want to play sports, making it easy to create, find, and join games nearby.
+> Web platform for creating, discovering, and joining local sports matches with teams, invites, real-time chat, notifications, and player ratings.
 
-[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Blazor](https://img.shields.io/badge/Blazor-Server-512BD4?logo=blazor)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.2-336791?logo=postgresql)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+## About the Project
 
-## 🎯 Overview
+**MatchBy** is a full-stack web application designed to help people organize and participate in local sports matches. The platform allows users to discover nearby games, create public or private matches, manage teams, invite players, chat in real time, and build trust through player ratings.
 
-MatchBy centralizes everything (players, time, and location) to remove coordination hassle. The platform enables active individuals to discover nearby matches, create games, and connect with other players in their community.
+The project was developed as part of a Master's degree software engineering project, with a focus on building a complete, production-oriented web application using modern .NET technologies.
 
-### Key Features
+The application supports two main user roles:
 
-- **Smart Match Discovery** - Location-based games and player search
-- **Easy Game Creation** - Set up matches in seconds
-- **Integrated Chat & Notifications** - Seamless coordination via SignalR
-- **Reputation & Fair Play System** - Ratings and feedback for trust
-- **Team Management** - Organize teams and manage invitations
-- **Real-time Updates** - Live notifications and match status updates
+- **Administrators**: manage the platform and access seeded admin-level functionality.
+- **Members**: create and join matches, manage teams, send invites, chat with other users, and rate players.
 
-## 🛠️ Technology Stack
+The main goal of the project was to reduce the friction of organizing sports activities by centralizing match discovery, team management, communication, and player coordination in one platform.
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend & Backend** | Blazor Server (.NET 9) |
-| **UI Framework** | Blazorise with Tailwind CSS |
-| **Database** | PostgreSQL 17.2 (via Npgsql) |
-| **ORM** | Entity Framework Core 9 |
-| **Real-time Communication** | SignalR |
-| **Background Jobs** | Hangfire |
-| **File Storage** | AWS S3 (via Supabase Storage) |
-| **Email Service** | Resend |
-| **Validation** | FluentValidation |
-| **Authentication** | ASP.NET Core Identity |
-| **Hosting** | Azure App Service |
-| **CI/CD** | GitHub Actions |
+## Features
 
-## 📋 Prerequisites
+- Register and authenticate users with ASP.NET Core Identity
+- Create, edit, search, and join sports matches
+- Support public and private matches
+- Manage teams with owners, members, privacy settings, and maximum capacity
+- Send and receive match invites
+- Send and receive team invites
+- Manage friends and user connections
+- Use real-time chat for private, team, and match conversations
+- Send chat messages with text, match invite links, and locations
+- Receive real-time notifications through SignalR
+- Rate players after matches
+- Schedule background jobs for match state processing and match reminders
+- Upload and validate user/team images through S3-compatible storage
+- Support demo data seeding for local testing
+- Run the full project locally with Docker
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [PostgreSQL 17.2](https://www.postgresql.org/download/) or Docker
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) or [Rider](https://www.jetbrains.com/rider/) (recommended)
-- AWS S3 credentials (or Supabase Storage)
-- Resend API key (for email functionality)
+## Tech Stack
 
-## 🚀 Getting Started
+### Web / Frontend
 
-### 1. Clone the Repository
+- Blazor Server
+- Razor Components
+- Blazorise
+- Tailwind CSS
+- Flowbite Components
 
-```bash
-git clone <repository-url>
-cd LAB
-```
+### Backend
 
-### 2. Database Setup
+- ASP.NET Core
+- .NET 10
+- C#
+- ASP.NET Core Identity
+- Entity Framework Core
+- FluentValidation
 
-Using Docker Compose (recommended):
+### Real-Time Communication
 
-```bash
-docker-compose up -d matchby.postgres
-```
+- SignalR
+- ChatHub
+- NotificationHub
 
-This will start a PostgreSQL container on port `5432` with:
-- Database: `database`
-- User: `postgres`
-- Password: `postgres`
+### Background Jobs
 
-Alternatively, you can use pgAdmin (included in compose.yaml) at `http://localhost:8080`.
+- Hangfire
+- PostgreSQL-backed job storage
+- Scheduled match state processing
+- Scheduled match reminder notifications
 
-### 3. Configuration
+### Database & Storage
 
-1. Copy `appsettings.Development.json` and configure your connection strings and API keys:
+- PostgreSQL 17.2
+- Entity Framework Core with Npgsql
+- S3-compatible file storage
+- Supabase Storage compatible configuration
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=database;Username=postgres;Password=postgres"
-  },
-  "Resend": {
-    "ApiKey": "your-resend-api-key"
-  },
-  "S3Settings": {
-    "AccessKey": "your-access-key",
-    "SecretKey": "your-secret-key",
-    "BucketName": "your-bucket-name",
-    "Region": "your-region"
-  },
-  "Blazorise": {
-    "ProductToken": "your-blazorise-token"
-  }
-}
-```
+### Testing & Tooling
 
-2. For sensitive configuration, use [User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets):
+- xUnit
+- Moq
+- Playwright
+- Docker
+- Docker Compose
 
-```bash
-dotnet user-secrets set "Resend:ApiKey" "your-api-key"
-dotnet user-secrets set "S3Settings:AccessKey" "your-access-key"
-# ... etc
-```
+## Screenshots
 
-### 4. Database Migrations
+### Home
 
-The application will automatically apply migrations and seed data in development mode. For manual migration:
+![Home](./docs/screenshots/home.gif)
+
+### Match Creation
+
+![Create Match](./docs/screenshots/creatematch.png)
+
+### About
+
+![About](./docs/screenshots/about.png)
+
+## How to Run the Project
+
+### Create the Environment File
+
+Copy the example environment file:
 
 ```bash
-cd MatchBy/MatchBy
-dotnet ef database update
+cp .env.example .env
 ```
 
-### 5. Run the Application
+The `.env.example` file already includes local development values for:
 
-**Using Visual Studio:**
-1. Open `MatchBy.sln` in Visual Studio
-2. Set `MatchBy` as the startup project
-3. Press `F5` to run
+- PostgreSQL
+- pgAdmin
+- Resend placeholder API key
+- OAuth placeholder credentials
+- Blazorise placeholder token
+- S3-compatible storage placeholder settings
 
-**Using .NET CLI:**
+> Note: The placeholder values are enough for running the local demo with seeded users. Features that require real external providers, such as OAuth login or real S3 uploads, require valid credentials.
+
+### Start the Application
+
 ```bash
-cd MatchBy/MatchBy
-dotnet run
+docker compose up --build
 ```
 
-The application will be available at `https://localhost:5001` (or the port specified in `launchSettings.json`).
+This starts:
 
-### 6. Access Hangfire Dashboard
+- MatchBy web application
+- PostgreSQL database
+- pgAdmin
 
-The Hangfire dashboard is available at `/hangfire` for monitoring background jobs.
-
-## 📁 Project Structure
+The application will be available at:
 
 ```
-MatchBy/
-├── MatchBy/                    # Main Blazor Server application
-│   ├── Components/            # Razor components (Pages, Layout, Account)
-│   ├── Controllers/           # API controllers
-│   ├── Data/                  # Data access layer (DbContext, Migrations, Seeders)
-│   ├── DTOs/                  # Data Transfer Objects
-│   ├── Enums/                 # Enumerations
-│   ├── Extensions/            # Extension methods
-│   ├── Hubs/                  # SignalR hubs (ChatHub)
-│   ├── Models/                # Domain models
-│   ├── Services/              # Business logic services
-│   │   ├── BackgroundJobs/   # Hangfire job services
-│   │   ├── ChatMessages/     # Chat message services
-│   │   ├── Conversations/    # Conversation services
-│   │   ├── Email/            # Email services
-│   │   ├── FileValidator/    # File validation
-│   │   ├── Matches/          # Match services
-│   │   ├── S3/               # S3 storage services
-│   │   └── Users/            # User services
-│   ├── Settings/              # Configuration classes
-│   └── Validators/            # FluentValidation validators
-├── MatchBy.Client/            # Blazor WebAssembly client (optional)
-└── MatchBy.UnitTests/         # Unit tests
+http://localhost:8080
 ```
 
-## 🏗️ Architecture
+pgAdmin will be available at:
 
-MatchBy follows a **layered architecture** pattern:
+```
+http://localhost:5050
+```
 
-1. **Presentation Layer** - Blazor Server components and pages
-2. **Business Logic Layer** - Service classes handling business rules
-3. **Data Access Layer** - Entity Framework Core with PostgreSQL
-4. **Domain Layer** - Domain models and entities
+## Demo Accounts
 
-For detailed architecture documentation, see [Architecture](https://github.com/MESW-LES-2025/MatchBy/wiki/Architecture).
+The project seeds demo users automatically in development mode.
 
-## 🧪 Testing
+| Role | Email | Password |
+|---|---|---|
+| Admin | admin@admin.com | Admin!123 |
+| User | user1@user.com | User1!123 |
+| User | user2@user.com | User2!123 |
+| Test User | test1@test.com | Test!123 |
+| Test User | test2@test.com | Test!123 |
 
-Run unit tests using:
+For local testing, use the email/password login form.
+
+> External login providers such as Google, GitHub, and Discord require real provider credentials and are not intended to be used with the default local placeholder values.
+
+
+## Stop the Project
+
+```bash
+docker compose down
+```
+
+## Reset the Local Database
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+In development mode, the application recreates and seeds the database on startup, so the local environment is always prepared with demo data.
+
+## Running Tests
+
+From the `project/` directory, run:
 
 ```bash
 dotnet test
 ```
 
-Or use Visual Studio's Test Explorer (Ctrl+R, A).
+## Architecture
 
-## 🚢 Deployment
+MatchBy follows a layered architecture with clear separation between UI, business logic, data access, and infrastructure concerns.
 
-### Environments
+### Presentation Layer
 
-- **Staging**: [Staging URL](https://matchby-d4eweaajaffthmh6.italynorth-01.azurewebsites.net) (deployed from `main` branch)
-- **Production**: [matchby.me](https://matchby.me/) (deployed from `production` branch with version tags)
+The presentation layer is built with Blazor Server and Razor Components. It includes pages for authentication, matches, teams, chat, users, profile management, and static content such as About and Contact pages.
 
-### CI/CD
+### Application / Service Layer
 
-- **Staging**: Automatic deployment on push to `main` branch
-- **Production**: Deployment triggered by version tags (e.g., `v1.2.0`) on `production` branch
+The service layer contains the main business logic for:
 
-For more details, see [Deployment](https://github.com/MESW-LES-2025/MatchBy/wiki/Deployment).
+- Matches
+- Match invites
+- Teams
+- Team invites
+- Users
+- Friends
+- Conversations
+- Chat messages
+- Notifications
+- Player ratings
+- Background jobs
+- File validation
+- Image refresh
+- Email sending
+- S3-compatible storage
 
-## 📚 Documentation
+### Data Access Layer
 
-Comprehensive documentation is available in the [GitHub Wiki](https://github.com/MESW-LES-2025/MatchBy/wiki):
+The data layer uses Entity Framework Core with PostgreSQL. It includes:
 
-- [Home](https://github.com/MESW-LES-2025/MatchBy/wiki/Home) - Main documentation index
-- [Product Vision](https://github.com/MESW-LES-2025/MatchBy/wiki/Product-Vision) - Vision, target group, and business goals
-- [User Stories](https://github.com/MESW-LES-2025/MatchBy/wiki/User-Stories) - Complete list of user stories
-- [Architecture](https://github.com/MESW-LES-2025/MatchBy/wiki/Architecture) - System architecture and design patterns
-- [Database Schema](https://github.com/MESW-LES-2025/MatchBy/wiki/Database-Schema) - Database structure and relationships
-- [Deployment](https://github.com/MESW-LES-2025/MatchBy/wiki/Deployment) - CI/CD and deployment strategy
-- [UI Mockups](https://github.com/MESW-LES-2025/MatchBy/wiki/UI‐Mockups) - User interface designs
-- [Iteration 1](https://github.com/MESW-LES-2025/MatchBy/wiki/Iteration-1) - Sprint reviews and deliverables
+- `ApplicationDbContext`
+- Entity configurations
+- Database migrations
+- Development seeders
+- Repository classes for domain access
 
-## 🔧 Development Guidelines
+### Real-Time Layer
 
-### Code Style
+SignalR is used for real-time communication through:
 
-- Follow C# coding conventions and .NET best practices
-- Use PascalCase for public members, camelCase for private fields
-- Prefix interfaces with `I` (e.g., `IUserService`)
-- Enable nullable reference types
-- Treat warnings as errors (configured in `Directory.Build.props`)
+- `ChatHub`
+- `NotificationHub`
 
-### Best Practices
+This enables live chat and notification updates without requiring manual page refreshes.
 
-- **Async/Await**: All I/O operations should be asynchronous
-- **Dependency Injection**: Use constructor injection for all dependencies
-- **Validation**: Use FluentValidation for server-side validation
-- **Error Handling**: Implement proper error handling and logging
-- **Security**: Use HTTPS, implement proper CORS policies, and follow OWASP guidelines
+### Background Processing
 
-## 🤝 Contributing
+Hangfire is used to run recurring background jobs, including:
 
-1. Create a feature branch from `main`
-2. Make your changes
-3. Ensure all tests pass
-4. Submit a pull request
+- Processing match states
+- Sending match reminders
 
-## 📝 License
+The Hangfire dashboard is available at:
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+```txt
+http://localhost:8080/hangfire
+```
 
-## 👥 Team
+## Main Domain Models
 
-Developed as part of a Master's degree program.
+The project includes the following core domain entities:
 
----
+- `ApplicationUser`
+- `Match`
+- `Team`
+- `Friend`
+- `Invite`
+- `MatchInvite`
+- `TeamInvite`
+- `Conversation`
+- `ChatMessage`
+- `Notification`
+- `PlayerRating`
 
-**Made with ❤️ using Blazor and .NET**
+These models support the main platform flows: creating matches, joining teams, inviting users, chatting, receiving notifications, and rating players.
+
+## Project Documentation
+
+Additional documentation is available in the [wiki](https://github.com/goncalosamp27/MatchBy/wiki).
