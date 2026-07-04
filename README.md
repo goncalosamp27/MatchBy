@@ -4,6 +4,8 @@
 
 [![MatchBy Demo](./docs/screenshots/home.gif)](https://github.com/goncalosamp27/MatchBy/wiki/Presentation-Demo)
 
+Click the image above to watch a walkthrough of the MatchBy application, including authentication, match creation, teams, chat, and user interactions.
+
 ## About the Project
 
 **MatchBy** is a full-stack web application designed to help people organize and participate in local sports matches. The platform allows users to discover nearby games, create public or private matches, manage teams, invite players, chat in real time, and build trust through player ratings.
