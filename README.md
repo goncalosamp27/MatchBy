@@ -2,7 +2,7 @@
 
 > Web platform for creating, discovering, and joining local sports matches with teams, invites, real-time chat, notifications, and player ratings.
 
-[![MatchBy Demo](./docs/screenshots/home.gif)](https://github.com/goncalosamp27/MatchBy/wiki/Presentation-Demo
+[![MatchBy Demo](./docs/screenshots/home.gif)](https://github.com/goncalosamp27/MatchBy/wiki/Presentation-Demo)
 
 ## About the Project
 
